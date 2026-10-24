@@ -8,6 +8,19 @@ import {
   Settings,
 } from "lucide-react";
 
+const navItems = [
+  { to: "/", label: "Inicio", icon: LayoutDashboard, exact: true },
+  { to: "/agenda", label: "Agenda", icon: Calendar, exact: true },
+  { to: "/pacientes", label: "Pacientes", icon: Users, exact: false }, // usa startsWith
+  {
+    to: "/inventario",
+    label: "Inventario y Farmacia",
+    icon: Package,
+    exact: true,
+  },
+  { to: "/configuracion", label: "Configuración", icon: Settings, exact: true },
+];
+
 export const Sidebar = () => {
   const location = useLocation();
 
@@ -23,65 +36,26 @@ export const Sidebar = () => {
       </div>
 
       <nav className="space-y-1.5 flex-1 overflow-y-auto pr-1">
-        <Link
-          to="/"
-          className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-            location.pathname === "/"
-              ? "bg-[#ece883] text-slate-950 font-semibold shadow-lg shadow-[#ece883]/10"
-              : "text-slate-300 hover:text-white hover:bg-slate-800/60"
-          }`}
-        >
-          <LayoutDashboard className="w-4 h-4" />
-          Inicio
-        </Link>
+        {navItems.map(({ to, label, icon: Icon, exact }) => {
+          const isActive = exact
+            ? location.pathname === to
+            : location.pathname.startsWith(to);
 
-        <Link
-          to="/agenda"
-          className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-            location.pathname === "/agenda"
-              ? "bg-[#ece883] text-slate-950 font-semibold shadow-lg shadow-[#ece883]/10"
-              : "text-slate-300 hover:text-white hover:bg-slate-800/60"
-          }`}
-        >
-          <Calendar className="w-4 h-4" />
-          Agenda
-        </Link>
-
-        <Link
-          to="/pacientes"
-          className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-            location.pathname.startsWith("/pacientes")
-              ? "bg-[#ece883] text-slate-950 font-semibold shadow-lg shadow-[#ece883]/10"
-              : "text-slate-300 hover:text-white hover:bg-slate-800/60"
-          }`}
-        >
-          <Users className="w-4 h-4" />
-          Pacientes
-        </Link>
-
-        <Link
-          to="/inventario"
-          className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-            location.pathname === "/inventario"
-              ? "bg-[#ece883] text-slate-950 font-semibold shadow-lg shadow-[#ece883]/10"
-              : "text-slate-300 hover:text-white hover:bg-slate-800/60"
-          }`}
-        >
-          <Package className="w-4 h-4" />
-          Inventario y Farmacia
-        </Link>
-
-        <Link
-          to="/configuracion"
-          className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-            location.pathname === "/configuracion"
-              ? "bg-[#ece883] text-slate-950 font-semibold shadow-lg shadow-[#ece883]/10"
-              : "text-slate-300 hover:text-white hover:bg-slate-800/60"
-          }`}
-        >
-          <Settings className="w-4 h-4" />
-          Configuración
-        </Link>
+          return (
+            <Link
+              key={to}
+              to={to}
+              className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                isActive
+                  ? "bg-[#ece883] text-slate-950 font-semibold shadow-lg shadow-[#ece883]/10"
+                  : "text-slate-300 hover:text-white hover:bg-slate-800/60"
+              }`}
+            >
+              <Icon className="w-4 h-4" />
+              {label}
+            </Link>
+          );
+        })}
       </nav>
     </aside>
   );

@@ -1,28 +1,64 @@
-// src/components/schedule/ConsultationModal/ConsultationModal.tsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Save, CheckCircle2, BedDouble } from "lucide-react";
-import { getBadgeStyle, getPetIcon } from "../appointmentUtils";
+import {
+  getAppointmentBadgeStyle,
+  getPetIcon,
+  formatAppointmentTypeLabel,
+} from "../../../utils/formatters";
+import {
+  calculateAge,
+  parseAgeToBirthDate,
+  formatDateLatam,
+} from "../../../utils/dateUtils";
+import { useAppointments } from "../../../hooks/useAppointments";
+import { usePatients } from "../../../hooks/usePatients";
 import { ConsultationHeader } from "./ConsultationHeader";
 import { ActionConfirmModal } from "./ConsultationModals";
-import { usePatientProfiles } from "../../../hooks/usePatientProfiles";
+import type { Appointment } from "../../../types/appointment";
+import type { Patient, Owner } from "../../../types/patient";
+import { getSucursalName } from "../../../constants/appConstants";
+
+// ============================================
+// TIPOS
+// ============================================
+export interface ConsultationData {
+  patient: Patient;
+  owner: Owner;
+  appointment: Appointment;
+  notes: string;
+  weight?: number;
+  recommendations?: string;
+  shouldFinish: boolean;
+}
 
 interface ConsultationModalProps {
   isOpen: boolean;
   onClose: () => void;
-  cita: any;
-  onSaveConsultation: (updatedData: any, shouldFinish?: boolean) => void;
-  onHospitalize?: (cita: any) => void;
+  appointment: Appointment;
+  patient: Patient;
+  owner: Owner;
+  onSaveConsultation: (data: ConsultationData) => void;
+  onHospitalize?: (data: ConsultationData) => void;
 }
 
+// ============================================
+// COMPONENTE PRINCIPAL
+// ============================================
 export const ConsultationModal = ({
   isOpen,
   onClose,
-  cita,
+  appointment,
+  patient,
+  owner,
   onSaveConsultation,
   onHospitalize,
 }: ConsultationModalProps) => {
-  const { getProfile, saveProfile } = usePatientProfiles();
+  const { isFirstTimePatient } = useAppointments();
+  const { updatePatient } = usePatients();
 
+  // ============================================
+  // ESTADOS DEL FORMULARIO
+  // ============================================
   const [formData, setFormData] = useState({
     edad: "",
     peso: "",
@@ -31,60 +67,68 @@ export const ConsultationModal = ({
     notas: "",
   });
 
+  // Edad inicial para detectar si el usuario la editó
+  const [initialAge, setInitialAge] = useState("");
+
   const [isHospitalizing, setIsHospitalizing] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showExitConfirmModal, setShowExitConfirmModal] = useState(false);
 
-  // Verificamos si es primera vez comparando el historial guardado en localStorage
-  const checkIfFirstTime = () => {
-    if (!cita || !cita.paciente || !cita.propietario) return true;
-    try {
-      const savedAppointments = localStorage.getItem("vet_appointments");
-      if (!savedAppointments) return true;
-      const parsed: any[] = JSON.parse(savedAppointments);
+  // ============================================
+  // DATOS DERIVADOS
+  // ============================================
+  const isFirstTime = useMemo(
+    () => isFirstTimePatient(patient.id),
+    [isFirstTimePatient, patient.id],
+  );
 
-      const normalizedPatient = cita.paciente.trim().toLowerCase();
-      const normalizedOwner = cita.propietario.trim().toLowerCase();
+  const showCondicionesPrevias = isFirstTime || Boolean(patient.conditions);
 
-      const historial = parsed.filter((app) => {
-        const appPatient = (app.paciente || "").trim().toLowerCase();
-        const appOwner = (app.propietario || "").trim().toLowerCase();
-        return appPatient === normalizedPatient && appOwner === normalizedOwner;
-      });
+  const badgeStyle = getAppointmentBadgeStyle(appointment.tipo);
+  const tipoLabel = formatAppointmentTypeLabel(appointment.tipo);
+  const sucursalName = getSucursalName(appointment.sucursalId);
 
-      return historial.length <= 1;
-    } catch (e) {
-      return true;
-    }
-  };
+  // Vista previa del nacimiento calculado desde la edad ingresada
+  const previewBirthDate = useMemo(
+    () => parseAgeToBirthDate(formData.edad),
+    [formData.edad],
+  );
 
-  const isFirstTime = checkIfFirstTime();
-
+  // ============================================
+  // EFECTOS
+  // ============================================
   useEffect(() => {
-    if (cita) {
-      // Intentamos cargar las condiciones previas desde el perfil persistente del paciente si existe
-      const patientProfile = getProfile(cita.paciente, cita.propietario);
-      const condicionesGuardadas = patientProfile
-        ? patientProfile.condicionesPrevias
-        : cita.condicionesPrevias || "";
-
+    if (isOpen && appointment && patient) {
+      const edadInicial =
+        patient.age ||
+        (patient.birthDate ? calculateAge(patient.birthDate) : "");
       setFormData({
-        edad: cita.edad || "",
-        peso: cita.peso || "",
-        condicionesPrevias: condicionesGuardadas,
-        recomendaciones: cita.recomendaciones || "",
-        notas: cita.notas || "",
+        edad: edadInicial,
+        peso:
+          appointment.pesoActual !== undefined &&
+          appointment.pesoActual !== null
+            ? String(appointment.pesoActual)
+            : "",
+        condicionesPrevias:
+          patient.conditions ||
+          appointment.condicionesPrevias ||
+          appointment.alergiasNotas ||
+          "",
+        recomendaciones: appointment.recomendaciones || "",
+        notas: appointment.notas || "",
       });
+      setInitialAge(edadInicial);
       setIsHospitalizing(false);
       setShowConfirmModal(false);
       setHasUnsavedChanges(false);
       setShowExitConfirmModal(false);
     }
-  }, [cita]);
+  }, [isOpen, appointment, patient]);
 
-  if (!isOpen || !cita) return null;
-
+  // ============================================
+  // HANDLERS
+  // ============================================
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
@@ -93,52 +137,86 @@ export const ConsultationModal = ({
     setHasUnsavedChanges(true);
   };
 
-  const handleSaveOnly = (e: React.FormEvent) => {
-    e.preventDefault();
+  const saveConditionsIfChanged = () => {
+    if (formData.condicionesPrevias !== (patient.conditions || "")) {
+      updatePatient(patient.id, { conditions: formData.condicionesPrevias });
+    }
+  };
 
-    // Guardamos también en el perfil persistente del paciente las condiciones previas
-    if (cita.paciente && cita.propietario) {
-      saveProfile(
-        cita.paciente,
-        cita.propietario,
-        formData.condicionesPrevias,
-        {
-          edad: formData.edad,
-          peso: formData.peso,
-        },
-      );
+  // Guarda la edad y calcula la fecha de nacimiento (mes y año) a partir de ella
+  const savePatientDemographics = () => {
+    const updates: Partial<Patient> = {};
+    const ageChanged = formData.edad !== initialAge;
+
+    if (ageChanged) {
+      updates.age = formData.edad;
     }
 
-    onSaveConsultation({ ...cita, ...formData }, false);
+    // Solo recalcula birthDate si la edad cambió o el paciente no tiene fecha.
+    // Así no pisamos una fecha de nacimiento real ya registrada.
+    if ((ageChanged || !patient.birthDate) && formData.edad.trim()) {
+      const computedBirth = parseAgeToBirthDate(formData.edad);
+      if (computedBirth) {
+        updates.birthDate = computedBirth;
+        updates.birthDateApproximate = true;
+      }
+    }
+
+    if (Object.keys(updates).length > 0) {
+      updatePatient(patient.id, updates);
+    }
+  };
+
+  const buildConsultationData = (shouldFinish: boolean): ConsultationData => ({
+    patient,
+    owner,
+    appointment,
+    notes: formData.notas,
+    weight: formData.peso ? parseFloat(formData.peso) : undefined,
+    recommendations: formData.recomendaciones,
+    shouldFinish,
+  });
+
+  const handleSaveOnly = (e: React.FormEvent) => {
+    e.preventDefault();
+    saveConditionsIfChanged();
+    savePatientDemographics();
+    onSaveConsultation(buildConsultationData(false));
     setHasUnsavedChanges(false);
   };
 
   const handleFinish = () => {
-    // Guardamos en el perfil persistente antes de finalizar
-    if (cita.paciente && cita.propietario) {
-      saveProfile(
-        cita.paciente,
-        cita.propietario,
-        formData.condicionesPrevias,
-        {
-          edad: formData.edad,
-          peso: formData.peso,
-        },
-      );
-    }
-
-    onSaveConsultation({ ...cita, ...formData }, true);
+    saveConditionsIfChanged();
+    savePatientDemographics();
+    onSaveConsultation(buildConsultationData(true));
     setHasUnsavedChanges(false);
   };
 
-  const badgeStyle = getBadgeStyle(cita.tipo);
+  const handleStartHospitalization = () => {
+    setIsHospitalizing(true);
+    setShowConfirmModal(true);
+  };
 
-  // Verificamos si ya hay un perfil con condiciones previas guardadas
-  const existingProfile = getProfile(cita.paciente, cita.propietario);
-  const hasSavedConditions = Boolean(existingProfile?.condicionesPrevias);
+  const handleConfirmHospitalization = () => {
+    setShowConfirmModal(false);
+    if (onHospitalize) {
+      onHospitalize(buildConsultationData(false));
+    }
+  };
 
-  // Muestra el campo de condiciones si es primera vez O si ya tiene algo escrito previamente en su perfil
-  const showCondicionesPrevias = isFirstTime || hasSavedConditions;
+  const handleSaveAndExit = () => {
+    saveConditionsIfChanged();
+    savePatientDemographics();
+    onSaveConsultation(buildConsultationData(false));
+    setShowExitConfirmModal(false);
+    setHasUnsavedChanges(false);
+    onClose();
+  };
+
+  // ============================================
+  // RENDER
+  // ============================================
+  if (!isOpen || !appointment || !patient || !owner) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
@@ -148,7 +226,7 @@ export const ConsultationModal = ({
         }`}
       >
         <ConsultationHeader
-          tipo={cita.tipo}
+          tipoLabel={tipoLabel}
           badgeStyle={badgeStyle}
           onCloseClick={() =>
             hasUnsavedChanges ? setShowExitConfirmModal(true) : onClose()
@@ -159,36 +237,34 @@ export const ConsultationModal = ({
           onSubmit={handleSaveOnly}
           className="p-6 space-y-4 overflow-y-auto flex-1"
         >
+          {/* Info del paciente y dueño */}
           <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-4 space-y-3">
             <div className="flex items-center gap-2.5">
-              <h3 className="text-lg font-bold text-white">{cita.paciente}</h3>
-              {getPetIcon(cita.tipoMascota || cita.tipo, cita.genero)}
+              <h3 className="text-lg font-bold text-white">{patient.name}</h3>
+              {getPetIcon(patient.species, patient.gender)}
             </div>
 
             <p className="text-xs text-slate-400">
               Propietario:{" "}
-              <span className="text-slate-300 font-medium">
-                {cita.propietario}
-              </span>
+              <span className="text-slate-300 font-medium">{owner.name}</span>
               <span className="mx-2">•</span>
               Sucursal:{" "}
-              <span className="text-slate-300 font-medium">
-                {cita.sucursal}
-              </span>
+              <span className="text-slate-300 font-medium">{sucursalName}</span>
             </p>
 
-            {cita.motivo && (
+            {appointment.motivo && (
               <div className="pt-2 border-t border-slate-800/60">
                 <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold mb-1">
                   Motivo de la consulta
                 </p>
                 <p className="text-sm text-slate-200 italic bg-slate-900/80 p-2.5 rounded-lg border border-slate-800/50">
-                  "{cita.motivo}"
+                  "{appointment.motivo}"
                 </p>
               </div>
             )}
           </div>
 
+          {/* Edad (calcula nacimiento) | Peso */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1">
@@ -202,24 +278,31 @@ export const ConsultationModal = ({
                 placeholder="Ej. 3 años y 2 meses"
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-blue-500"
               />
+              {previewBirthDate && (
+                <p className="text-[10px] text-slate-500 mt-1 pl-1">
+                  ≈ Nacimiento estimado: {formatDateLatam(previewBirthDate)}
+                </p>
+              )}
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1">
-                Peso (kg)
+                Peso actual (kg)
               </label>
               <input
-                type="text"
+                type="number"
+                step="0.1"
+                min="0"
                 name="peso"
                 value={formData.peso}
                 onChange={handleChange}
-                placeholder="Ej. 12.5 kg"
+                placeholder="Ej. 12.5"
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-blue-500"
               />
             </div>
           </div>
 
-          {/* Sección dinámica: Solo aparece si es su primera vez o si ya contiene información guardada en su perfil */}
+          {/* Condiciones previas */}
           {showCondicionesPrevias && (
             <div className="p-4 bg-amber-950/10 border border-amber-500/20 rounded-xl space-y-1">
               <label className="block text-xs font-semibold text-amber-400 mb-1">
@@ -236,6 +319,7 @@ export const ConsultationModal = ({
             </div>
           )}
 
+          {/* Notas clínicas */}
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1">
               Notas de la Consulta / Diagnóstico
@@ -250,6 +334,7 @@ export const ConsultationModal = ({
             />
           </div>
 
+          {/* Recomendaciones */}
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1">
               Recomendaciones para el Propietario
@@ -264,13 +349,11 @@ export const ConsultationModal = ({
             />
           </div>
 
+          {/* Botones de acción */}
           <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-slate-800">
             <button
               type="button"
-              onClick={() => {
-                setIsHospitalizing(true);
-                setShowConfirmModal(true);
-              }}
+              onClick={handleStartHospitalization}
               className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all cursor-pointer ${
                 isHospitalizing
                   ? "bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/30 border border-amber-400 font-bold"
@@ -301,24 +384,14 @@ export const ConsultationModal = ({
         <ActionConfirmModal
           show={showConfirmModal}
           title="Hospitalización seleccionada"
-          description={`¿Deseas enviar a ${cita.paciente} al área de internación y monitoreo?`}
+          description={`¿Deseas enviar a ${patient.name} al área de internación y monitoreo?`}
           confirmText="Aceptar"
           cancelText="Cancelar"
           onCancel={() => {
             setIsHospitalizing(false);
             setShowConfirmModal(false);
           }}
-          onConfirm={() => {
-            setShowConfirmModal(false);
-            if (onHospitalize) {
-              onHospitalize({
-                ...cita,
-                ...formData,
-                fechaIngreso: new Date().toISOString(),
-                estado: "Hospitalizado",
-              });
-            }
-          }}
+          onConfirm={handleConfirmHospitalization}
         />
 
         <ActionConfirmModal
@@ -326,29 +399,14 @@ export const ConsultationModal = ({
           title="Cambios sin guardar"
           description="Tienes modificaciones pendientes que no han sido guardadas. ¿Qué deseas hacer?"
           confirmText="Guardar y salir"
-          cancelText="Aceptar"
+          cancelText="Salir sin guardar"
           borderColor="border-blue-500/40"
           iconBgColor="bg-blue-600/20 border-blue-500/40 text-blue-400"
           onCancel={() => {
             setShowExitConfirmModal(false);
             onClose();
           }}
-          onConfirm={() => {
-            if (cita.paciente && cita.propietario) {
-              saveProfile(
-                cita.paciente,
-                cita.propietario,
-                formData.condicionesPrevias,
-                {
-                  edad: formData.edad,
-                  peso: formData.peso,
-                },
-              );
-            }
-            onSaveConsultation({ ...cita, ...formData }, false);
-            setShowExitConfirmModal(false);
-            onClose();
-          }}
+          onConfirm={handleSaveAndExit}
         />
       </div>
     </div>

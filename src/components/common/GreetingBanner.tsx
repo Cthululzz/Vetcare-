@@ -1,5 +1,5 @@
-// src/components/GreetingBanner.tsx
 import { useState, useEffect } from "react";
+import { useAuth } from "../../hooks/useAuth";
 
 const frasesManana = [
   "Todo está listo para comenzar una nueva jornada.",
@@ -28,11 +28,11 @@ const frasesNoche = [
   "Cada esfuerzo realizado hoy contribuye al bienestar animal.",
 ];
 
-interface GreetingBannerProps {
-  nombreDoctor: string;
-}
-
-export const GreetingBanner = ({ nombreDoctor }: GreetingBannerProps) => {
+// ============================================
+// COMPONENTE PRINCIPAL
+// ============================================
+export const GreetingBanner = () => {
+  const { user } = useAuth();
   const [saludo, setSaludo] = useState("");
   const [fraseDelDia, setFraseDelDia] = useState("");
 
@@ -56,10 +56,13 @@ export const GreetingBanner = ({ nombreDoctor }: GreetingBannerProps) => {
     setFraseDelDia(fraseAleatoria);
   }, []);
 
+  // Obtener nombre del usuario logueado, o usar placeholder si no hay
+  const nombreUsuario = user?.name || "Usuario";
+
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-sm">
       <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
-        {saludo}, {nombreDoctor}.
+        {saludo}, {nombreUsuario}.
       </h1>
       <p className="text-slate-400 mt-1 text-sm sm:text-base">
         {fraseDelDia || "Todo está listo para comenzar una nueva jornada."}

@@ -1,24 +1,67 @@
-import { useState } from "react";
-import { Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { useState, useEffect, type FormEvent } from "react";
+import { Mail, Lock, Eye, EyeOff, AlertCircle } from "lucide-react";
 import logo from "../assets/logo.png";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../hooks/useAuth";
 
 const Login = () => {
-  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
+  const { login, isAuthenticated } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // ============================================
+  // ESTADOS
+  // ============================================
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // ============================================
+  // EFECTOS
+  // ============================================
+
+  // Si ya está autenticado, redirigir al dashboard
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/", { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
+
+  // ============================================
+  // HANDLERS
+  // ============================================
+
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    navigate("/dashboard");
+    setError(null);
+    setIsLoading(true);
+
+    // Simular delay de red (en producción sería una llamada real al backend)
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    const result = login(email, password);
+
+    if (!result.success) {
+      setError(result.error || "Error desconocido");
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(false);
+    navigate("/", { replace: true });
   };
 
+  // ============================================
+  // RENDER
+  // ============================================
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800">
       <div className="w-full max-w-6xl grid lg:grid-cols-2 bg-slate-900 rounded-3xl overflow-hidden shadow-2xl relative">
         {/* Glow Original (Amarillo/Cálido) */}
         <div className="pointer-events-none absolute w-[600px] h-[600px] bg-[#ece883]/10 blur-[150px] animate-pulse rounded-full top-1/2 left-1/4 -translate-x-1/2 -translate-y-1/2" />
 
-        {/* NUEVO: Glow Purpura Oscuro de prueba */}
+        {/* Glow Purpura Oscuro */}
         <div className="pointer-events-none absolute w-[500px] h-[500px] bg-purple-600/15 blur-[160px] rounded-full bottom-[-10%] right-[-10%]" />
 
         {/* Left Side */}
@@ -63,8 +106,29 @@ const Login = () => {
               </div>
             </div>
 
+            {/* Credenciales de prueba */}
+            <div className="mt-8 p-4 rounded-xl bg-slate-800/50 border border-slate-700/50">
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                Credenciales de prueba
+              </p>
+              <div className="space-y-1.5 text-xs text-slate-300 font-mono">
+                <p>
+                  <span className="text-slate-500">Admin:</span>{" "}
+                  admin@vetcare.com / admin123
+                </p>
+                <p>
+                  <span className="text-slate-500">Veterinario:</span>{" "}
+                  vet@vetcare.com / vet123
+                </p>
+                <p>
+                  <span className="text-slate-500">Recepción:</span>{" "}
+                  recepcion@vetcare.com / recep123
+                </p>
+              </div>
+            </div>
+
             {/* Versión del sistema */}
-            <div className="mt-8 inline-flex items-center px-2.5 py-1 rounded-md bg-slate-800/80 border border-slate-700/60 text-xs text-slate-400 font-mono tracking-wider">
+            <div className="mt-4 inline-flex items-center px-2.5 py-1 rounded-md bg-slate-800/80 border border-slate-700/60 text-xs text-slate-400 font-mono tracking-wider">
               VetCare+ System v1.0
             </div>
           </div>
@@ -88,6 +152,14 @@ const Login = () => {
               Accede a tu plataforma veterinaria.
             </p>
 
+            {/* Mensaje de error */}
+            {error && (
+              <div className="mt-6 p-4 rounded-xl bg-red-950/40 border border-red-500/30 flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-red-300">{error}</p>
+              </div>
+            )}
+
             <form className="mt-10 space-y-6" onSubmit={handleSubmit}>
               {/* Email */}
               <div>
@@ -108,6 +180,10 @@ const Login = () => {
                     id="email"
                     type="email"
                     required
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    disabled={isLoading}
                     placeholder="correo@ejemplo.com"
                     className="
                       w-full
@@ -125,6 +201,8 @@ const Login = () => {
                       focus:border-[#ece883]
                       focus:ring-4
                       focus:ring-[#ece883]/20
+                      disabled:opacity-50
+                      disabled:cursor-not-allowed
                     "
                   />
                 </div>
@@ -149,6 +227,10 @@ const Login = () => {
                     id="password"
                     type={showPassword ? "text" : "password"}
                     required
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={isLoading}
                     placeholder="••••••••"
                     className="
                       w-full
@@ -166,18 +248,12 @@ const Login = () => {
                       focus:border-[#ece883]
                       focus:ring-4
                       focus:ring-[#ece883]/20
+                      disabled:opacity-50
+                      disabled:cursor-not-allowed
                     "
                   />
 
-                  <div
-                    className="
-                      absolute
-                      right-4
-                      top-1/2
-                      -translate-y-1/2
-                      group
-                    "
-                  >
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 group">
                     <button
                       type="button"
                       aria-label={
@@ -186,39 +262,13 @@ const Login = () => {
                           : "Mostrar contraseña"
                       }
                       onClick={() => setShowPassword(!showPassword)}
-                      className="
-                        text-slate-500
-                        hover:text-slate-300
-                        transition
-                      "
+                      disabled={isLoading}
+                      className="text-slate-500 hover:text-slate-300 transition disabled:opacity-50"
                     >
                       {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
 
-                    <div
-                      className="
-                        absolute
-                        right-0
-                        -top-11
-                        px-3
-                        py-1.5
-                        rounded-lg
-                        bg-slate-950
-                        border
-                        border-slate-700
-                        text-white
-                        text-xs
-                        shadow-lg
-                        whitespace-nowrap
-                        opacity-0
-                        pointer-events-none
-                        transition-all
-                        duration-200
-                        translate-y-1
-                        group-hover:opacity-100
-                        group-hover:translate-y-0
-                      "
-                    >
+                    <div className="absolute right-0 -top-11 px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-white text-xs shadow-lg whitespace-nowrap opacity-0 pointer-events-none transition-all duration-200 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0">
                       {showPassword
                         ? "Ocultar contraseña"
                         : "Mostrar contraseña"}
@@ -230,7 +280,8 @@ const Login = () => {
               <div className="flex items-center justify-between text-sm">
                 <button
                   type="button"
-                  className="text-slate-400 hover:text-white transition"
+                  disabled={isLoading}
+                  className="text-slate-400 hover:text-white transition disabled:opacity-50"
                 >
                   ¿Olvidaste tu contraseña?
                 </button>
@@ -238,6 +289,7 @@ const Login = () => {
 
               <button
                 type="submit"
+                disabled={isLoading || !email || !password}
                 className="
                   w-full
                   bg-[#ece883]
@@ -252,9 +304,14 @@ const Login = () => {
                   hover:shadow-[#ece883]/20
                   active:scale-[0.99]
                   cursor-pointer
+                  disabled:opacity-50
+                  disabled:cursor-not-allowed
+                  disabled:hover:bg-[#ece883]
+                  disabled:hover:shadow-none
+                  disabled:active:scale-100
                 "
               >
-                Iniciar sesión
+                {isLoading ? "Iniciando sesión..." : "Iniciar sesión"}
               </button>
             </form>
           </div>

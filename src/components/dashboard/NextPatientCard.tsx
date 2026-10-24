@@ -1,35 +1,49 @@
-// src/components/dashboard/NextPatientCard.tsx
 import { Clock, FileText, Stethoscope } from "lucide-react";
 import {
   getPetIcon,
-  getCardGlowConfig,
-  getBadgeStyle,
-} from "../schedule/appointmentUtils";
-
-interface Paciente {
-  id: string;
-  hora: string;
-  paciente: string;
-  propietario: string;
-  motivo: string;
-  tipo: string;
-  tipoMascota?: string;
-  genero?: "Macho" | "Hembra" | string;
-}
+  getAppointmentGlowConfig,
+  getAppointmentBadgeStyle,
+} from "../../utils/formatters";
+import { usePatients } from "../../hooks/usePatients";
+import { formatTime } from "../../utils/dateUtils";
+import { formatAppointmentTypeLabel } from "../../utils/formatters";
+import type { Appointment } from "../../types/appointment";
 
 interface NextPatientCardProps {
-  paciente: Paciente;
+  appointment: Appointment;
   onNavigate: (path: string) => void;
-  onStartConsultation?: (paciente: Paciente) => void;
+  onStartConsultation?: (appointment: Appointment) => void;
 }
 
 export const NextPatientCard = ({
-  paciente,
+  appointment,
   onNavigate,
 }: NextPatientCardProps) => {
+  // Obtener datos completos del paciente y dueño usando los IDs
+  const { getPatient, getOwner } = usePatients();
+  const patient = getPatient(appointment.patientId);
+  const owner = patient ? getOwner(patient.ownerId) : null;
+
+  // Manejo de caso donde no se encuentran los datos
+  if (!patient || !owner) {
+    return (
+      <div className="relative rounded-2xl p-7 bg-slate-900 border border-slate-800 min-h-[240px] flex items-center justify-center">
+        <p className="text-slate-400 text-sm">
+          Datos del paciente no disponibles.
+        </p>
+      </div>
+    );
+  }
+
   // Obtenemos la configuración de glow y estilo según el tipo de cita
-  const glowConfig = getCardGlowConfig(paciente.tipo);
-  const badgeStyle = getBadgeStyle(paciente.tipo);
+  const glowConfig = getAppointmentGlowConfig(appointment.tipo);
+  const badgeStyle = getAppointmentBadgeStyle(appointment.tipo);
+
+  // Formatear hora para mostrar
+  const horaFormateada = formatTime(appointment.hora);
+
+  // Formatear tipo de cita para mostrar
+  const tipoFormateado = formatAppointmentTypeLabel(appointment.tipo);
 
   return (
     <div
@@ -45,7 +59,7 @@ export const NextPatientCard = ({
             </h3>
           </div>
           <span className="bg-blue-500/10 text-blue-400 border border-blue-500/20 text-xs px-3 py-1 rounded-lg font-medium">
-            {paciente.hora}
+            {horaFormateada}
           </span>
         </div>
 
@@ -54,31 +68,26 @@ export const NextPatientCard = ({
             <div>
               <div className="flex items-center gap-2.5">
                 <h4 className="text-base sm:text-lg font-bold text-white">
-                  {paciente.paciente}
+                  {patient.name}
                 </h4>
 
                 {/* Ícono de mascota con su respectivo género */}
-                {getPetIcon(
-                  paciente.tipoMascota || paciente.tipo,
-                  paciente.genero,
-                )}
+                {getPetIcon(patient.species, patient.gender)}
               </div>
 
               <p className="text-xs sm:text-sm text-slate-400 mt-1">
                 Propietario:{" "}
-                <span className="text-slate-300 font-medium">
-                  {paciente.propietario}
-                </span>
+                <span className="text-slate-300 font-medium">{owner.name}</span>
               </p>
             </div>
             <span
               className={`text-xs px-2.5 py-1 rounded-md border font-medium ${badgeStyle}`}
             >
-              {paciente.tipo}
+              {tipoFormateado}
             </span>
           </div>
           <p className="text-xs sm:text-sm text-slate-300 mt-4 pt-4 border-t border-slate-800/60 italic leading-relaxed">
-            Motivo: "{paciente.motivo}"
+            Motivo: "{appointment.motivo}"
           </p>
         </div>
       </div>
@@ -88,7 +97,7 @@ export const NextPatientCard = ({
           type="button"
           onClick={(e) => {
             e.stopPropagation();
-            onNavigate(`/pacientes/${paciente.id}/historial`);
+            onNavigate(`/pacientes/${patient.id}/historial`);
           }}
           className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs sm:text-sm font-semibold py-3 px-4 rounded-xl transition-colors flex items-center justify-center gap-2 cursor-pointer"
         >
@@ -100,8 +109,8 @@ export const NextPatientCard = ({
           type="button"
           onClick={(e) => {
             e.stopPropagation();
-            // Obligamos a redirigir a la vista de agenda con el parámetro para abrir el modal allá
-            onNavigate(`/agenda?consultar=${paciente.id}`);
+            // Redirigir a la vista de agenda con el parámetro para abrir el modal allá
+            onNavigate(`/agenda?consultar=${appointment.id}`);
           }}
           className="flex-1 bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-semibold py-3 px-4 rounded-xl transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-blue-600/20"
         >

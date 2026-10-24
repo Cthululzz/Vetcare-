@@ -1,100 +1,159 @@
-// src/hooks/useAppointments.ts
-import { useState, useEffect } from "react";
+import { useMemo } from "react";
 import type { Appointment } from "../types/appointment";
-import { sortCitasByHour } from "../components/schedule/appointmentUtils";
-import { getLocalTodayStr } from "../utils/dateUtils";
+import type { EstadoCita } from "../constants/appConstants";
+import { useLocalStorage } from "./useLocalStorage";
+import {
+  getLocalTodayStr,
+  sortAppointmentsByDateTime,
+} from "../utils/dateUtils";
 
-export const useAppointments = () => {
-  const [appointments, setAppointments] = useState<Appointment[]>(() => {
-    const saved = localStorage.getItem("vet_appointments");
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        return [];
-      }
-    }
-    return [];
-  });
+// ============================================
+// CONSTANTES
+// ============================================
+const APPOINTMENTS_KEY = "vet_appointments";
 
-  useEffect(() => {
-    localStorage.setItem("vet_appointments", JSON.stringify(appointments));
-  }, [appointments]);
+// Estados que indican que la cita ya terminó
+const ESTADOS_FINALIZADOS: EstadoCita[] = ["finalizada", "cancelada"];
 
-  const saveAppointment = (appointmentData: any) => {
-    setAppointments((prev) => {
-      const index = prev.findIndex(
-        (app) => String(app.id) === String(appointmentData.id),
-      );
+// ============================================
+// UTILIDADES INTERNAS
+// ============================================
+function generateId(): string {
+  return crypto.randomUUID();
+}
 
-      if (index >= 0) {
-        const updated = [...prev];
-        updated[index] = {
-          ...updated[index],
-          ...appointmentData,
-        };
-        return updated;
-      } else {
-        const newAppointment: Appointment = {
-          ...appointmentData,
-          id: appointmentData.id
-            ? String(appointmentData.id)
-            : Date.now().toString(),
-        };
-        return [newAppointment, ...prev];
-      }
-    });
+function isoNow(): string {
+  return new Date().toISOString();
+}
+
+// ============================================
+// HOOK PRINCIPAL
+// ============================================
+export function useAppointments() {
+  const [appointments, setAppointments] = useLocalStorage<Appointment[]>(
+    APPOINTMENTS_KEY,
+    [],
+  );
+
+  // ---------- CRUD ----------
+
+  const getAppointment = (id: string): Appointment | undefined =>
+    appointments.find((app) => app.id === id);
+
+  const getAppointmentsByPatient = (patientId: string): Appointment[] =>
+    appointments.filter((app) => app.patientId === patientId);
+
+  const getAppointmentsByDoctor = (doctorId: string): Appointment[] =>
+    appointments.filter((app) => app.doctorId === doctorId);
+
+  const getAppointmentsByDate = (fecha: string): Appointment[] =>
+    appointments.filter((app) => app.fecha === fecha);
+
+  const createAppointment = (
+    data: Omit<Appointment, "id" | "createdAt" | "updatedAt">,
+  ): Appointment => {
+    const newAppointment: Appointment = {
+      ...data,
+      id: generateId(),
+      createdAt: isoNow(),
+      updatedAt: isoNow(),
+    };
+    setAppointments((prev) => [...prev, newAppointment]);
+    return newAppointment;
   };
 
-  const deleteAppointment = (id: string) => {
+  const updateAppointment = (
+    id: string,
+    updates: Partial<Omit<Appointment, "id" | "createdAt">>,
+  ) => {
     setAppointments((prev) =>
-      prev.filter((app) => String(app.id) !== String(id)),
+      prev.map((app) =>
+        app.id === id ? { ...app, ...updates, updatedAt: isoNow() } : app,
+      ),
     );
   };
 
-  // Función para determinar si un paciente (por nombre de mascota y propietario) va por primera vez
-  const isFirstTimePatient = (
-    nombrePaciente: string,
-    nombrePropietario: string,
-  ): boolean => {
-    if (!nombrePaciente || !nombrePropietario) return true;
-
-    const normalizedPatient = nombrePaciente.trim().toLowerCase();
-    const normalizedOwner = nombrePropietario.trim().toLowerCase();
-
-    // Filtramos todas las citas que coincidan con la mascota y el dueño
-    const historialPaciente = appointments.filter((app: any) => {
-      const appPatient = (app.paciente || "").trim().toLowerCase();
-      const appOwner = (app.propietario || "").trim().toLowerCase();
-      return appPatient === normalizedPatient && appOwner === normalizedOwner;
-    });
-
-    // Si no tiene registros previos o solo tiene 0/1, se considera su primera vez
-    return historialPaciente.length <= 1;
+  const deleteAppointment = (id: string) => {
+    setAppointments((prev) => prev.filter((app) => app.id !== id));
   };
+
+  const updateStatus = (id: string, status: EstadoCita) => {
+    updateAppointment(id, { status });
+  };
+
+  // ---------- CONSULTAS DERIVADAS (memoizadas) ----------
 
   const todayIso = getLocalTodayStr();
 
-  const citasDeHoy = sortCitasByHour(
-    appointments.filter((app: any) => {
-      const isToday = app.fecha === todayIso;
-      const status = (app.status || "").toLowerCase();
-      const isFinished =
-        status === "completada" ||
-        status === "finalizada" ||
-        status === "atendida";
-
-      return isToday && !isFinished;
-    }),
+  const citasDeHoy = useMemo(
+    () =>
+      sortAppointmentsByDateTime(
+        appointments.filter(
+          (app) =>
+            app.fecha === todayIso && !ESTADOS_FINALIZADOS.includes(app.status),
+        ),
+      ),
+    [appointments, todayIso],
   );
 
-  return {
-    appointments,
-    addAppointment: saveAppointment,
-    saveAppointment,
-    deleteAppointment,
-    isFirstTimePatient, // <-- Exportamos la función lista para usarse donde lo necesites
-    totalCitasHoy: citasDeHoy.length,
-    proximoPaciente: citasDeHoy[0] || null,
+  const proximoPaciente = useMemo(() => citasDeHoy[0] || null, [citasDeHoy]);
+
+  const totalCitasHoy = citasDeHoy.length;
+
+  // ---------- LÓGICA DE NEGOCIO ----------
+
+  /**
+   * Verifica si un paciente es primera vez (tiene 0 o 1 citas previas)
+   */
+  const isFirstTimePatient = (patientId: string): boolean => {
+    const historialPaciente = appointments.filter(
+      (app) => app.patientId === patientId,
+    );
+    return historialPaciente.length <= 1;
   };
-};
+
+  /**
+   * Busca conflictos de horario para un doctor en una fecha/hora específica
+   */
+  const hasScheduleConflict = (
+    doctorId: string,
+    fecha: string,
+    hora: string,
+    excludeAppointmentId?: string,
+  ): boolean => {
+    return appointments.some(
+      (app) =>
+        app.id !== excludeAppointmentId &&
+        app.doctorId === doctorId &&
+        app.fecha === fecha &&
+        app.hora === hora &&
+        !ESTADOS_FINALIZADOS.includes(app.status),
+    );
+  };
+
+  return {
+    // Datos crudos
+    appointments,
+
+    // Consultas
+    getAppointment,
+    getAppointmentsByPatient,
+    getAppointmentsByDoctor,
+    getAppointmentsByDate,
+
+    // CRUD
+    createAppointment,
+    updateAppointment,
+    deleteAppointment,
+    updateStatus,
+
+    // Derivados
+    citasDeHoy,
+    proximoPaciente,
+    totalCitasHoy,
+
+    // Lógica de negocio
+    isFirstTimePatient,
+    hasScheduleConflict,
+  };
+}

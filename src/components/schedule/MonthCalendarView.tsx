@@ -1,16 +1,16 @@
-// src/components/schedule/MonthCalendarView.tsx
 import {
   ChevronLeft,
   ChevronRight,
   Calendar as CalendarIcon,
 } from "lucide-react";
+import type { Appointment } from "../../types/appointment";
 
 interface MonthCalendarViewProps {
   currentCalendarDate: Date;
   onPrevMonth: () => void;
   onNextMonth: () => void;
   onGoToToday: () => void;
-  citas: any[];
+  appointments: Appointment[];
   onSelectDay: (dateStr: string, title: string) => void;
 }
 
@@ -19,7 +19,7 @@ export const MonthCalendarView = ({
   onPrevMonth,
   onNextMonth,
   onGoToToday,
-  citas,
+  appointments,
   onSelectDay,
 }: MonthCalendarViewProps) => {
   const year = currentCalendarDate.getFullYear();
@@ -92,24 +92,26 @@ export const MonthCalendarView = ({
           const capitalizedTitle =
             fullTitle.charAt(0).toUpperCase() + fullTitle.slice(1);
 
-          const citasDelDia = citas.filter((c) => c.fecha === targetDateStr);
-          const hasCita = citasDelDia.length > 0;
+          const appointmentsDelDia = appointments.filter(
+            (c) => c.fecha === targetDateStr,
+          );
+          const hasAppointment = appointmentsDelDia.length > 0;
 
           return (
             <div
               key={i}
               onClick={() => onSelectDay(targetDateStr, capitalizedTitle)}
               className={`h-16 rounded-xl border flex flex-col items-center justify-center p-1 transition-all cursor-pointer hover:scale-105 ${
-                hasCita
+                hasAppointment
                   ? "bg-[#ece883] text-slate-950 font-black border-[#ece883] shadow-md shadow-[#ece883]/10"
                   : "bg-slate-950/40 text-slate-400 border-slate-800/60 hover:border-slate-700 hover:text-white"
               }`}
             >
               <span className="text-xs">{dayNum}</span>
-              {hasCita && (
+              {hasAppointment && (
                 <span className="text-[9px] bg-slate-950/20 px-1.5 py-0.5 rounded mt-1 font-bold">
-                  {citasDelDia.length}{" "}
-                  {citasDelDia.length === 1 ? "cita" : "citas"}
+                  {appointmentsDelDia.length}{" "}
+                  {appointmentsDelDia.length === 1 ? "cita" : "citas"}
                 </span>
               )}
             </div>

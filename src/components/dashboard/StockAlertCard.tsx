@@ -1,5 +1,11 @@
 import { PackageX, ChevronRight } from "lucide-react";
 
+// TODO: Cuando se implemente el módulo de inventario, este componente debería:
+// 1. Consumir un hook `useInventory` en lugar de recibir la alerta como prop
+// 2. Obtener las alertas de stock crítico directamente desde el hook
+// 3. Eliminar el hardcodeo de `alertaStockCritico` en Dashboard.tsx
+// Por ahora funciona como placeholder con datos estáticos.
+
 interface AlertaStock {
   medicamento: string;
   stockActual: number;

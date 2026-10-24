@@ -15,7 +15,7 @@ export const QuickAccessBar = ({ onNavigate }: QuickAccessBarProps) => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Agendar Cita */}
         <button
-          onClick={() => onNavigate("/agenda/nuevo")}
+          onClick={() => onNavigate("/agenda")}
           className="relative overflow-hidden bg-slate-900 border border-slate-800 hover:border-[#ece883]/50 rounded-2xl p-6 transition-all group flex items-center gap-5 text-left shadow-sm cursor-pointer"
         >
           <div className="pointer-events-none absolute w-[220px] h-[220px] bg-[#ece883]/10 blur-[70px] rounded-full -top-10 -right-10 group-hover:bg-[#ece883]/20 transition-all" />

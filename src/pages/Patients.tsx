@@ -1,24 +1,25 @@
-// src/pages/Patients.tsx
 import { useNavigate } from "react-router-dom";
 import { Users, BedDouble, Activity, Bell, ChevronRight } from "lucide-react";
 import { Footer } from "../components/common/Footer";
+import { usePatients } from "../hooks/usePatients";
 
-interface PatientsProps {
-  patients?: any[]; // Lista completa de pacientes de tu base o estado global
-  hospitalizedPatients?: any[]; // Lista de pacientes hospitalizados
-}
-
-export const Patients = ({
-  patients = [],
-  hospitalizedPatients = [],
-}: PatientsProps) => {
+const Patients = () => {
   const navigate = useNavigate();
 
-  // Contadores reales basados en la longitud de los arrays
-  const totalFichas = patients.length;
+  // Consumir el hook directamente (sin props drilling)
+  const { patients, getActivePatients, getHospitalizedPatients } =
+    usePatients();
+
+  // Datos derivados con filtros del nuevo modelo
+  const activePatients = getActivePatients();
+  const hospitalizedPatients = getHospitalizedPatients();
+
+  // Contadores reales basados en la data del hook
+  const totalFichas = activePatients.length;
   const pacientesHospitalizadosCount = hospitalizedPatients.length;
 
-  // Puedes dejar un valor por defecto o calcularlo de notas reales si las tienes
+  // TODO: Este valor debería venir de un hook de recordatorios/tareas
+  // Por ahora lo dejamos en 0 como placeholder
   const recordatoriosActivos = 0;
 
   return (

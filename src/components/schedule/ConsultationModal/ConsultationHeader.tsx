@@ -1,14 +1,13 @@
-// src/components/schedule/ConsultationHeader.tsx
 import { Stethoscope, X } from "lucide-react";
 
 interface ConsultationHeaderProps {
-  tipo: string;
+  tipoLabel: string; // ← antes era `tipo: string` (ID crudo)
   badgeStyle: string;
   onCloseClick: () => void;
 }
 
 export const ConsultationHeader = ({
-  tipo,
+  tipoLabel,
   badgeStyle,
   onCloseClick,
 }: ConsultationHeaderProps) => {
@@ -32,7 +31,7 @@ export const ConsultationHeader = ({
         <span
           className={`text-xs px-3 py-1 rounded-md border font-semibold w-fit ${badgeStyle}`}
         >
-          {tipo}
+          {tipoLabel}
         </span>
 
         <button

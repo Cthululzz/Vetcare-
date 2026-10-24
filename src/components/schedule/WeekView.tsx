@@ -1,25 +1,33 @@
-// src/components/schedule/WeekView.tsx
+import { sortAppointmentsByDateTime } from "../../utils/dateUtils";
 import {
-  sortCitasByHour,
   getPetIcon,
-  getCardGlowConfig,
-} from "./appointmentUtils";
+  getAppointmentGlowConfig,
+  formatAppointmentTypeLabel,
+} from "../../utils/formatters";
+import { usePatients } from "../../hooks/usePatients";
+import type { Appointment } from "../../types/appointment";
 
 interface WeekViewProps {
   weekDays: { name: string; dateStr: string }[];
-  citas: any[];
+  appointments: Appointment[];
   onSelectDay: (dateStr: string, title: string) => void;
 }
 
-export const WeekView = ({ weekDays, citas, onSelectDay }: WeekViewProps) => {
+export const WeekView = ({
+  weekDays,
+  appointments,
+  onSelectDay,
+}: WeekViewProps) => {
+  const { getPatient, getOwner } = usePatients();
+
   return (
     <div className="space-y-4">
       {weekDays.map((dia, idx) => {
-        const citasDelDia = sortCitasByHour(
-          citas.filter((c) => c.fecha === dia.dateStr),
+        const appointmentsDelDia = sortAppointmentsByDateTime(
+          appointments.filter((c) => c.fecha === dia.dateStr),
         );
-        const primerasCitas = citasDelDia.slice(0, 3);
-        const citasRestantes = citasDelDia.length - 3;
+        const primerasCitas = appointmentsDelDia.slice(0, 3);
+        const citasRestantes = appointmentsDelDia.length - 3;
 
         const dateObj = new Date(dia.dateStr + "T00:00:00");
         const fullTitle = dateObj.toLocaleDateString("es-ES", {
@@ -44,18 +52,25 @@ export const WeekView = ({ weekDays, citas, onSelectDay }: WeekViewProps) => {
                 {capitalizedTitle}
               </h3>
               <span className="text-xs text-slate-400 group-hover:text-white transition-colors">
-                {citasDelDia.length} citas registradas (Ver detalle) &rarr;
+                {appointmentsDelDia.length} citas registradas (Ver detalle)
+                &rarr;
               </span>
             </div>
 
-            {citasDelDia.length === 0 ? (
+            {appointmentsDelDia.length === 0 ? (
               <p className="text-sm text-slate-500 italic relative z-10">
                 No hay citas registradas
               </p>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 relative z-10">
-                {primerasCitas.map((cita, cIdx) => {
-                  const glowConfig = getCardGlowConfig(cita.tipo);
+                {primerasCitas.map((appointment, cIdx) => {
+                  const glowConfig = getAppointmentGlowConfig(appointment.tipo);
+                  const patient = getPatient(appointment.patientId);
+                  const owner = patient ? getOwner(patient.ownerId) : null;
+
+                  const tipoLabel = formatAppointmentTypeLabel(
+                    appointment.tipo,
+                  );
 
                   return (
                     <div
@@ -70,25 +85,27 @@ export const WeekView = ({ weekDays, citas, onSelectDay }: WeekViewProps) => {
                       {/* Arriba: Tipo de cita */}
                       <div className="flex items-center justify-between mb-2.5 relative z-10">
                         <span className="text-xs bg-slate-800 text-slate-300 px-2.5 py-0.5 rounded-md font-medium tracking-wide">
-                          {cita.tipo || "General"}
+                          {tipoLabel}
                         </span>
                         <span className="text-xs text-blue-400 font-semibold">
-                          {cita.hora}
+                          {appointment.hora}
                         </span>
                       </div>
 
                       {/* Abajo: Ícono directamente junto al nombre del paciente */}
                       <div className="flex items-center gap-2.5 mb-1 relative z-10">
                         <div className="shrink-0 flex items-center justify-center">
-                          {getPetIcon(cita.tipoMascota, cita.genero)}
+                          {patient
+                            ? getPetIcon(patient.species, patient.gender)
+                            : null}
                         </div>
                         <span className="font-bold text-white text-base truncate">
-                          {cita.paciente}
+                          {patient?.name || "Paciente no encontrado"}
                         </span>
                       </div>
 
                       <p className="text-xs text-slate-400 truncate relative z-10 pl-7">
-                        Prop: {cita.propietario}
+                        Prop: {owner?.name || "Sin propietario"}
                       </p>
                     </div>
                   );

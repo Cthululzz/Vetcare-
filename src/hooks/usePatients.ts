@@ -1,110 +1,240 @@
-// src/hooks/usePatients.ts
-import { useState, useEffect } from "react";
+import { useLocalStorage } from "./useLocalStorage";
+import type { Patient, Owner, MedicalRecord } from "../types/patient";
+import type {
+  EspecieMascota,
+  Genero,
+  EstadoVacuna,
+} from "../constants/appConstants";
 
-export interface PatientRecord {
-  id: string;
-  name: string;
-  species: string;
-  breed?: string;
-  age: string;
-  gender: string;
-  ownerName: string;
-  ownerPhone: string;
-  vaccineStatus: string;
-  nextAppointment: string;
-  history: Array<{
-    date: string;
-    notes: string;
-    weight: string;
-    recommendations: string;
-  }>;
+// ============================================
+// KEYS DE ALMACENAMIENTO
+// ============================================
+const PATIENTS_KEY = "vet_patients";
+const OWNERS_KEY = "vet_owners";
+
+// ============================================
+// UTILIDADES INTERNAS
+// ============================================
+function generateId(): string {
+  return crypto.randomUUID();
 }
 
-const LOCAL_STORAGE_KEY = "vet_patients_directory";
+function isoNow(): string {
+  return new Date().toISOString();
+}
 
-export const usePatients = () => {
-  const [patients, setPatients] = useState<PatientRecord[]>(() => {
-    const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error("Error al cargar pacientes de localStorage", e);
-      }
-    }
-    // Datos iniciales de ejemplo o vacío
-    return [];
-  });
+// ============================================
+// HOOK PRINCIPAL
+// ============================================
+export function usePatients() {
+  const [patients, setPatients] = useLocalStorage<Patient[]>(PATIENTS_KEY, []);
+  const [owners, setOwners] = useLocalStorage<Owner[]>(OWNERS_KEY, []);
 
-  useEffect(() => {
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(patients));
-  }, [patients]);
+  // ---------- OWNERS ----------
 
-  // Función clave que se ejecuta al FINALIZAR una consulta
-  const registerOrUpdateFromConsultation = (consultationData: any) => {
-    setPatients((prevPatients) => {
-      const patientName = consultationData.paciente || consultationData.name;
-      const ownerName =
-        consultationData.propietario || consultationData.ownerName;
+  const getOwner = (ownerId: string): Owner | undefined =>
+    owners.find((o) => o.id === ownerId);
 
-      // Buscar si ya existe una ficha con el mismo nombre y propietario
-      const existingIndex = prevPatients.findIndex(
-        (p) =>
-          p.name.toLowerCase() === patientName?.toLowerCase() &&
-          p.ownerName.toLowerCase() === ownerName?.toLowerCase(),
-      );
+  const getOwnerByPhone = (phone: string): Owner | undefined =>
+    owners.find((o) => o.phone === phone);
 
-      const newHistoryEntry = {
-        date: new Date().toLocaleDateString(),
-        notes: consultationData.notas || "Sin notas registradas",
-        weight: consultationData.peso || "No registrado",
-        recommendations: consultationData.recomendaciones || "Ninguna",
-      };
-
-      if (existingIndex >= 0) {
-        // Si ya existe, actualizamos sus datos generales y añadimos la entrada al historial
-        const updated = [...prevPatients];
-        const current = updated[existingIndex];
-
-        updated[existingIndex] = {
-          ...current,
-          age: consultationData.edad || current.age,
-          gender: consultationData.genero || current.gender,
-          vaccineStatus:
-            consultationData.vaccineStatus || current.vaccineStatus,
-          nextAppointment: consultationData.fecha || current.nextAppointment,
-          history: [newHistoryEntry, ...current.history], // Añadimos al inicio del historial
-        };
-        return updated;
-      } else {
-        // Si es su primera vez, creamos la ficha oficial automáticamente
-        const newPatient: PatientRecord = {
-          id: consultationData.pacienteId || Date.now().toString(),
-          name: patientName || "Paciente sin nombre",
-          species:
-            consultationData.especie || consultationData.tipoMascota || "Perro",
-          breed: consultationData.raza || "No especificada",
-          age: consultationData.edad || "No especificada",
-          gender: consultationData.genero || "Macho",
-          ownerName: ownerName || "Sin propietario",
-          ownerPhone: consultationData.telefono || "Sin teléfono",
-          vaccineStatus: "Al día",
-          nextAppointment: consultationData.fecha || "Pendiente",
-          history: [newHistoryEntry],
-        };
-        return [...prevPatients, newPatient];
-      }
-    });
+  const createOwner = (data: Omit<Owner, "id" | "createdAt">): Owner => {
+    const newOwner: Owner = {
+      ...data,
+      id: generateId(),
+      createdAt: isoNow(),
+    };
+    setOwners((prev) => [...prev, newOwner]);
+    return newOwner;
   };
 
-  // Función para eliminar un paciente por su ID
+  const updateOwner = (
+    id: string,
+    updates: Partial<Omit<Owner, "id" | "createdAt">>,
+  ) => {
+    setOwners((prev) =>
+      prev.map((o) => (o.id === id ? { ...o, ...updates } : o)),
+    );
+  };
+
+  const deleteOwner = (id: string) => {
+    setOwners((prev) => prev.filter((o) => o.id !== id));
+    // Opcional: eliminar también sus mascotas
+    setPatients((prev) => prev.filter((p) => p.ownerId !== id));
+  };
+
+  // ---------- PATIENTS ----------
+
+  const getPatient = (patientId: string): Patient | undefined =>
+    patients.find((p) => p.id === patientId);
+
+  const getPatientsByOwner = (ownerId: string): Patient[] =>
+    patients.filter((p) => p.ownerId === ownerId);
+
+  const createPatient = (
+    data: Omit<
+      Patient,
+      "id" | "createdAt" | "updatedAt" | "history" | "isActive"
+    >,
+  ): Patient => {
+    const newPatient: Patient = {
+      ...data,
+      id: generateId(),
+      history: [],
+      isActive: true,
+      createdAt: isoNow(),
+      updatedAt: isoNow(),
+    };
+    setPatients((prev) => [...prev, newPatient]);
+    return newPatient;
+  };
+
+  const updatePatient = (
+    id: string,
+    updates: Partial<Omit<Patient, "id" | "createdAt">>,
+  ) => {
+    setPatients((prev) =>
+      prev.map((p) =>
+        p.id === id ? { ...p, ...updates, updatedAt: isoNow() } : p,
+      ),
+    );
+  };
+
   const deletePatient = (id: string) => {
-    setPatients((prevPatients) => prevPatients.filter((p) => p.id !== id));
+    // Soft delete: marcamos como inactivo en lugar de borrar
+    setPatients((prev) =>
+      prev.map((p) =>
+        p.id === id ? { ...p, isActive: false, updatedAt: isoNow() } : p,
+      ),
+    );
+  };
+
+  const hardDeletePatient = (id: string) => {
+    setPatients((prev) => prev.filter((p) => p.id !== id));
+  };
+
+  // ---------- HISTORIAL MÉDICO ----------
+
+  const addMedicalRecord = (
+    patientId: string,
+    record: Omit<MedicalRecord, "id">,
+  ) => {
+    const newRecord: MedicalRecord = {
+      ...record,
+      id: generateId(),
+    };
+    setPatients((prev) =>
+      prev.map((p) =>
+        p.id === patientId
+          ? {
+              ...p,
+              history: [newRecord, ...p.history],
+              updatedAt: isoNow(),
+            }
+          : p,
+      ),
+    );
+  };
+
+  // ---------- CONSULTA (lógica de negocio compuesta) ----------
+  // Esta función orquesta: crear/obtener dueño + crear/actualizar paciente + agregar historial
+  const registerFromConsultation = (params: {
+    ownerName: string;
+    ownerPhone: string;
+    ownerEmail?: string;
+    patientName: string;
+    species: EspecieMascota;
+    gender: Genero;
+    breed?: string;
+    birthDate?: string;
+    microchip?: string;
+    vaccineStatus: EstadoVacuna;
+    record: Omit<MedicalRecord, "id">;
+  }): { patient: Patient; owner: Owner } => {
+    // 1. Buscar o crear dueño
+    let owner = getOwnerByPhone(params.ownerPhone);
+    if (!owner) {
+      owner = createOwner({
+        name: params.ownerName,
+        phone: params.ownerPhone,
+        email: params.ownerEmail,
+      });
+    }
+
+    // 2. Buscar paciente existente (por nombre + dueño) o crear nuevo
+    let patient = patients.find(
+      (p) =>
+        p.name.toLowerCase() === params.patientName.toLowerCase() &&
+        p.ownerId === owner!.id &&
+        p.isActive,
+    );
+
+    if (!patient) {
+      patient = createPatient({
+        name: params.patientName,
+        species: params.species,
+        gender: params.gender,
+        ownerId: owner.id,
+        breed: params.breed,
+        birthDate: params.birthDate,
+        microchip: params.microchip,
+        vaccineStatus: params.vaccineStatus,
+      });
+    }
+
+    // 3. Agregar registro médico
+    addMedicalRecord(patient.id, params.record);
+
+    // Devolvemos el paciente actualizado
+    const updatedPatient = getPatient(patient.id)!;
+    return { patient: updatedPatient, owner };
+  };
+
+  // ---------- DERIVADOS (datos calculados, no almacenados) ----------
+
+  const getActivePatients = (): Patient[] => patients.filter((p) => p.isActive);
+
+  const getHospitalizedPatients = (): Patient[] =>
+    // Esto debería basarse en citas activas de tipo hospitalización,
+    // pero por ahora lo dejamos como filtro simple
+    patients.filter(
+      (p) =>
+        p.isActive &&
+        p.history.some((r) =>
+          r.recommendations?.toLowerCase().includes("hospitalizado"),
+        ),
+    );
+  const updateConditions = (patientId: string, conditions: string) => {
+    updatePatient(patientId, { conditions });
   };
 
   return {
+    // Datos crudos
     patients,
-    registerOrUpdateFromConsultation,
+    owners,
+
+    // Owners
+    getOwner,
+    getOwnerByPhone,
+    createOwner,
+    updateOwner,
+    deleteOwner,
+
+    // Patients
+    getPatient,
+    getPatientsByOwner,
+    getActivePatients,
+    getHospitalizedPatients,
+    createPatient,
+    updatePatient,
     deletePatient,
+    hardDeletePatient,
+
+    // Historial
+    addMedicalRecord,
+
+    // Consulta (lógica compuesta)
+    registerFromConsultation,
+    updateConditions,
   };
-};
+}

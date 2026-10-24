@@ -1,6 +1,7 @@
-// src/components/patients/PatientCard.tsx
 import type { Patient } from "../../types/patient";
-import { Cat, Dog, Heart, Calendar } from "lucide-react";
+import { Cat, Dog, Star, Heart, Calendar } from "lucide-react";
+import { usePatients } from "../../hooks/usePatients";
+import { getPatientDisplayAge } from "../../utils/dateUtils";
 
 interface PatientCardProps {
   patient: Patient & { lastVisit?: string };
@@ -8,9 +9,12 @@ interface PatientCardProps {
 }
 
 export const PatientCard = ({ patient, onOpenProfile }: PatientCardProps) => {
-  // Determinar si es hembra para el color del icono
-  const genderLower = patient.gender?.toLowerCase() || "";
-  const isFemale = genderLower.includes("hembra");
+  // Obtener datos del propietario usando el ID de referencia
+  const { getOwner } = usePatients();
+  const owner = getOwner(patient.ownerId);
+
+  // Determinar si es hembra para el color del ícono
+  const isFemale = patient.gender === "hembra";
 
   // Color dinámico según género
   const iconColorClass = isFemale ? "text-pink-400" : "text-blue-400";
@@ -18,13 +22,22 @@ export const PatientCard = ({ patient, onOpenProfile }: PatientCardProps) => {
     ? "bg-pink-500/10 border-pink-500/20"
     : "bg-blue-500/10 border-blue-500/20";
 
+  // Ícono según especie (comparación estricta con el tipo)
   const renderSpeciesIcon = () => {
-    const speciesLower = patient.species?.toLowerCase() || "";
-    if (speciesLower.includes("gato") || speciesLower.includes("felino")) {
-      return <Cat className={`w-7 h-7 ${iconColorClass}`} />;
+    switch (patient.species) {
+      case "gato":
+        return <Cat className={`w-7 h-7 ${iconColorClass}`} />;
+      case "perro":
+        return <Dog className={`w-7 h-7 ${iconColorClass}`} />;
+      case "exoticos":
+        return <Star className={`w-7 h-7 ${iconColorClass}`} />;
+      default:
+        return <Dog className={`w-7 h-7 ${iconColorClass}`} />;
     }
-    return <Dog className={`w-7 h-7 ${iconColorClass}`} />;
   };
+
+  // Calcular edad desde birthDate (en lugar de usar age como string)
+  const edadFormateada = getPatientDisplayAge(patient);
 
   return (
     <div className="bg-slate-950/80 border border-slate-800/80 hover:border-slate-700 transition-all rounded-2xl p-6 flex flex-col justify-between shadow-lg relative overflow-hidden group">
@@ -36,7 +49,9 @@ export const PatientCard = ({ patient, onOpenProfile }: PatientCardProps) => {
             <h4 className="font-extrabold text-white text-lg tracking-tight leading-snug">
               {patient.name}
             </h4>
-            <p className="text-xs text-slate-400 font-medium">{patient.age}</p>
+            <p className="text-xs text-slate-400 font-medium">
+              {edadFormateada}
+            </p>
             {patient.breed && (
               <p className="text-xs font-bold text-slate-200 tracking-wide truncate max-w-[180px]">
                 {patient.breed}
@@ -59,10 +74,12 @@ export const PatientCard = ({ patient, onOpenProfile }: PatientCardProps) => {
             <Heart className="w-4 h-4 text-slate-500" />
             Propietario:{" "}
             <span className="text-white font-semibold">
-              {patient.ownerName}
+              {owner?.name || "Sin propietario"}
             </span>
           </p>
-          <p className="text-xs text-slate-400 pl-6">📞 {patient.ownerPhone}</p>
+          <p className="text-xs text-slate-400 pl-6">
+            📞 {owner?.phone || "Sin teléfono"}
+          </p>
         </div>
 
         {/* Indicador de última visita (siempre visible como acceso rápido) */}

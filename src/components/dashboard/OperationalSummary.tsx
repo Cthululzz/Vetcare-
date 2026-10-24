@@ -1,19 +1,20 @@
-// src/components/dashboard/OperationalSummary.tsx
 import { Calendar, CheckSquare, AlertTriangle, ArrowRight } from "lucide-react";
+import { useAppointments } from "../../hooks/useAppointments";
 
 interface OperationalSummaryProps {
-  citas: number;
   tareas: number;
   alertas: number;
   onNavigate: (path: string) => void;
 }
 
 export const OperationalSummary = ({
-  citas,
   tareas,
   alertas,
   onNavigate,
 }: OperationalSummaryProps) => {
+  // Consumir citas directamente del hook (no más props drilling)
+  const { totalCitasHoy } = useAppointments();
+
   return (
     <div>
       <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
@@ -38,7 +39,7 @@ export const OperationalSummary = ({
               </div>
             </div>
             <div className="text-3xl font-bold text-white tracking-tight mb-1">
-              {citas}
+              {totalCitasHoy}
             </div>
             <p className="text-xs sm:text-sm text-slate-400">
               Pacientes agendados para la jornada actual.
