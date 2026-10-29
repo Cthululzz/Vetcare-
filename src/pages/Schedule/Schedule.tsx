@@ -17,6 +17,7 @@ import type { TabType } from "./types";
 const Schedule = () => {
   const [activeTab, setActiveTab] = useState<TabType>("hoy");
   const [currentCalendarDate, setCurrentCalendarDate] = useState(new Date());
+  const [showCompleted, setShowCompleted] = useState(false);
 
   const {
     appointments,
@@ -35,7 +36,7 @@ const Schedule = () => {
     handleSaveAppointment,
     handleStartConsultation,
     handleSaveConsultation,
-    handleHospitalize, // ← AGREGADO
+    handleHospitalize,
     handleCloseConsultation,
   } = useScheduleActions();
 
@@ -43,10 +44,15 @@ const Schedule = () => {
 
   const citasActivas = useMemo(
     () =>
-      appointments.filter(
-        (c) => c.status !== "finalizada" && c.status !== "cancelada",
-      ),
-    [appointments],
+      appointments.filter((c) => {
+        // Si el toggle está activo, mostrar todas (incluyendo finalizadas)
+        if (showCompleted) {
+          return c.status !== "cancelada";
+        }
+        // Si no, solo mostrar activas
+        return c.status !== "finalizada" && c.status !== "cancelada";
+      }),
+    [appointments, showCompleted],
   );
 
   const citasDeHoy = useMemo(
@@ -64,13 +70,31 @@ const Schedule = () => {
       {/* Header */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 relative overflow-hidden shadow-sm">
         <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-[#ece883]/5 rounded-full blur-2xl pointer-events-none" />
-        <div className="relative z-10 space-y-1">
-          <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-            Citas Agendadas
-          </h1>
-          <p className="text-sm text-slate-400 max-w-xl">
-            Gestión y control de todas las citas registradas en el sistema.
-          </p>
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="space-y-1">
+            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+              Citas Agendadas
+            </h1>
+            <p className="text-sm text-slate-400 max-w-xl">
+              Gestión y control de todas las citas registradas en el sistema.
+            </p>
+          </div>
+
+          {/* Toggle de citas finalizadas */}
+          <label className="flex items-center gap-3 cursor-pointer select-none">
+            <span className="text-sm text-slate-300 font-medium whitespace-nowrap">
+              Mostrar finalizadas
+            </span>
+            <div className="relative">
+              <input
+                type="checkbox"
+                checked={showCompleted}
+                onChange={(e) => setShowCompleted(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#ece883]/50 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 after:border-slate-700 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#ece883] peer-checked:after:bg-white"></div>
+            </div>
+          </label>
         </div>
       </div>
 
@@ -266,7 +290,7 @@ const Schedule = () => {
           patient={modalPatient}
           owner={modalOwner}
           onSaveConsultation={handleSaveConsultation}
-          onHospitalize={handleHospitalize} // ← AGREGADO
+          onHospitalize={handleHospitalize}
         />
       )}
     </div>
