@@ -5,8 +5,7 @@ import { useInventoryMovements } from "../../hooks/useInventoryMovements";
 import { useInventory } from "../../hooks/useInventory";
 
 export const InventoryReminderPopup = () => {
-  const { getRemindersToNotify, markAsNotified, dismissReminder } =
-    useInventoryReminders();
+  const { getRemindersToNotify, markAsNotified } = useInventoryReminders();
   const { getPendingMovements, completeMovement } = useInventoryMovements();
   const { getProduct } = useInventory();
 
@@ -74,6 +73,10 @@ export const InventoryReminderPopup = () => {
   };
 
   const handleDismiss = () => {
+    // Marcar todos los recordatorios como notificados para reiniciar el timer de 30 min
+    pendingReminders.forEach((reminder) => {
+      markAsNotified(reminder.id);
+    });
     setIsVisible(false);
   };
 
@@ -268,7 +271,7 @@ export const InventoryReminderPopup = () => {
               onClick={handleDismiss}
               className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold transition-colors"
             >
-              Ver más tarde
+              Recuérdame más tarde
             </button>
           )}
         </div>
