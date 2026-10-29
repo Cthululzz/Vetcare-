@@ -83,7 +83,7 @@ const Schedule = () => {
           {/* Toggle de citas finalizadas */}
           <label className="flex items-center gap-3 cursor-pointer select-none">
             <span className="text-sm text-slate-300 font-medium whitespace-nowrap">
-              Mostrar finalizadas
+              Mostrar citas finalizadas
             </span>
             <div className="relative">
               <input

@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   BedDouble,
@@ -12,6 +12,11 @@ import {
 import { Footer } from "../components/common/Footer";
 import { usePatients } from "../hooks/usePatients";
 import { useHospitalizations } from "../hooks/useHospitalizations";
+import {
+  EvolutionFormModal,
+  type EvolutionData,
+} from "../components/hospitalization/EvolutionFormModal";
+import { DischargeConfirmModal } from "../components/hospitalization/DischargeConfirmModal";
 import type { Patient, Owner } from "../types/patient";
 import type { Hospitalization } from "../types/hospitalization";
 
@@ -41,8 +46,15 @@ const TOTAL_CAMAS = 10;
 const HospitalizationView = () => {
   const navigate = useNavigate();
 
-  const { getOwner } = usePatients();
+  const { getOwner, addMedicalRecord } = usePatients();
   const { getActiveHospitalizations, dischargePatient } = useHospitalizations();
+
+  // Estados para modales
+  const [showEvolutionModal, setShowEvolutionModal] = useState(false);
+  const [showDischargeModal, setShowDischargeModal] = useState(false);
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  const [selectedHospitalization, setSelectedHospitalization] =
+    useState<Hospitalization | null>(null);
 
   // ============================================
   // DATOS DERIVADOS
@@ -81,42 +93,94 @@ const HospitalizationView = () => {
   // ============================================
 
   /**
-   * Da de alta a un paciente hospitalizado.
-   * NO elimina al paciente del sistema, solo marca la hospitalización como finalizada.
+   * Abre el modal de registrar evolución
+   */
+  const handleRegistrarEvolucion = (patient: Patient) => {
+    setSelectedPatient(patient);
+    setShowEvolutionModal(true);
+  };
+
+  /**
+   * Guarda la evolución en el historial del paciente
+   */
+  const handleSaveEvolution = (
+    patientId: string,
+    evolutionData: EvolutionData,
+  ) => {
+    // Construir nota completa con todos los datos
+    let notes = `EVOLUCIÓN HOSPITALIZACIÓN\n\n${evolutionData.notes}`;
+
+    // Agregar signos vitales si existen
+    const vitalSigns = [];
+    if (evolutionData.temperature)
+      vitalSigns.push(`Temperatura: ${evolutionData.temperature}°C`);
+    if (evolutionData.heartRate)
+      vitalSigns.push(`Frec. Cardíaca: ${evolutionData.heartRate} lpm`);
+    if (evolutionData.respiratoryRate)
+      vitalSigns.push(
+        `Frec. Respiratoria: ${evolutionData.respiratoryRate} rpm`,
+      );
+
+    if (vitalSigns.length > 0) {
+      notes += `\n\nSIGNOS VITALES\n${vitalSigns.join("\n")}`;
+    }
+
+    // Agregar cambios de tratamiento si existen
+    if (evolutionData.treatmentChanges) {
+      notes += `\n\nCAMBIOS EN TRATAMIENTO\n${evolutionData.treatmentChanges}`;
+    }
+
+    // Agregar observaciones de enfermería si existen
+    if (evolutionData.nursingObservations) {
+      notes += `\n\nOBSERVACIONES DE ENFERMERÍA\n${evolutionData.nursingObservations}`;
+    }
+
+    // Guardar en el historial del paciente
+    addMedicalRecord(patientId, {
+      date: new Date().toISOString(),
+      notes,
+      recommendations: "Continuar monitoreo según evolución",
+    });
+
+    // Cerrar modal
+    setShowEvolutionModal(false);
+    setSelectedPatient(null);
+  };
+
+  /**
+   * Abre el modal de confirmar alta
    */
   const handleDarDeAlta = (
     hospitalization: Hospitalization,
     patient: Patient,
   ) => {
-    const confirmacion = window.confirm(
-      `¿Confirmas dar de alta a ${patient.name}?\n\n` +
-        `Esta acción marcará la hospitalización como finalizada y registrará el evento en el historial clínico.`,
-    );
-
-    if (confirmacion) {
-      dischargePatient(hospitalization.id);
-      // TODO: Registrar evento de alta en historial clínico
-      // addMedicalRecord(patient.id, {
-      //   date: new Date().toISOString(),
-      //   notes: "Alta médica - Fin de hospitalización",
-      //   recommendations: "Seguimiento ambulatorio"
-      // });
-    }
+    setSelectedHospitalization(hospitalization);
+    setSelectedPatient(patient);
+    setShowDischargeModal(true);
   };
 
   /**
-   * Abre el modal/formulario para registrar evolución clínica
-   * TODO: Implementar modal de evolución con campos específicos
+   * Confirma el alta del paciente
    */
-  const handleRegistrarEvolucion = (patient: Patient) => {
-    alert(
-      `Función pendiente: Registrar evolución para ${patient.name}\n\n` +
-        `Debería abrir un formulario con:\n` +
-        `- Signos vitales\n` +
-        `- Notas de enfermería\n` +
-        `- Cambios en tratamiento\n` +
-        `- Próxima revisión programada`,
-    );
+  const handleConfirmDischarge = () => {
+    if (!selectedHospitalization || !selectedPatient) return;
+
+    // Dar de alta en hospitalización
+    dischargePatient(selectedHospitalization.id);
+
+    // Registrar en el historial clínico
+    addMedicalRecord(selectedPatient.id, {
+      date: new Date().toISOString(),
+      notes:
+        "ALTA MÉDICA - Fin de hospitalización\n\nEl paciente ha sido dado de alta del área de hospitalización.",
+      recommendations:
+        "Seguimiento ambulatorio según indicaciones médicas. Controlar evolución en domicilio.",
+    });
+
+    // Cerrar modal
+    setShowDischargeModal(false);
+    setSelectedHospitalization(null);
+    setSelectedPatient(null);
   };
 
   /**
@@ -338,6 +402,29 @@ const HospitalizationView = () => {
       </div>
 
       <Footer />
+
+      {/* Modal de Registrar Evolución */}
+      <EvolutionFormModal
+        isOpen={showEvolutionModal}
+        patient={selectedPatient}
+        onSave={handleSaveEvolution}
+        onClose={() => {
+          setShowEvolutionModal(false);
+          setSelectedPatient(null);
+        }}
+      />
+
+      {/* Modal de Confirmar Alta */}
+      <DischargeConfirmModal
+        isOpen={showDischargeModal}
+        patient={selectedPatient}
+        onConfirm={handleConfirmDischarge}
+        onCancel={() => {
+          setShowDischargeModal(false);
+          setSelectedHospitalization(null);
+          setSelectedPatient(null);
+        }}
+      />
     </div>
   );
 };
