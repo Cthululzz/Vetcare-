@@ -75,14 +75,6 @@ export const AppointmentCard = ({
     }
   };
 
-  // Si no encontramos el paciente, mostramos una versión degradada
-  console.log("🔍 AppointmentCard debug:", {
-    appointmentId: appointment.id,
-    patientId: appointment.patientId,
-    patientFound: !!patient,
-    ownerId: patient?.ownerId,
-    ownerFound: !!owner,
-  });
   if (!patient || !owner) {
     return (
       <div className="relative rounded-2xl p-5 sm:p-6 bg-slate-900 border border-slate-800 min-h-[240px] flex items-center justify-center">
