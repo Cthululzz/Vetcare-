@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react";
+import { useCallback } from "react";
 import { useLocalStorage } from "./useLocalStorage";
 import { useNavigate } from "react-router-dom";
 import type { UserRole } from "../constants/appConstants";
@@ -123,6 +123,7 @@ export function useAuth() {
     },
     [authState.user],
   );
+
   /**
    * Auto-login para desarrollo. Solo funciona si VITE_BYPASS_AUTH está activo.
    * Loguea automáticamente con las credenciales de VITE_DEFAULT_USER_EMAIL
@@ -152,12 +153,6 @@ export function useAuth() {
     return false;
   }, [authState.isAuthenticated, setAuthState]);
 
-  // Y agrega devAutoLogin al return:
-  return {
-    // ... todo lo que ya existe
-    devAutoLogin,
-  };
-
   return {
     // Estado
     user: authState.user,
@@ -170,5 +165,8 @@ export function useAuth() {
     // Consultas
     hasRole,
     hasAnyRole,
+
+    // Desarrollo
+    devAutoLogin,
   };
 }
