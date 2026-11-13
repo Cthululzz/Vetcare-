@@ -7,8 +7,7 @@ const Patients = () => {
   const navigate = useNavigate();
 
   // Consumir el hook directamente (sin props drilling)
-  const { patients, getActivePatients, getHospitalizedPatients } =
-    usePatients();
+  const { getActivePatients, getHospitalizedPatients } = usePatients();
 
   // Datos derivados con filtros del nuevo modelo
   const activePatients = getActivePatients();

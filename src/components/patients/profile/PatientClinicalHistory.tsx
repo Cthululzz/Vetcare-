@@ -9,7 +9,6 @@ import {
   ChevronUp,
 } from "lucide-react";
 import type { MedicalRecord } from "../../../types/patient";
-import { formatDateShort } from "../../../utils/dateUtils";
 
 interface PatientClinicalHistoryProps {
   history: MedicalRecord[];

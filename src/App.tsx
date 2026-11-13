@@ -19,7 +19,7 @@ interface ProtectedRouteProps {
 }
 
 function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { isAuthenticated, devAutoLogin } = useAuth();
+  const { isAuthenticated } = useAuth();
 
   const bypassAuth = import.meta.env.VITE_BYPASS_AUTH === "true";
 

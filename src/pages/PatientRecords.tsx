@@ -376,7 +376,7 @@ const PatientRecords = () => {
           isOpen={isModalOpen}
           onClose={handleCloseProfile}
           patient={selectedPatient}
-          owner={getOwner(selectedPatient.ownerId)}
+          owner={getOwner(selectedPatient.ownerId) ?? null}
           onDeleteMedicalRecord={handleDeleteMedicalRecord}
           onDeletePatient={handleDeleteFullPatient}
         />
