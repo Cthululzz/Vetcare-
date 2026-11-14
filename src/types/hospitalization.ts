@@ -50,6 +50,8 @@ export interface Hospitalization {
   // Datos de internación
   bed?: string;
   diagnosis?: string;
+  /** Peso del paciente al momento del ingreso, en kg. */
+  weightAtAdmission?: number;
   monitoringFrequency?: number; // horas entre revisiones
   nextReviewAt?: string; // ISO
   sucursalId?: string;

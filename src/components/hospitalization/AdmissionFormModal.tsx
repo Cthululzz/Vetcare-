@@ -18,6 +18,7 @@ export interface AdmissionData {
   patientId: string;
   reason: string;
   diagnosis?: string;
+  weight: number;
   bed: string;
   monitoringFrequency: number;
   initialTreatment?: string;
@@ -45,6 +46,7 @@ export const AdmissionFormModal = ({
   const [selectedPatientId, setSelectedPatientId] = useState("");
   const [reason, setReason] = useState("");
   const [diagnosis, setDiagnosis] = useState("");
+  const [weight, setWeight] = useState("");
   const [bed, setBed] = useState("");
   const [monitoringFrequency, setMonitoringFrequency] = useState(
     DEFAULT_MONITORING_FREQUENCY,
@@ -79,6 +81,7 @@ export const AdmissionFormModal = ({
     setSelectedPatientId("");
     setReason("");
     setDiagnosis("");
+    setWeight("");
     setBed("");
     setMonitoringFrequency(DEFAULT_MONITORING_FREQUENCY);
     setInitialTreatment("");
@@ -102,6 +105,13 @@ export const AdmissionFormModal = ({
       setError("Indica el motivo de la internación.");
       return;
     }
+
+    const parsedWeight = Number(weight);
+    if (!Number.isFinite(parsedWeight) || parsedWeight <= 0) {
+      setError("Ingresa el peso del paciente en kg (mayor a cero).");
+      return;
+    }
+
     if (!selectedBed) {
       setError("No hay camas disponibles en este momento.");
       return;
@@ -111,6 +121,7 @@ export const AdmissionFormModal = ({
       patientId: selectedPatientId,
       reason: reason.trim(),
       diagnosis: diagnosis.trim() || undefined,
+      weight: parsedWeight,
       bed: selectedBed,
       monitoringFrequency,
       initialTreatment: initialTreatment.trim() || undefined,
@@ -254,6 +265,24 @@ export const AdmissionFormModal = ({
                 value={diagnosis}
                 onChange={(event) => setDiagnosis(event.target.value)}
                 placeholder="Ej. Gastroenteritis aguda"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#ece883] transition-colors"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
+                Peso al ingreso (kg) *
+              </label>
+              <input
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={weight}
+                onChange={(event) => {
+                  setWeight(event.target.value);
+                  setError("");
+                }}
+                placeholder="Ej. 12.5"
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#ece883] transition-colors"
               />
             </div>

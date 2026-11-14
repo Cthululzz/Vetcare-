@@ -25,22 +25,28 @@ export const buildWhatsAppLink = (phone: string, message: string): string => {
 };
 
 /**
+ * Saludo según la hora local del envío.
+ */
+export const buildTimeGreeting = (date: Date = new Date()): string => {
+  const hour = date.getHours();
+  if (hour < 12) return "Buenos días";
+  if (hour < 19) return "Buenas tardes";
+  return "Buenas noches";
+};
+
+/**
  * Mensaje de recordatorio de revisión para un paciente hospitalizado.
  * El remitente es la sucursal/establecimiento, nunca el nombre de la app.
  */
 export const buildReviewReminderMessage = (params: {
-  ownerName?: string;
   patientName: string;
   reviewDate: string;
   sucursal?: string;
 }): string => {
-  const greeting = params.ownerName
-    ? `Hola ${params.ownerName},`
-    : "Hola,";
   const sender = params.sucursal?.trim() || "la clínica veterinaria";
 
   return [
-    greeting,
+    `${buildTimeGreeting()},`,
     `le escribimos de ${sender} por ${params.patientName}.`,
     `Le recordamos que tiene una revisión programada para el ${params.reviewDate}.`,
     "Si tiene dudas o necesita reagendar, responda a este mensaje.",
@@ -53,19 +59,15 @@ export const buildReviewReminderMessage = (params: {
  * Mensaje con las indicaciones de alta de un paciente hospitalizado.
  */
 export const buildDischargeMessage = (params: {
-  ownerName?: string;
   patientName: string;
   sucursal?: string;
   nextControlDate?: string;
   indications?: string;
 }): string => {
-  const greeting = params.ownerName
-    ? `Hola ${params.ownerName},`
-    : "Hola,";
   const sender = params.sucursal?.trim() || "la clínica veterinaria";
 
   return [
-    greeting,
+    `${buildTimeGreeting()},`,
     `le escribimos de ${sender} por ${params.patientName}.`,
     params.nextControlDate
       ? `Su próximo control es el ${params.nextControlDate}.`

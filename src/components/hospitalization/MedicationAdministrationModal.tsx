@@ -239,7 +239,7 @@ export const MedicationAdministrationModal = ({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
-                Descontar de inventario
+                Descontar de inventario (opcional)
               </label>
               <div className="flex items-center gap-2">
                 <input
@@ -272,10 +272,10 @@ export const MedicationAdministrationModal = ({
           </div>
 
           <p className="text-[11px] text-slate-500">
-            La dosis es lo que recibe el paciente (por ejemplo, 1 pastilla o 5
-            ml). El descuento de inventario es independiente: usa{" "}
-            <span className="text-slate-300">0</span> si no corresponde descontar
-            stock (por ejemplo, cuando el inventario se lleva por caja).
+            Anota lo que le diste al paciente: por ejemplo, 5 ml, 1 pastilla o
+            10 gotas. Si además quieres descontar stock, escribe cuántas
+            unidades salieron del inventario; si no, deja el descuento en{" "}
+            <span className="text-slate-300">0</span>.
           </p>
 
           <div>
@@ -293,8 +293,8 @@ export const MedicationAdministrationModal = ({
 
           <p className="text-[11px] text-slate-500">
             {isEditing
-              ? "Al guardar se ajustará el stock según la diferencia entre el descuento anterior y el nuevo."
-              : "Si indicas un descuento mayor a 0, se registrará un retiro en inventario con el nombre del paciente."}
+              ? "Al guardar se ajustará el stock según el nuevo descuento."
+              : "Si el descuento es mayor a 0, esa cantidad se restará del stock."}
           </p>
 
           {error && (

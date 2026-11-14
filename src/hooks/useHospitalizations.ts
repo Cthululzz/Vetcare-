@@ -68,6 +68,7 @@ export interface ActiveHospitalization {
 export interface AdmitPatientOptions {
   bed?: string;
   diagnosis?: string;
+  weight?: number;
   monitoringFrequency?: number;
   nextReviewAt?: string;
   notes?: string;
@@ -131,6 +132,7 @@ export function useHospitalizations() {
         status: "activa",
         bed,
         diagnosis: options?.diagnosis,
+        weightAtAdmission: options?.weight,
         monitoringFrequency,
         nextReviewAt,
         notes: options?.notes,

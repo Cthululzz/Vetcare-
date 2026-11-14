@@ -303,6 +303,7 @@ const HospitalizationView = () => {
     const created = admitPatient(data.patientId, data.reason, {
       bed: data.bed,
       diagnosis: data.diagnosis,
+      weight: data.weight,
       monitoringFrequency: data.monitoringFrequency,
       nextReviewAt,
       notes: data.initialTreatment,
@@ -318,10 +319,12 @@ const HospitalizationView = () => {
 
     addMedicalRecord(data.patientId, {
       date: new Date().toISOString(),
+      weight: data.weight,
       notes: [
         "INGRESO A HOSPITALIZACIÓN",
         `Motivo: ${data.reason}`,
         data.diagnosis ? `Diagnóstico presuntivo: ${data.diagnosis}` : "",
+        `Peso al ingreso: ${data.weight} kg`,
         `Cama: ${data.bed}`,
         `Sucursal: ${getSucursalName(data.sucursalId)}`,
         `Frecuencia de monitoreo: cada ${data.monitoringFrequency} horas`,
@@ -657,7 +660,6 @@ const HospitalizationView = () => {
     }
 
     const message = buildReviewReminderMessage({
-      ownerName: item.owner?.name,
       patientName: item.patient.name,
       reviewDate: formatDateTime(item.nextReviewAt),
       sucursal: item.hospitalization.sucursalId
@@ -688,7 +690,6 @@ const HospitalizationView = () => {
 
     const summary = hospitalization.dischargeSummary;
     const message = buildDischargeMessage({
-      ownerName: owner?.name,
       patientName: patient.name,
       sucursal: hospitalization.sucursalId
         ? getSucursalName(hospitalization.sucursalId)
@@ -928,6 +929,12 @@ const HospitalizationView = () => {
                       )}
                       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
                         <span>Ingreso: {formatRelativeDate(item.admissionDate)}</span>
+                        <span>
+                          Peso:{" "}
+                          {item.hospitalization.weightAtAdmission != null
+                            ? `${item.hospitalization.weightAtAdmission} kg`
+                            : "No registrado"}
+                        </span>
                         <span
                           className={`inline-flex items-center gap-1 ${
                             item.reviewOverdue ? "text-red-400" : ""

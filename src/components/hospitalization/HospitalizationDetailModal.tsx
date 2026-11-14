@@ -133,6 +133,14 @@ export const HospitalizationDetailModal = ({
               value={hospitalization.bed || "Sin cama asignada"}
             />
             <DataField
+              label="Peso al ingreso"
+              value={
+                hospitalization.weightAtAdmission != null
+                  ? `${hospitalization.weightAtAdmission} kg`
+                  : undefined
+              }
+            />
+            <DataField
               label="Ingreso"
               value={formatDateTime(hospitalization.admittedAt)}
             />

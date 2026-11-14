@@ -238,6 +238,7 @@ export function useScheduleActions() {
     // 2. Registrar ingreso a hospitalización (hereda la sucursal de la cita)
     admitPatient(patient.id, notes || undefined, {
       sucursalId: appointment.sucursalId,
+      weight,
     });
 
     // 3. La consulta queda en curso (el paciente sigue en atención)
