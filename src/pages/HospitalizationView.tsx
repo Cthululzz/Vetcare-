@@ -250,33 +250,34 @@ const HospitalizationView = () => {
   return (
     <div className="flex flex-col min-h-[calc(100vh-2rem)] justify-between w-full px-4 sm:px-6 lg:px-8 mx-auto">
       <div className="space-y-6 pb-6 max-w-7xl w-full mx-auto">
-        {/* Cabecera con botón de retorno al Hub */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <button
-              onClick={() => navigate("/pacientes")}
-              className="inline-flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-white mb-2 transition-colors cursor-pointer"
-            >
-              <ArrowLeft className="w-4 h-4" /> Volver al Hub de Pacientes
-            </button>
-            <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight flex items-center gap-3">
-              <div className="p-2.5 rounded-2xl bg-emerald-600/20 text-emerald-400 border border-emerald-500/30">
-                <BedDouble className="w-6 h-6" />
-              </div>
-              Área de Hospitalización y Monitoreo
-            </h1>
-            <p className="text-sm text-slate-400 mt-1">
-              Control activo de pacientes internados, tratamientos y signos
-              vitales.
-            </p>
-          </div>
+        {/* Header */}
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 relative overflow-hidden shadow-sm">
+          <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-[#ece883]/5 rounded-full blur-2xl pointer-events-none" />
+          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="space-y-1">
+              <button
+                onClick={() => navigate("/pacientes")}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-[#ece883] mb-2 transition-colors cursor-pointer"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" /> Volver al Hub de Pacientes
+              </button>
+              <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-3">
+                <BedDouble className="w-8 h-8 text-[#ece883]" />
+                Área de Hospitalización y Monitoreo
+              </h1>
+              <p className="text-sm text-slate-400 max-w-xl">
+                Control activo de pacientes internados, tratamientos y signos
+                vitales.
+              </p>
+            </div>
 
-          <button
-            onClick={handleIngresarPaciente}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold transition-colors shadow-lg shadow-emerald-600/20 cursor-pointer self-start sm:self-auto"
-          >
-            <Plus className="w-4 h-4" /> Ingresar Paciente
-          </button>
+            <button
+              onClick={handleIngresarPaciente}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#ece883] hover:bg-[#e4df68] text-slate-950 text-sm font-bold transition-colors shadow-md shadow-[#ece883]/10 cursor-pointer self-start sm:self-auto"
+            >
+              <Plus className="w-4 h-4" /> Ingresar Paciente
+            </button>
+          </div>
         </div>
 
         {/* Tarjetas de Resumen Rápido */}
@@ -325,15 +326,19 @@ const HospitalizationView = () => {
         </div>
 
         {/* Listado de Pacientes Hospitalizados */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-          <div className="px-6 py-4 border-b border-slate-800 bg-slate-950/40">
-            <h2 className="text-base font-bold text-white">
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-[#ece883]">
               Pacientes en Cuidado Activo
             </h2>
+            <span className="text-xs text-slate-400 bg-slate-950 px-3 py-1 rounded-full border border-slate-800">
+              {totalInternados}{" "}
+              {totalInternados === 1 ? "paciente" : "pacientes"}
+            </span>
           </div>
 
           {hospitalizedPatientsView.length === 0 ? (
-            <div className="p-12 text-center">
+            <div className="text-center py-12">
               <Stethoscope className="w-12 h-12 text-slate-600 mx-auto mb-3 stroke-1" />
               <p className="text-sm text-slate-400 mb-2 font-medium">
                 No hay pacientes hospitalizados en este momento.
@@ -345,21 +350,21 @@ const HospitalizationView = () => {
               </p>
             </div>
           ) : (
-            <div className="divide-y divide-slate-800">
+            <div className="space-y-3">
               {hospitalizedPatientsView.map((item) => (
                 <div
                   key={item.hospitalization.id}
-                  className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-slate-800/20 transition-colors"
+                  className="bg-slate-950/60 border border-slate-800 hover:border-slate-700 rounded-xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all"
                 >
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-3">
-                      <h3 className="text-lg font-bold text-white">
+                  <div className="space-y-1.5">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-base font-bold text-white">
                         {item.patient.name}
                       </h3>
-                      <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-950/80 text-emerald-400 border border-emerald-900/50 font-medium">
+                      <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold">
                         {item.bed}
                       </span>
-                      <span className="text-xs px-2.5 py-0.5 rounded-full bg-blue-950/80 text-blue-400 border border-blue-900/50 font-medium">
+                      <span className="text-[10px] px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20 font-semibold">
                         {item.status}
                       </span>
                     </div>
@@ -370,7 +375,7 @@ const HospitalizationView = () => {
                       </span>{" "}
                       ({formatSpeciesAndBreed(item.patient)})
                     </p>
-                    <p className="text-sm text-slate-300 pt-1 font-medium italic">
+                    <p className="text-sm text-slate-300 font-medium italic">
                       Motivo: "{item.reason}"
                     </p>
                     <p className="text-xs text-slate-500">
@@ -378,12 +383,12 @@ const HospitalizationView = () => {
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-3 self-end md:self-auto">
+                  <div className="flex items-center gap-2 self-end md:self-auto shrink-0">
                     <button
                       onClick={() => handleRegistrarEvolucion(item.patient)}
-                      className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-colors cursor-pointer"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-colors cursor-pointer"
                     >
-                      Registrar Evolución
+                      <Activity className="w-3.5 h-3.5" /> Registrar Evolución
                     </button>
                     <button
                       onClick={() =>
@@ -391,7 +396,7 @@ const HospitalizationView = () => {
                       }
                       className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 text-xs font-semibold transition-colors cursor-pointer"
                     >
-                      <CheckCircle className="w-4 h-4" /> Dar de Alta
+                      <CheckCircle className="w-3.5 h-3.5" /> Dar de Alta
                     </button>
                   </div>
                 </div>

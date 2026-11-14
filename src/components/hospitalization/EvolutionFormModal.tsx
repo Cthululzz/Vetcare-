@@ -100,7 +100,7 @@ export const EvolutionFormModal = ({
               required
               rows={4}
               placeholder="Describa el estado actual del paciente, evolución clínica, respuesta al tratamiento..."
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-colors resize-none"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#ece883] transition-colors resize-none"
             />
           </div>
 
@@ -116,7 +116,7 @@ export const EvolutionFormModal = ({
                 value={formData.temperature}
                 onChange={handleChange}
                 placeholder="Ej. 38.5"
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-colors"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#ece883] transition-colors"
               />
             </div>
             <div>
@@ -129,7 +129,7 @@ export const EvolutionFormModal = ({
                 value={formData.heartRate}
                 onChange={handleChange}
                 placeholder="Ej. 120"
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-colors"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#ece883] transition-colors"
               />
             </div>
             <div>
@@ -142,7 +142,7 @@ export const EvolutionFormModal = ({
                 value={formData.respiratoryRate}
                 onChange={handleChange}
                 placeholder="Ej. 20"
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-colors"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#ece883] transition-colors"
               />
             </div>
           </div>
@@ -158,7 +158,7 @@ export const EvolutionFormModal = ({
               onChange={handleChange}
               rows={2}
               placeholder="Medicamentos agregados, modificados o suspendidos..."
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-colors resize-none"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#ece883] transition-colors resize-none"
             />
           </div>
 
@@ -173,7 +173,7 @@ export const EvolutionFormModal = ({
               onChange={handleChange}
               rows={2}
               placeholder="Alimentación, hidratación, comportamiento, movilidad..."
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-colors resize-none"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#ece883] transition-colors resize-none"
             />
           </div>
         </form>
@@ -190,7 +190,7 @@ export const EvolutionFormModal = ({
           <button
             type="submit"
             onClick={handleSubmit}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold transition-colors shadow-lg shadow-emerald-600/20"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#ece883] hover:bg-[#e4df68] text-slate-950 text-sm font-bold transition-colors shadow-lg shadow-[#ece883]/10"
           >
             <Save className="w-4 h-4" />
             Guardar Evolución
