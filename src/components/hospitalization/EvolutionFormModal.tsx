@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { X, Save, Activity } from "lucide-react";
+import { X, Save, Activity, CalendarClock } from "lucide-react";
 import type { Patient } from "../../types/patient";
 
 interface EvolutionFormModalProps {
@@ -16,7 +16,19 @@ export interface EvolutionData {
   respiratoryRate?: string;
   treatmentChanges?: string;
   nursingObservations?: string;
+  /** Fecha y hora local (yyyy-MM-ddTHH:mm) de la próxima revisión. */
+  nextReviewAt?: string;
 }
+
+const EMPTY_FORM: EvolutionData = {
+  notes: "",
+  temperature: "",
+  heartRate: "",
+  respiratoryRate: "",
+  treatmentChanges: "",
+  nursingObservations: "",
+  nextReviewAt: "",
+};
 
 export const EvolutionFormModal = ({
   isOpen,
@@ -24,14 +36,7 @@ export const EvolutionFormModal = ({
   onSave,
   onClose,
 }: EvolutionFormModalProps) => {
-  const [formData, setFormData] = useState<EvolutionData>({
-    notes: "",
-    temperature: "",
-    heartRate: "",
-    respiratoryRate: "",
-    treatmentChanges: "",
-    nursingObservations: "",
-  });
+  const [formData, setFormData] = useState<EvolutionData>(EMPTY_FORM);
 
   if (!isOpen || !patient) return null;
 
@@ -42,18 +47,15 @@ export const EvolutionFormModal = ({
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleClose = () => {
+    setFormData(EMPTY_FORM);
+    onClose();
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSave(patient.id, formData);
-    // Reset form
-    setFormData({
-      notes: "",
-      temperature: "",
-      heartRate: "",
-      respiratoryRate: "",
-      treatmentChanges: "",
-      nursingObservations: "",
-    });
+    setFormData(EMPTY_FORM);
   };
 
   return (
@@ -76,8 +78,8 @@ export const EvolutionFormModal = ({
             </div>
           </div>
           <button
-            onClick={onClose}
-            className="p-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+            onClick={handleClose}
+            className="p-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -85,6 +87,7 @@ export const EvolutionFormModal = ({
 
         {/* Form */}
         <form
+          id="evolution-form"
           onSubmit={handleSubmit}
           className="flex-1 overflow-y-auto p-6 space-y-5"
         >
@@ -147,6 +150,27 @@ export const EvolutionFormModal = ({
             </div>
           </div>
 
+          {/* Próxima revisión */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
+              Próxima revisión
+            </label>
+            <div className="relative">
+              <CalendarClock className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type="datetime-local"
+                name="nextReviewAt"
+                value={formData.nextReviewAt}
+                onChange={handleChange}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#ece883] transition-colors"
+              />
+            </div>
+            <p className="text-[11px] text-slate-500 mt-1">
+              Si lo dejas vacío, se programará según la frecuencia de monitoreo
+              del ingreso.
+            </p>
+          </div>
+
           {/* Cambios en Tratamiento */}
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
@@ -182,15 +206,15 @@ export const EvolutionFormModal = ({
         <div className="flex items-center justify-end gap-3 p-6 border-t border-slate-800">
           <button
             type="button"
-            onClick={onClose}
-            className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold transition-colors"
+            onClick={handleClose}
+            className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold transition-colors cursor-pointer"
           >
             Cancelar
           </button>
           <button
             type="submit"
-            onClick={handleSubmit}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#ece883] hover:bg-[#e4df68] text-slate-950 text-sm font-bold transition-colors shadow-lg shadow-[#ece883]/10"
+            form="evolution-form"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#ece883] hover:bg-[#e4df68] text-slate-950 text-sm font-bold transition-colors shadow-lg shadow-[#ece883]/10 cursor-pointer"
           >
             <Save className="w-4 h-4" />
             Guardar Evolución

@@ -1,6 +1,7 @@
 import type { Patient } from "../../types/patient";
-import { Cat, Dog, Star, Heart, Calendar } from "lucide-react";
+import { Cat, Dog, Star, Heart, Calendar, BedDouble } from "lucide-react";
 import { usePatients } from "../../hooks/usePatients";
+import { useHospitalizations } from "../../hooks/useHospitalizations";
 import { getPatientDisplayAge } from "../../utils/dateUtils";
 
 interface PatientCardProps {
@@ -11,7 +12,9 @@ interface PatientCardProps {
 export const PatientCard = ({ patient, onOpenProfile }: PatientCardProps) => {
   // Obtener datos del propietario usando el ID de referencia
   const { getOwner } = usePatients();
+  const { isHospitalized } = useHospitalizations();
   const owner = getOwner(patient.ownerId);
+  const hospitalized = isHospitalized(patient.id);
 
   // Determinar si es hembra para el color del ícono
   const isFemale = patient.gender === "hembra";
@@ -49,6 +52,12 @@ export const PatientCard = ({ patient, onOpenProfile }: PatientCardProps) => {
             <h4 className="font-extrabold text-white text-lg tracking-tight leading-snug">
               {patient.name}
             </h4>
+            {hospitalized && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                <BedDouble className="w-3 h-3" />
+                Hospitalizado
+              </span>
+            )}
             <p className="text-xs text-slate-400 font-medium">
               {edadFormateada}
             </p>

@@ -1,8 +1,18 @@
 import { useCallback } from "react";
 import { useLocalStorage } from "./useLocalStorage";
-import type { Hospitalization } from "../types/hospitalization";
+import type {
+  DischargeSummary,
+  Hospitalization,
+  HospitalizationEvolution,
+  MedicationAdministration,
+} from "../types/hospitalization";
 import { usePatients } from "./usePatients";
 import type { Patient } from "../types/patient";
+import {
+  CAMAS_HOSPITALIZACION,
+  DEFAULT_MONITORING_FREQUENCY,
+  calcularProximaRevision,
+} from "../constants/hospitalization";
 
 const HOSPITALIZATIONS_KEY = "vet_hospitalizations";
 
@@ -14,9 +24,63 @@ function isoNow(): string {
   return new Date().toISOString();
 }
 
+/**
+ * Camas ocupadas por internaciones activas.
+ * Se deriva de los datos: no se guarda un estado de ocupación aparte.
+ */
+export function getOccupiedBeds(
+  hospitalizations: Hospitalization[],
+): Map<string, Hospitalization> {
+  const occupied = new Map<string, Hospitalization>();
+
+  for (const hospitalization of hospitalizations) {
+    if (hospitalization.status === "activa" && hospitalization.bed) {
+      occupied.set(hospitalization.bed, hospitalization);
+    }
+  }
+
+  return occupied;
+}
+
+/**
+ * Una revisión está pendiente si aún no se programó o si ya venció.
+ */
+export function isReviewPending(hospitalization: Hospitalization): boolean {
+  if (hospitalization.status !== "activa") return false;
+  if (!hospitalization.nextReviewAt) return true;
+  return new Date(hospitalization.nextReviewAt).getTime() <= Date.now();
+}
+
+/**
+ * Una revisión está vencida si tenía fecha programada y ya pasó.
+ */
+export function isReviewOverdue(hospitalization: Hospitalization): boolean {
+  if (hospitalization.status !== "activa") return false;
+  if (!hospitalization.nextReviewAt) return false;
+  return new Date(hospitalization.nextReviewAt).getTime() <= Date.now();
+}
+
 export interface ActiveHospitalization {
   hospitalization: Hospitalization;
   patient: Patient;
+}
+
+export interface AdmitPatientOptions {
+  bed?: string;
+  diagnosis?: string;
+  monitoringFrequency?: number;
+  nextReviewAt?: string;
+  notes?: string;
+  sucursalId?: string;
+  createdBy?: string;
+}
+
+export interface DischargeDetails {
+  diagnosis: string;
+  treatment: string;
+  indications: string;
+  nextControlAt?: string;
+  dischargedBy?: string;
 }
 
 export function useHospitalizations() {
@@ -28,29 +92,169 @@ export function useHospitalizations() {
 
   // ---------- ACCIONES ----------
 
+  /**
+   * Registra un ingreso. Devuelve `null` si el paciente ya está hospitalizado
+   * o si la cama solicitada está ocupada.
+   */
   const admitPatient = useCallback(
-    (patientId: string, reason?: string): Hospitalization => {
+    (
+      patientId: string,
+      reason?: string,
+      options?: AdmitPatientOptions,
+    ): Hospitalization | null => {
+      const alreadyAdmitted = hospitalizations.some(
+        (h) => h.patientId === patientId && h.status === "activa",
+      );
+      if (alreadyAdmitted) return null;
+
+      const occupiedBeds = getOccupiedBeds(hospitalizations);
+      let bed = options?.bed?.trim() || undefined;
+
+      if (bed && occupiedBeds.has(bed)) return null;
+
+      if (!bed) {
+        bed = CAMAS_HOSPITALIZACION.find((b) => !occupiedBeds.has(b));
+      }
+
+      const monitoringFrequency =
+        options?.monitoringFrequency ?? DEFAULT_MONITORING_FREQUENCY;
+      const nextReviewAt =
+        options?.nextReviewAt ??
+        calcularProximaRevision(monitoringFrequency);
+
       const record: Hospitalization = {
         id: generateId(),
         patientId,
         admittedAt: isoNow(),
         reason,
         status: "activa",
+        bed,
+        diagnosis: options?.diagnosis,
+        monitoringFrequency,
+        nextReviewAt,
+        notes: options?.notes,
+        sucursalId: options?.sucursalId,
+        createdBy: options?.createdBy,
+        evolutions: [],
+        medications: [],
       };
+
       setHospitalizations((prev) => [...prev, record]);
       return record;
+    },
+    [hospitalizations, setHospitalizations],
+  );
+
+  const updateHospitalization = useCallback(
+    (hospitalizationId: string, updates: Partial<Hospitalization>) => {
+      setHospitalizations((prev) =>
+        prev.map((h) =>
+          h.id === hospitalizationId ? { ...h, ...updates } : h,
+        ),
+      );
     },
     [setHospitalizations],
   );
 
-  const dischargePatient = useCallback(
-    (hospitalizationId: string) => {
+  /**
+   * Agrega una evolución al registro de internación.
+   */
+  const addEvolution = useCallback(
+    (
+      hospitalizationId: string,
+      data: Omit<HospitalizationEvolution, "id" | "date"> & { date?: string },
+    ): HospitalizationEvolution | null => {
+      const target = hospitalizations.find(
+        (h) => h.id === hospitalizationId,
+      );
+      if (!target) return null;
+
+      const evolution: HospitalizationEvolution = {
+        id: generateId(),
+        date: data.date ?? isoNow(),
+        notes: data.notes,
+        temperature: data.temperature,
+        heartRate: data.heartRate,
+        respiratoryRate: data.respiratoryRate,
+        treatmentChanges: data.treatmentChanges,
+        nursingObservations: data.nursingObservations,
+        nextReviewAt: data.nextReviewAt,
+        createdBy: data.createdBy,
+      };
+
       setHospitalizations((prev) =>
         prev.map((h) =>
           h.id === hospitalizationId
-            ? { ...h, status: "alta" as const, dischargedAt: isoNow() }
+            ? {
+                ...h,
+                evolutions: [...(h.evolutions ?? []), evolution],
+                nextReviewAt: evolution.nextReviewAt ?? h.nextReviewAt,
+              }
             : h,
         ),
+      );
+
+      return evolution;
+    },
+    [hospitalizations, setHospitalizations],
+  );
+
+  /**
+   * Registra una medicación administrada durante la hospitalización.
+   * El descuento de stock lo realiza quien invoca (useInventoryMovements).
+   */
+  const addMedicationAdministration = useCallback(
+    (
+      hospitalizationId: string,
+      data: Omit<MedicationAdministration, "id" | "date">,
+    ): MedicationAdministration | null => {
+      const target = hospitalizations.find(
+        (h) => h.id === hospitalizationId,
+      );
+      if (!target) return null;
+
+      const administration: MedicationAdministration = {
+        id: generateId(),
+        date: isoNow(),
+        ...data,
+      };
+
+      setHospitalizations((prev) =>
+        prev.map((h) =>
+          h.id === hospitalizationId
+            ? {
+                ...h,
+                medications: [...(h.medications ?? []), administration],
+              }
+            : h,
+        ),
+      );
+
+      return administration;
+    },
+    [hospitalizations, setHospitalizations],
+  );
+
+  const dischargePatient = useCallback(
+    (hospitalizationId: string, details?: DischargeDetails) => {
+      const dischargedAt = isoNow();
+
+      setHospitalizations((prev) =>
+        prev.map((h) => {
+          if (h.id !== hospitalizationId) return h;
+
+          const dischargeSummary: DischargeSummary | undefined = details
+            ? { ...details, dischargedAt }
+            : h.dischargeSummary;
+
+          return {
+            ...h,
+            status: "alta" as const,
+            dischargedAt,
+            nextReviewAt: undefined,
+            dischargeSummary,
+          };
+        }),
       );
     },
     [setHospitalizations],
@@ -73,6 +277,27 @@ export function useHospitalizations() {
       );
   }, [hospitalizations, getPatient]);
 
+  /**
+   * Historial de altas, más recientes primero.
+   */
+  const getDischargedHospitalizations =
+    useCallback((): ActiveHospitalization[] => {
+      return hospitalizations
+        .filter((h) => h.status === "alta")
+        .map((h) => ({
+          hospitalization: h,
+          patient: getPatient(h.patientId),
+        }))
+        .filter((x): x is ActiveHospitalization =>
+          Boolean(x.patient && x.patient.isActive),
+        )
+        .sort((a, b) =>
+          (b.hospitalization.dischargedAt ?? b.hospitalization.admittedAt).localeCompare(
+            a.hospitalization.dischargedAt ?? a.hospitalization.admittedAt,
+          ),
+        );
+    }, [hospitalizations, getPatient]);
+
   const isHospitalized = useCallback(
     (patientId: string): boolean =>
       hospitalizations.some(
@@ -87,12 +312,40 @@ export function useHospitalizations() {
     [hospitalizations],
   );
 
+  /**
+   * Camas libres según las internaciones activas.
+   */
+  const getAvailableBeds = useCallback((): string[] => {
+    const occupied = getOccupiedBeds(hospitalizations);
+    return CAMAS_HOSPITALIZACION.filter((bed) => !occupied.has(bed));
+  }, [hospitalizations]);
+
+  /**
+   * Indica si una cama está ocupada por otra internación activa.
+   */
+  const isBedOccupied = useCallback(
+    (bed: string, exceptHospitalizationId?: string): boolean =>
+      hospitalizations.some(
+        (h) =>
+          h.status === "activa" &&
+          h.bed === bed &&
+          h.id !== exceptHospitalizationId,
+      ),
+    [hospitalizations],
+  );
+
   return {
     hospitalizations,
     admitPatient,
+    updateHospitalization,
+    addEvolution,
+    addMedicationAdministration,
     dischargePatient,
     getActiveHospitalizations,
+    getDischargedHospitalizations,
     isHospitalized,
     getHospitalizationsByPatient,
+    getAvailableBeds,
+    isBedOccupied,
   };
 }

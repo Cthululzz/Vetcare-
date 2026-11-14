@@ -1,6 +1,7 @@
-import { Cat, Dog, Star } from "lucide-react";
+import { BedDouble, Cat, Dog, Star } from "lucide-react";
 import type { Patient } from "../../../types/patient";
 import { getPatientDisplayAge } from "../../../utils/dateUtils";
+import { useHospitalizations } from "../../../hooks/useHospitalizations";
 
 interface PatientProfileHeaderProps {
   patient: Patient;
@@ -9,6 +10,8 @@ interface PatientProfileHeaderProps {
 export const PatientProfileHeader = ({
   patient,
 }: PatientProfileHeaderProps) => {
+  const { isHospitalized } = useHospitalizations();
+  const hospitalized = isHospitalized(patient.id);
   const isFemale = patient.gender === "hembra";
   const iconColorClass = isFemale ? "text-pink-400" : "text-blue-400";
   const badgeBgClass = isFemale
@@ -54,6 +57,12 @@ export const PatientProfileHeader = ({
             <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-800 text-slate-300 border border-slate-700">
               {patient.gender === "hembra" ? "Hembra" : "Macho"}
             </span>
+            {hospitalized && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                <BedDouble className="w-3.5 h-3.5" />
+                Hospitalizado
+              </span>
+            )}
           </div>
           <p className="text-sm font-bold text-[#ece883]">
             {speciesLabel} {patient.breed ? `• ${patient.breed}` : ""}

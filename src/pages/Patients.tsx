@@ -2,24 +2,28 @@ import { useNavigate } from "react-router-dom";
 import { Users, BedDouble, Activity, Bell, ChevronRight } from "lucide-react";
 import { Footer } from "../components/common/Footer";
 import { usePatients } from "../hooks/usePatients";
+import {
+  isReviewPending,
+  useHospitalizations,
+} from "../hooks/useHospitalizations";
 
 const Patients = () => {
   const navigate = useNavigate();
 
   // Consumir el hook directamente (sin props drilling)
-  const { getActivePatients, getHospitalizedPatients } = usePatients();
+  const { getActivePatients } = usePatients();
+  const { getActiveHospitalizations } = useHospitalizations();
 
   // Datos derivados con filtros del nuevo modelo
   const activePatients = getActivePatients();
-  const hospitalizedPatients = getHospitalizedPatients();
+  const activeHospitalizations = getActiveHospitalizations();
 
-  // Contadores reales basados en la data del hook
+  // Contadores reales basados en la data de hospitalizaciones
   const totalFichas = activePatients.length;
-  const pacientesHospitalizadosCount = hospitalizedPatients.length;
-
-  // TODO: Este valor debería venir de un hook de recordatorios/tareas
-  // Por ahora lo dejamos en 0 como placeholder
-  const recordatoriosActivos = 0;
+  const pacientesHospitalizadosCount = activeHospitalizations.length;
+  const recordatoriosActivos = activeHospitalizations.filter(
+    ({ hospitalization }) => isReviewPending(hospitalization),
+  ).length;
 
   return (
     <div className="flex flex-col min-h-[calc(100vh-2rem)] justify-between w-full px-4 sm:px-6 lg:px-8 mx-auto">
