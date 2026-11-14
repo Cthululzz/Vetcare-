@@ -10,6 +10,8 @@ import {
   formatQuantity,
   formatQuantityWithUnit,
   getContentInBaseUnit,
+  getStockDisplay,
+  isMeasuredUnit,
 } from "../../utils/inventoryUnits";
 
 interface InventoryMovementFormProps {
@@ -51,7 +53,7 @@ export const InventoryMovementForm = ({
     ? getContentInBaseUnit(selectedProduct)
     : null;
   const canUsePackages = Boolean(
-    movementType === "ingreso" &&
+    movementType !== "ajuste" &&
       selectedProduct?.packageType &&
       contentInBaseUnit &&
       contentInBaseUnit > 0,
@@ -76,6 +78,11 @@ export const InventoryMovementForm = ({
       : movementType === "ajuste"
         ? baseQuantity
         : Math.max(0, currentStock - baseQuantity);
+
+  const stockDisplay = selectedProduct ? getStockDisplay(selectedProduct) : null;
+  const resultingDisplay = selectedProduct
+    ? getStockDisplay({ ...selectedProduct, currentStock: resultingStock })
+    : null;
 
   const subtractsStock =
     movementType === "retiro" ||
@@ -199,6 +206,7 @@ export const InventoryMovementForm = ({
                   type="button"
                   onClick={() => {
                     setMovementType(type);
+                    setInputMode(type === "ingreso" ? "packages" : "base");
                     setError("");
                   }}
                   className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors capitalize ${
@@ -231,7 +239,7 @@ export const InventoryMovementForm = ({
               <option value="">Seleccionar producto...</option>
               {products.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.name} (Stock: {formatQuantityWithUnit(p.currentStock, p.unit)})
+                  {p.name} (Stock: {getStockDisplay(p).primary})
                 </option>
               ))}
             </select>
@@ -278,7 +286,9 @@ export const InventoryMovementForm = ({
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
               {effectiveInputMode === "packages"
-                ? `Cantidad recibida (${packageLabel})`
+                ? movementType === "ingreso"
+                  ? `Cantidad recibida (${packageLabel})`
+                  : `Cantidad (${packageLabel})`
                 : movementType === "ajuste"
                   ? `Nuevo stock total (${unit || "unidad"})`
                   : `Cantidad (${unit || "unidad"})`}{" "}
@@ -321,6 +331,7 @@ export const InventoryMovementForm = ({
                   </p>
                 )}
                 {effectiveInputMode === "base" &&
+                  isMeasuredUnit(selectedProduct.unit) &&
                   formatPackageEquivalence(baseQuantity, selectedProduct) && (
                     <p>
                       {formatPackageEquivalence(baseQuantity, selectedProduct)}
@@ -328,20 +339,27 @@ export const InventoryMovementForm = ({
                   )}
                 <p>
                   Stock actual:{" "}
-                  {formatQuantityWithUnit(
-                    selectedProduct.currentStock,
-                    selectedProduct.unit,
-                  )}
+                  <span className="text-slate-300 font-semibold">
+                    {stockDisplay?.primary}
+                  </span>
                 </p>
                 <p>
                   Quedará:{" "}
                   <span className="text-slate-300 font-semibold">
-                    {formatQuantityWithUnit(
-                      resultingStock,
-                      selectedProduct.unit,
-                    )}
+                    {resultingDisplay?.primary}
                   </span>
+                  {resultingDisplay?.detailLabel === "Total interno" &&
+                  resultingDisplay.detail
+                    ? ` (${resultingDisplay.detail})`
+                    : ""}
                 </p>
+                {resultingDisplay?.detailLabel === "Equivale a" &&
+                  resultingDisplay.detail && (
+                    <p>
+                      {resultingDisplay.detailLabel}:{" "}
+                      {resultingDisplay.detail}
+                    </p>
+                  )}
               </div>
             )}
           </div>

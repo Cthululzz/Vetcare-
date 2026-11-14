@@ -4,6 +4,7 @@ import { useInventoryMovements } from "../../hooks/useInventoryMovements";
 import { useInventory } from "../../hooks/useInventory";
 import type { MovementType } from "../../types/inventory";
 import {
+  formatMovementEquivalence,
   formatMovementPackages,
   formatMovementQuantity,
 } from "../../utils/inventoryUnits";
@@ -293,11 +294,15 @@ export const InventoryMovementHistory = ({
                           <div>
                             {formatMovementQuantity(movement, product)}
                           </div>
-                          {formatMovementPackages(movement) && (
+                          {formatMovementPackages(movement) ? (
                             <div className="text-[11px] text-slate-500">
                               {formatMovementPackages(movement)}
                             </div>
-                          )}
+                          ) : formatMovementEquivalence(movement, product) ? (
+                            <div className="text-[11px] text-slate-500">
+                              {formatMovementEquivalence(movement, product)}
+                            </div>
+                          ) : null}
                         </td>
                         <td className="py-3 text-sm text-slate-300">
                           {movement.userName || (

@@ -52,7 +52,12 @@ import {
   buildReviewReminderMessage,
   buildWhatsAppLink,
 } from "../utils/whatsappUtils";
-import { formatFractionWithUnit, formatQuantityWithUnit } from "../utils/inventoryUnits";
+import {
+  formatFractionWithUnit,
+  formatPackageEquivalence,
+  formatQuantityDisplay,
+  isMeasuredUnit,
+} from "../utils/inventoryUnits";
 
 // ============================================
 // TIPOS INTERNOS
@@ -497,9 +502,9 @@ const HospitalizationView = () => {
     const availableStock = product.currentStock + previousQuantity;
 
     if (data.quantity > availableStock) {
-      return `Stock insuficiente: quedan ${formatQuantityWithUnit(
+      return `Stock insuficiente: quedan ${formatQuantityDisplay(
         availableStock,
-        product.unit,
+        product,
       )}.`;
     }
 
@@ -545,7 +550,16 @@ const HospitalizationView = () => {
       });
     }
 
-    const quantityLabel = formatFractionWithUnit(data.quantity, product.unit);
+    const baseQuantityLabel = formatFractionWithUnit(
+      data.quantity,
+      product.unit,
+    );
+    const equivalence = isMeasuredUnit(product.unit)
+      ? formatPackageEquivalence(data.quantity, product)
+      : null;
+    const quantityLabel = equivalence
+      ? `${baseQuantityLabel} (${equivalence})`
+      : baseQuantityLabel;
 
     setShowMedicationModal(false);
     setEditingMedication(null);

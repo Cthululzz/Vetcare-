@@ -16,8 +16,8 @@ import { InventoryProductForm } from "../components/inventory/InventoryProductFo
 import { formatDateShort } from "../utils/dateUtils";
 import {
   formatPresentation,
-  formatQuantityWithUnit,
-  formatStockBreakdown,
+  formatQuantityDisplay,
+  getStockDisplay,
 } from "../utils/inventoryUnits";
 
 const Inventory = () => {
@@ -215,9 +215,9 @@ const Inventory = () => {
                     Aún no hay productos registrados en el inventario.
                   </p>
                   <p className="text-xs text-slate-500 max-w-md mx-auto mt-1">
-                    Registra tu primer producto con su unidad de medida (ml, mg,
-                    comprimidos, etc.) para controlar el stock y descontar la
-                    medicación desde hospitalización.
+                    Registra tu primer producto con su presentación (lata, caja,
+                    frasco) y su unidad de consumo (g, ml, comprimido) para
+                    controlar el stock y descontar porciones o medicación.
                   </p>
                   <button
                     onClick={() => setShowProductForm(true)}
@@ -236,6 +236,7 @@ const Inventory = () => {
                   product.currentStock,
                   product.minStock,
                 );
+                const stock = getStockDisplay(product);
                 return (
                   <div
                     key={product.id}
@@ -269,29 +270,23 @@ const Inventory = () => {
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-slate-400">Stock actual:</span>
                           <span className="font-bold text-white">
-                            {formatQuantityWithUnit(
-                              product.currentStock,
-                              product.unit,
-                            )}
+                            {stock.primary}
                           </span>
                         </div>
-                        {formatStockBreakdown(product) && (
+                        {stock.detail && stock.detailLabel && (
                           <div className="flex items-center justify-between text-xs gap-3">
                             <span className="text-slate-500">
-                              Equivale a:
+                              {stock.detailLabel}:
                             </span>
                             <span className="text-right text-slate-300">
-                              {formatStockBreakdown(product)}
+                              {stock.detail}
                             </span>
                           </div>
                         )}
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-slate-400">Stock mínimo:</span>
                           <span className="font-medium text-slate-300">
-                            {formatQuantityWithUnit(
-                              product.minStock,
-                              product.unit,
-                            )}
+                            {formatQuantityDisplay(product.minStock, product)}
                           </span>
                         </div>
                       </div>

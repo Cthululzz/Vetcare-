@@ -2,8 +2,8 @@ import { useState } from "react";
 import { PackageX, ChevronRight, X, AlertTriangle } from "lucide-react";
 import { useInventory } from "../../hooks/useInventory";
 import {
-  formatQuantity,
-  formatQuantityWithUnit,
+  formatQuantityDisplay,
+  getStockDisplay,
 } from "../../utils/inventoryUnits";
 
 interface StockAlertCardProps {
@@ -54,34 +54,39 @@ export const StockAlertCard = ({ onNavigate }: StockAlertCardProps) => {
           </div>
 
           <div className="space-y-2">
-            {lowStockProducts.map((product) => (
-              <div
-                key={product.id}
-                className="bg-slate-950/50 border border-slate-800/60 rounded-xl p-4"
-              >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h4 className="text-sm font-bold text-white group-hover:text-[#ece883] transition-colors">
-                      {product.name}
-                    </h4>
-                    <p className="text-xs text-slate-400 mt-1">
-                      Mínimo:{" "}
-                      <span className="text-slate-300 font-medium">
-                        {formatQuantityWithUnit(product.minStock, product.unit)}
+            {lowStockProducts.map((product) => {
+              const stock = getStockDisplay(product);
+              return (
+                <div
+                  key={product.id}
+                  className="bg-slate-950/50 border border-slate-800/60 rounded-xl p-4"
+                >
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h4 className="text-sm font-bold text-white group-hover:text-[#ece883] transition-colors">
+                        {product.name}
+                      </h4>
+                      <p className="text-xs text-slate-400 mt-1">
+                        Mínimo:{" "}
+                        <span className="text-slate-300 font-medium">
+                          {formatQuantityDisplay(product.minStock, product)}
+                        </span>
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-lg font-bold text-red-400">
+                        {stock.primary}
                       </span>
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-xl font-bold text-red-400">
-                      {formatQuantity(product.currentStock)}
-                    </span>
-                    <p className="text-[10px] text-slate-400 uppercase tracking-wider">
-                      {product.unit}
-                    </p>
+                      {stock.detail && (
+                        <p className="text-[10px] text-slate-400">
+                          {stock.detail}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
@@ -118,35 +123,42 @@ export const StockAlertCard = ({ onNavigate }: StockAlertCardProps) => {
             </div>
 
             <div className="flex-1 overflow-y-auto p-6 space-y-3">
-              {allLowStock.map((product) => (
-                <div
-                  key={product.id}
-                  className="bg-slate-950/60 border border-slate-800 rounded-xl p-4"
-                >
-                  <div className="flex justify-between items-start">
-                    <div className="space-y-1">
-                      <h4 className="text-base font-bold text-white">
-                        {product.name}
-                      </h4>
-                      <p className="text-xs text-slate-400">
-                        Stock mínimo:{" "}
-                        {formatQuantityWithUnit(product.minStock, product.unit)}
-                      </p>
-                      {product.description && (
-                        <p className="text-xs text-slate-500 mt-1">
-                          {product.description}
+              {allLowStock.map((product) => {
+                const stock = getStockDisplay(product);
+                return (
+                  <div
+                    key={product.id}
+                    className="bg-slate-950/60 border border-slate-800 rounded-xl p-4"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="space-y-1">
+                        <h4 className="text-base font-bold text-white">
+                          {product.name}
+                        </h4>
+                        <p className="text-xs text-slate-400">
+                          Stock mínimo:{" "}
+                          {formatQuantityDisplay(product.minStock, product)}
                         </p>
-                      )}
-                    </div>
-                    <div className="text-right">
-                      <span className="text-2xl font-bold text-red-400">
-                        {formatQuantity(product.currentStock)}
-                      </span>
-                      <p className="text-xs text-slate-400">{product.unit}</p>
+                        {product.description && (
+                          <p className="text-xs text-slate-500 mt-1">
+                            {product.description}
+                          </p>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <span className="text-xl font-bold text-red-400">
+                          {stock.primary}
+                        </span>
+                        {stock.detail && (
+                          <p className="text-xs text-slate-400">
+                            {stock.detail}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <div className="p-6 border-t border-slate-800 flex justify-end">

@@ -7,8 +7,9 @@ import {
   formatFraction,
   formatFractionWithUnit,
   formatPackageEquivalence,
-  formatQuantityWithUnit,
-  formatStockBreakdown,
+  formatQuantityDisplay,
+  getStockDisplay,
+  isMeasuredUnit,
 } from "../../utils/inventoryUnits";
 
 export interface MedicationAdministrationData {
@@ -73,11 +74,14 @@ export const MedicationAdministrationModal = ({
   const supportsFractions = ["comprimido", "pastilla", "capsula"].includes(
     unit,
   );
-  const remainingBreakdown = selectedProduct
-    ? formatStockBreakdown({ ...selectedProduct, currentStock: remainingStock })
+  const availableDisplay = selectedProduct
+    ? getStockDisplay({ ...selectedProduct, currentStock: availableStock })
+    : null;
+  const remainingDisplay = selectedProduct
+    ? getStockDisplay({ ...selectedProduct, currentStock: remainingStock })
     : null;
   const packageEquivalence =
-    selectedProduct && parsedQuantity > 0
+    selectedProduct && parsedQuantity > 0 && isMeasuredUnit(unit)
       ? formatPackageEquivalence(parsedQuantity, selectedProduct)
       : null;
 
@@ -112,9 +116,9 @@ export const MedicationAdministrationModal = ({
 
     if (parsedQuantity > availableStock) {
       setError(
-        `Stock insuficiente: quedan ${formatQuantityWithUnit(
+        `Stock insuficiente: quedan ${formatQuantityDisplay(
           availableStock,
-          selectedProduct.unit,
+          selectedProduct,
         )}.`,
       );
       return;
@@ -186,8 +190,7 @@ export const MedicationAdministrationModal = ({
               ) : (
                 selectableProducts.map((product) => (
                   <option key={product.id} value={product.id}>
-                    {product.name} —{" "}
-                    {formatQuantityWithUnit(product.currentStock, product.unit)}
+                    {product.name} — Stock: {getStockDisplay(product).primary}
                   </option>
                 ))
               )}
@@ -259,9 +262,21 @@ export const MedicationAdministrationModal = ({
                 {isEditing ? "Stock disponible al ajustar" : "Stock disponible"}
               </label>
               <div className="w-full bg-slate-950/60 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-300">
-                {selectedProduct
-                  ? formatQuantityWithUnit(availableStock, selectedProduct.unit)
-                  : "—"}
+                {availableDisplay ? (
+                  <>
+                    <span className="font-semibold text-white">
+                      {availableDisplay.primary}
+                    </span>
+                    {availableDisplay.detail && (
+                      <span className="block text-[11px] text-slate-500">
+                        {availableDisplay.detailLabel}:{" "}
+                        {availableDisplay.detail}
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  "—"
+                )}
               </div>
             </div>
           </div>
@@ -278,9 +293,12 @@ export const MedicationAdministrationModal = ({
                   {" "}
                   Quedarán{" "}
                   <span className="text-slate-300 font-semibold">
-                    {formatQuantityWithUnit(remainingStock, selectedProduct.unit)}
+                    {remainingDisplay?.primary}
                   </span>
-                  {remainingBreakdown ? ` (${remainingBreakdown})` : ""} en stock.
+                  {remainingDisplay?.detail
+                    ? ` (${remainingDisplay.detail})`
+                    : ""}{" "}
+                  en stock.
                 </>
               )}
           </p>

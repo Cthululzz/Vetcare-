@@ -12,6 +12,7 @@ import {
   convertUnit,
   formatPackagePlural,
   formatQuantity,
+  formatQuantityInPackages,
   formatQuantityWithUnit,
   getContentUnitOptions,
 } from "../../utils/inventoryUnits";
@@ -85,6 +86,19 @@ export const InventoryProductForm = ({
     effectiveStockMode === "packages" && contentInBaseUnit
       ? minStockValue * contentInBaseUnit
       : minStockValue;
+
+  const presentationItem = {
+    unit,
+    packageType: packageType.trim(),
+    contentPerPackage: parsedContent,
+    contentUnit,
+  };
+  const initialPackagesLabel = presentationReady
+    ? formatQuantityInPackages(initialStockBase, presentationItem)
+    : null;
+  const minPackagesLabel = presentationReady
+    ? formatQuantityInPackages(minStockBase, presentationItem)
+    : null;
 
   const resetForm = () => {
     setName("");
@@ -462,17 +476,31 @@ export const InventoryProductForm = ({
             </div>
 
             <div className="rounded-xl border border-[#ece883]/20 bg-[#ece883]/5 px-4 py-3 space-y-1">
+              {initialPackagesLabel && (
+                <p className="text-xs text-slate-200">
+                  Se registrarán:{" "}
+                  <span className="font-bold text-[#ece883]">
+                    {initialPackagesLabel}
+                  </span>
+                </p>
+              )}
               <p className="text-xs text-slate-200">
                 Total interno guardado:{" "}
-                <span className="font-bold text-[#ece883]">
+                <span className={initialPackagesLabel ? "font-semibold text-slate-200" : "font-bold text-[#ece883]"}>
                   {formatQuantityWithUnit(initialStockBase, unit)}
                 </span>
               </p>
               <p className="text-xs text-slate-400">
                 Stock mínimo equivalente:{" "}
                 <span className="font-semibold text-slate-200">
-                  {formatQuantityWithUnit(minStockBase, unit)}
+                  {minPackagesLabel ?? formatQuantityWithUnit(minStockBase, unit)}
                 </span>
+                {minPackagesLabel && (
+                  <span className="text-slate-500">
+                    {" "}
+                    ({formatQuantityWithUnit(minStockBase, unit)})
+                  </span>
+                )}
               </p>
               <p className="text-[11px] text-slate-500">
                 Cada consumo o retiro se descuenta de este total, sin importar

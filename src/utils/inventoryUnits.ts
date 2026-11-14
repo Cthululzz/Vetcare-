@@ -102,6 +102,11 @@ export const hasPresentation = (
   >,
 ): boolean => Boolean(item.packageType && getContentInBaseUnit(item));
 
+/** Indica si la unidad de control es de peso o volumen (g, mg, kg, ml, L). */
+export const isMeasuredUnit = (unit: string): boolean => Boolean(UNIT_INFO[unit]);
+
+const roundQuantity = (value: number): number => Math.round(value * 100) / 100;
+
 // ============================================
 // FORMATO DE CANTIDADES
 // ============================================
@@ -214,10 +219,90 @@ export const formatStockBreakdown = (item: InventoryItem): string | null => {
     );
   }
   if (remainder > 0) {
-    parts.push(formatQuantityWithUnit(remainder, item.unit));
+    parts.push(formatFractionWithUnit(remainder, item.unit));
   }
 
   return parts.length > 0 ? parts.join(" + ") : formatQuantityWithUnit(0, item.unit);
+};
+
+/**
+ * Expresa una cantidad en envases, con fracciones simples: 400 g de una lata
+ * de 400 g → "1 lata"; 200 g → "½ lata"; 7.800 g → "19½ latas".
+ */
+export const formatQuantityInPackages = (
+  quantity: number,
+  item: Pick<
+    InventoryItem,
+    "packageType" | "contentPerPackage" | "contentUnit" | "unit"
+  >,
+): string | null => {
+  const contentInBase = getContentInBaseUnit(item);
+  if (!item.packageType || !contentInBase || contentInBase <= 0) return null;
+
+  const packages = roundQuantity(quantity / contentInBase);
+  const display = formatFraction(packages);
+  const singular =
+    packages > 0 &&
+    packages <= 1 &&
+    display !== formatQuantity(packages);
+
+  return `${display} ${
+    singular
+      ? item.packageType
+      : formatPackagePlural(item.packageType, packages)
+  }`.trim();
+};
+
+/**
+ * Texto principal de una cantidad: envases cuando el control es en peso o
+ * volumen, o la unidad de control (comprimidos, gotas) en el resto de casos.
+ */
+export const formatQuantityDisplay = (
+  quantity: number,
+  item: Pick<
+    InventoryItem,
+    "packageType" | "contentPerPackage" | "contentUnit" | "unit"
+  >,
+): string => {
+  if (isMeasuredUnit(item.unit)) {
+    const packages = formatQuantityInPackages(quantity, item);
+    if (packages) return packages;
+  }
+
+  return formatFractionWithUnit(quantity, item.unit);
+};
+
+export interface StockDisplay {
+  primary: string;
+  detail: string | null;
+  detailLabel: "Total interno" | "Equivale a" | null;
+}
+
+/**
+ * Stock listo para mostrar: primero los envases (latas, sachets) y debajo el
+ * total interno en la unidad real; para conteos, primero la unidad y debajo
+ * el desglose en cajas.
+ */
+export const getStockDisplay = (item: InventoryItem): StockDisplay => {
+  const usesPackages =
+    isMeasuredUnit(item.unit) && Boolean(getContentInBaseUnit(item));
+
+  if (usesPackages) {
+    return {
+      primary: formatQuantityDisplay(item.currentStock, item),
+      detail: formatQuantityWithUnit(item.currentStock, item.unit),
+      detailLabel: "Total interno",
+    };
+  }
+
+  const primary = formatQuantityDisplay(item.currentStock, item);
+  const breakdown = formatStockBreakdown(item);
+
+  return {
+    primary,
+    detail: breakdown && breakdown !== primary ? breakdown : null,
+    detailLabel: "Equivale a",
+  };
 };
 
 /**
@@ -230,14 +315,8 @@ export const formatPackageEquivalence = (
     "packageType" | "contentPerPackage" | "contentUnit" | "unit"
   >,
 ): string | null => {
-  const contentInBase = getContentInBaseUnit(item);
-  if (!item.packageType || !contentInBase || contentInBase <= 0) return null;
-
-  const packages = quantity / contentInBase;
-  return `≈ ${formatQuantity(packages)} ${formatPackagePlural(
-    item.packageType,
-    packages,
-  )}`;
+  const packages = formatQuantityInPackages(quantity, item);
+  return packages ? `≈ ${packages}` : null;
 };
 
 // ============================================
@@ -256,13 +335,12 @@ export const formatMovementQuantity = (
 };
 
 /**
- * Detalle del ingreso por envases: "25 sachets × 85 g".
+ * Detalle de un movimiento ingresado por envases: "25 sachets × 85 g".
  */
 export const formatMovementPackages = (
   movement: InventoryMovement,
 ): string | null => {
   if (
-    movement.type !== "ingreso" ||
     movement.packageQuantity == null ||
     !movement.packageType ||
     movement.packageContent == null ||
@@ -277,4 +355,23 @@ export const formatMovementPackages = (
   )} × ${formatQuantity(movement.packageContent)} ${
     movement.packageContentUnit
   }`;
+};
+
+/**
+ * Equivalencia en envases de un movimiento de salida: 200 g → "≈ ½ lata".
+ */
+export const formatMovementEquivalence = (
+  movement: InventoryMovement,
+  product?: InventoryItem,
+): string | null => {
+  if (
+    !product ||
+    movement.type === "ingreso" ||
+    movement.type === "ajuste" ||
+    !isMeasuredUnit(product.unit)
+  ) {
+    return null;
+  }
+
+  return formatPackageEquivalence(movement.quantity, product);
 };
