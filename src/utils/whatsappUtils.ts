@@ -26,6 +26,7 @@ export const buildWhatsAppLink = (phone: string, message: string): string => {
 
 /**
  * Mensaje de recordatorio de revisión para un paciente hospitalizado.
+ * El remitente es la sucursal/establecimiento, nunca el nombre de la app.
  */
 export const buildReviewReminderMessage = (params: {
   ownerName?: string;
@@ -36,13 +37,41 @@ export const buildReviewReminderMessage = (params: {
   const greeting = params.ownerName
     ? `Hola ${params.ownerName},`
     : "Hola,";
+  const sender = params.sucursal?.trim() || "la clínica veterinaria";
 
   return [
     greeting,
-    `le escribimos de VetCare+ por ${params.patientName}.`,
+    `le escribimos de ${sender} por ${params.patientName}.`,
     `Le recordamos que tiene una revisión programada para el ${params.reviewDate}.`,
-    params.sucursal ? `Lugar: ${params.sucursal}.` : "",
     "Si tiene dudas o necesita reagendar, responda a este mensaje.",
+  ]
+    .filter(Boolean)
+    .join(" ");
+};
+
+/**
+ * Mensaje con las indicaciones de alta de un paciente hospitalizado.
+ */
+export const buildDischargeMessage = (params: {
+  ownerName?: string;
+  patientName: string;
+  sucursal?: string;
+  nextControlDate?: string;
+  indications?: string;
+}): string => {
+  const greeting = params.ownerName
+    ? `Hola ${params.ownerName},`
+    : "Hola,";
+  const sender = params.sucursal?.trim() || "la clínica veterinaria";
+
+  return [
+    greeting,
+    `le escribimos de ${sender} por ${params.patientName}.`,
+    params.nextControlDate
+      ? `Su próximo control es el ${params.nextControlDate}.`
+      : "",
+    params.indications ? `Indicaciones: ${params.indications}` : "",
+    "Quedamos atentos a cualquier duda.",
   ]
     .filter(Boolean)
     .join(" ");

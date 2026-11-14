@@ -4,12 +4,17 @@ import {
   CalendarClock,
   ClipboardList,
   HeartPulse,
+  Pencil,
   Pill,
   Stethoscope,
+  Trash2,
   X,
 } from "lucide-react";
 import type { Owner, Patient } from "../../types/patient";
-import type { Hospitalization } from "../../types/hospitalization";
+import type {
+  Hospitalization,
+  MedicationAdministration,
+} from "../../types/hospitalization";
 import { getSucursalName } from "../../constants/appConstants";
 
 interface HospitalizationDetailModalProps {
@@ -18,6 +23,8 @@ interface HospitalizationDetailModalProps {
   owner?: Owner;
   hospitalization: Hospitalization | null;
   onClose: () => void;
+  onEditMedication?: (medication: MedicationAdministration) => void;
+  onDeleteMedication?: (medication: MedicationAdministration) => void;
 }
 
 const formatDateTime = (value?: string): string => {
@@ -57,12 +64,20 @@ const DataField = ({
   </div>
 );
 
+const formatDose = (medication: MedicationAdministration): string => {
+  const dose = medication.dose ?? medication.quantity;
+  const unit = medication.doseUnit ?? medication.unit ?? "";
+  return `${dose} ${unit}`.trim();
+};
+
 export const HospitalizationDetailModal = ({
   isOpen,
   patient,
   owner,
   hospitalization,
   onClose,
+  onEditMedication,
+  onDeleteMedication,
 }: HospitalizationDetailModalProps) => {
   if (!isOpen || !patient || !hospitalization) return null;
 
@@ -326,8 +341,33 @@ export const HospitalizationDetailModal = ({
                       )}
                     </div>
                     <span className="text-xs font-bold text-[#ece883] shrink-0">
-                      {medication.quantity} {medication.unit ?? ""}
+                      {formatDose(medication)}
                     </span>
+                    {hospitalization.status === "activa" &&
+                      (onEditMedication || onDeleteMedication) && (
+                        <div className="flex items-center gap-1 shrink-0">
+                          {onEditMedication && (
+                            <button
+                              type="button"
+                              onClick={() => onEditMedication(medication)}
+                              title="Editar dosis"
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-[#ece883] hover:bg-slate-800 transition-colors cursor-pointer"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                          {onDeleteMedication && (
+                            <button
+                              type="button"
+                              onClick={() => onDeleteMedication(medication)}
+                              title="Eliminar registro"
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      )}
                   </div>
                 ))}
               </div>

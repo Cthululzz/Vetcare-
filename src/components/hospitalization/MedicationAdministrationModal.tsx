@@ -2,10 +2,19 @@ import { useState } from "react";
 import { AlertCircle, Pill, X } from "lucide-react";
 import type { Patient } from "../../types/patient";
 import type { InventoryItem } from "../../types/inventory";
+import type { MedicationAdministration } from "../../types/hospitalization";
+import {
+  DEFAULT_DOSE_UNIT,
+  UNIDADES_DOSIS,
+} from "../../constants/hospitalization";
 
 export interface MedicationAdministrationData {
   productId: string;
-  quantity: number;
+  /** Dosis clínica administrada (ej. 1 pastilla, 5 ml). */
+  dose: number;
+  doseUnit: string;
+  /** Unidades de inventario a descontar. 0 = no descontar stock. */
+  stockQuantity: number;
   notes?: string;
 }
 
@@ -13,6 +22,8 @@ interface MedicationAdministrationModalProps {
   isOpen: boolean;
   patient: Patient | null;
   products: InventoryItem[];
+  /** Registro existente cuando se está editando una administración. */
+  initial?: MedicationAdministration | null;
   onAdminister: (data: MedicationAdministrationData) => string | null;
   onClose: () => void;
 }
@@ -21,27 +32,55 @@ export const MedicationAdministrationModal = ({
   isOpen,
   patient,
   products,
+  initial = null,
   onAdminister,
   onClose,
 }: MedicationAdministrationModalProps) => {
-  const [productId, setProductId] = useState("");
-  const [quantity, setQuantity] = useState("1");
-  const [notes, setNotes] = useState("");
+  const isEditing = Boolean(initial);
+
+  const [productId, setProductId] = useState(initial?.productId ?? "");
+  const [dose, setDose] = useState(
+    initial ? String(initial.dose ?? initial.quantity ?? "") : "1",
+  );
+  const [doseUnit, setDoseUnit] = useState(
+    initial?.doseUnit ?? initial?.unit ?? DEFAULT_DOSE_UNIT,
+  );
+  const [stockQuantity, setStockQuantity] = useState(
+    initial ? String(initial.quantity ?? 0) : "0",
+  );
+  const [notes, setNotes] = useState(initial?.notes ?? "");
   const [error, setError] = useState("");
 
   const selectableProducts = products.filter(
-    (product) => product.isActive && product.currentStock > 0,
+    (product) =>
+      (product.isActive && product.currentStock > 0) ||
+      product.id === initial?.productId,
   );
 
   const selectedProduct =
     selectableProducts.find((product) => product.id === productId) ??
     selectableProducts[0];
 
+  const doseUnitOptions = UNIDADES_DOSIS.some(
+    (unit) => unit.value === doseUnit,
+  )
+    ? UNIDADES_DOSIS
+    : [
+        ...UNIDADES_DOSIS,
+        { value: doseUnit, label: doseUnit || "unidad" },
+      ];
+
+  // Al editar, se devuelve primero el descuento anterior antes de aplicar el nuevo.
+  const availableStock =
+    (selectedProduct?.currentStock ?? 0) + (initial?.quantity ?? 0);
+
   if (!isOpen || !patient) return null;
 
   const resetForm = () => {
     setProductId("");
-    setQuantity("1");
+    setDose("1");
+    setDoseUnit(DEFAULT_DOSE_UNIT);
+    setStockQuantity("0");
     setNotes("");
     setError("");
   };
@@ -59,22 +98,29 @@ export const MedicationAdministrationModal = ({
       return;
     }
 
-    const parsedQuantity = Number(quantity);
-
-    if (!Number.isFinite(parsedQuantity) || parsedQuantity <= 0) {
-      setError("Ingresa una cantidad válida mayor a cero.");
+    const parsedDose = Number(dose);
+    if (!Number.isFinite(parsedDose) || parsedDose <= 0) {
+      setError("Ingresa una dosis válida mayor a cero.");
       return;
     }
-    if (parsedQuantity > selectedProduct.currentStock) {
+
+    const parsedStockQuantity = Number(stockQuantity || 0);
+    if (!Number.isFinite(parsedStockQuantity) || parsedStockQuantity < 0) {
+      setError("El descuento de inventario no puede ser negativo.");
+      return;
+    }
+    if (parsedStockQuantity > availableStock) {
       setError(
-        `Stock insuficiente: quedan ${selectedProduct.currentStock} ${selectedProduct.unit}.`,
+        `Stock insuficiente: quedan ${availableStock} ${selectedProduct.unit}.`,
       );
       return;
     }
 
     const submitError = onAdminister({
       productId: selectedProduct.id,
-      quantity: parsedQuantity,
+      dose: parsedDose,
+      doseUnit,
+      stockQuantity: parsedStockQuantity,
       notes: notes.trim() || undefined,
     });
 
@@ -87,7 +133,7 @@ export const MedicationAdministrationModal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
       <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg max-h-[92vh] overflow-hidden flex flex-col shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-slate-800">
@@ -97,7 +143,9 @@ export const MedicationAdministrationModal = ({
             </div>
             <div>
               <h2 className="text-xl font-bold text-white">
-                Administrar Medicación
+                {isEditing
+                  ? "Editar Medicación Administrada"
+                  : "Administrar Medicación"}
               </h2>
               <p className="text-sm text-slate-400 mt-0.5">
                 Paciente:{" "}
@@ -128,7 +176,7 @@ export const MedicationAdministrationModal = ({
                 setProductId(event.target.value);
                 setError("");
               }}
-              disabled={selectableProducts.length === 0}
+              disabled={selectableProducts.length === 0 || isEditing}
               className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#ece883] transition-colors disabled:text-slate-500"
             >
               {selectableProducts.length === 0 ? (
@@ -141,20 +189,26 @@ export const MedicationAdministrationModal = ({
                 ))
               )}
             </select>
+            {isEditing && (
+              <p className="text-[11px] text-slate-500 mt-1.5">
+                El producto no se puede cambiar. Si necesitas otro, elimina este
+                registro y agrega uno nuevo.
+              </p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
-                Cantidad *
+                Dosis administrada *
               </label>
               <input
                 type="number"
                 min="0.01"
                 step="0.01"
-                value={quantity}
+                value={dose}
                 onChange={(event) => {
-                  setQuantity(event.target.value);
+                  setDose(event.target.value);
                   setError("");
                 }}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#ece883] transition-colors"
@@ -163,15 +217,66 @@ export const MedicationAdministrationModal = ({
 
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
-                Stock actual
+                Unidad de la dosis *
+              </label>
+              <select
+                value={doseUnit}
+                onChange={(event) => {
+                  setDoseUnit(event.target.value);
+                  setError("");
+                }}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#ece883] transition-colors"
+              >
+                {doseUnitOptions.map((unit) => (
+                  <option key={unit.value} value={unit.value}>
+                    {unit.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
+                Descontar de inventario
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={stockQuantity}
+                  onChange={(event) => {
+                    setStockQuantity(event.target.value);
+                    setError("");
+                  }}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#ece883] transition-colors"
+                />
+                <span className="text-xs text-slate-400 shrink-0">
+                  {selectedProduct?.unit ?? "—"}
+                </span>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
+                {isEditing ? "Stock disponible al ajustar" : "Stock disponible"}
               </label>
               <div className="w-full bg-slate-950/60 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-300">
                 {selectedProduct
-                  ? `${selectedProduct.currentStock} ${selectedProduct.unit}`
+                  ? `${availableStock} ${selectedProduct.unit}`
                   : "—"}
               </div>
             </div>
           </div>
+
+          <p className="text-[11px] text-slate-500">
+            La dosis es lo que recibe el paciente (por ejemplo, 1 pastilla o 5
+            ml). El descuento de inventario es independiente: usa{" "}
+            <span className="text-slate-300">0</span> si no corresponde descontar
+            stock (por ejemplo, cuando el inventario se lleva por caja).
+          </p>
 
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
@@ -181,14 +286,15 @@ export const MedicationAdministrationModal = ({
               value={notes}
               onChange={(event) => setNotes(event.target.value)}
               rows={2}
-              placeholder="Vía, dosis, observaciones..."
+              placeholder="Vía, frecuencia, observaciones..."
               className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#ece883] transition-colors resize-none"
             />
           </div>
 
           <p className="text-[11px] text-slate-500">
-            Al confirmar se registrará un movimiento de retiro en inventario con
-            el nombre del paciente y se descontará el stock.
+            {isEditing
+              ? "Al guardar se ajustará el stock según la diferencia entre el descuento anterior y el nuevo."
+              : "Si indicas un descuento mayor a 0, se registrará un retiro en inventario con el nombre del paciente."}
           </p>
 
           {error && (
@@ -215,7 +321,7 @@ export const MedicationAdministrationModal = ({
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#ece883] hover:bg-[#e4df68] disabled:bg-slate-700 disabled:text-slate-500 text-slate-950 text-sm font-bold transition-colors shadow-lg shadow-[#ece883]/10 disabled:shadow-none disabled:cursor-not-allowed cursor-pointer"
           >
             <Pill className="w-4 h-4" />
-            Registrar Administración
+            {isEditing ? "Guardar Cambios" : "Registrar Administración"}
           </button>
         </div>
       </div>

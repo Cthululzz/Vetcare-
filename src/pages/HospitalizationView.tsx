@@ -23,6 +23,7 @@ import {
 } from "../hooks/useHospitalizations";
 import { useInventory } from "../hooks/useInventory";
 import { useInventoryMovements } from "../hooks/useInventoryMovements";
+import { useHospitalBeds } from "../hooks/useHospitalBeds";
 import { useAuth } from "../hooks/useAuth";
 import { AdmissionFormModal } from "../components/hospitalization/AdmissionFormModal";
 import type { AdmissionData } from "../components/hospitalization/AdmissionFormModal";
@@ -37,14 +38,17 @@ import type { MedicationAdministrationData } from "../components/hospitalization
 import { HospitalizationDetailModal } from "../components/hospitalization/HospitalizationDetailModal";
 import { BedMap } from "../components/hospitalization/BedMap";
 import type { Patient, Owner } from "../types/patient";
-import type { Hospitalization } from "../types/hospitalization";
+import type {
+  Hospitalization,
+  MedicationAdministration,
+} from "../types/hospitalization";
 import {
-  CAMAS_HOSPITALIZACION,
   DEFAULT_MONITORING_FREQUENCY,
   calcularProximaRevision,
 } from "../constants/hospitalization";
 import { getSucursalName } from "../constants/appConstants";
 import {
+  buildDischargeMessage,
   buildReviewReminderMessage,
   buildWhatsAppLink,
 } from "../utils/whatsappUtils";
@@ -136,6 +140,14 @@ const dateInputToIso = (value?: string): string | undefined => {
   return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
 };
 
+const formatMedicationDose = (
+  medication: MedicationAdministration,
+): string => {
+  const dose = medication.dose ?? medication.quantity;
+  const unit = medication.doseUnit ?? medication.unit ?? "";
+  return `${dose} ${unit}`.trim();
+};
+
 const formatSpeciesAndBreed = (patient: Patient): string => {
   const speciesLabels: Record<string, string> = {
     perro: "Perro",
@@ -181,9 +193,12 @@ const HospitalizationView = () => {
   const { getOwner, getPatient, getActivePatients, addMedicalRecord } =
     usePatients();
   const {
+    hospitalizations,
     admitPatient,
     addEvolution,
     addMedicationAdministration,
+    updateMedicationAdministration,
+    removeMedicationAdministration,
     dischargePatient,
     getActiveHospitalizations,
     getDischargedHospitalizations,
@@ -191,6 +206,7 @@ const HospitalizationView = () => {
     isHospitalized,
     isBedOccupied,
   } = useHospitalizations();
+  const { beds, addBed, removeBed } = useHospitalBeds();
   const { getProducts, getProduct } = useInventory();
   const { createMovement } = useInventoryMovements();
   const { user } = useAuth();
@@ -203,9 +219,15 @@ const HospitalizationView = () => {
   const [showMedicationModal, setShowMedicationModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
-  const [selectedHospitalization, setSelectedHospitalization] =
-    useState<Hospitalization | null>(null);
+  const [selectedHospitalizationId, setSelectedHospitalizationId] = useState<
+    string | null
+  >(null);
+  const [editingMedication, setEditingMedication] =
+    useState<MedicationAdministration | null>(null);
   const [feedback, setFeedback] = useState<FeedbackMessage | null>(null);
+
+  const selectedHospitalization =
+    hospitalizations.find((h) => h.id === selectedHospitalizationId) ?? null;
 
   // ============================================
   // DATOS DERIVADOS
@@ -238,7 +260,7 @@ const HospitalizationView = () => {
   );
   const products = getProducts();
 
-  const bedMapItems = CAMAS_HOSPITALIZACION.map((bed) => {
+  const bedMapItems = beds.map((bed) => {
     const entry = activeViews.find(
       (item) => item.hospitalization.bed === bed,
     );
@@ -256,7 +278,7 @@ const HospitalizationView = () => {
     (item) => item.reviewPending,
   ).length;
   const camasDisponibles = availableBeds.length;
-  const totalCamas = CAMAS_HOSPITALIZACION.length;
+  const totalCamas = beds.length;
   const totalAltas = dischargedViews.length;
 
   // ============================================
@@ -328,7 +350,7 @@ const HospitalizationView = () => {
     patient: Patient,
   ) => {
     setFeedback(null);
-    setSelectedHospitalization(hospitalization);
+    setSelectedHospitalizationId(hospitalization.id);
     setSelectedPatient(patient);
     setShowEvolutionModal(true);
   };
@@ -378,7 +400,7 @@ const HospitalizationView = () => {
     });
 
     setShowEvolutionModal(false);
-    setSelectedHospitalization(null);
+    setSelectedHospitalizationId(null);
     setSelectedPatient(null);
     setFeedback({
       type: "success",
@@ -391,7 +413,7 @@ const HospitalizationView = () => {
     patient: Patient,
   ) => {
     setFeedback(null);
-    setSelectedHospitalization(hospitalization);
+    setSelectedHospitalizationId(hospitalization.id);
     setSelectedPatient(patient);
     setShowDischargeModal(true);
   };
@@ -426,7 +448,7 @@ const HospitalizationView = () => {
     });
 
     setShowDischargeModal(false);
-    setSelectedHospitalization(null);
+    setSelectedHospitalizationId(null);
     setSelectedPatient(null);
     setFeedback({
       type: "success",
@@ -439,12 +461,23 @@ const HospitalizationView = () => {
     patient: Patient,
   ) => {
     setFeedback(null);
-    setSelectedHospitalization(hospitalization);
+    setEditingMedication(null);
+    setSelectedHospitalizationId(hospitalization.id);
     setSelectedPatient(patient);
     setShowMedicationModal(true);
   };
 
-  const handleAdministerMedication = (
+  const handleEditMedication = (medication: MedicationAdministration) => {
+    setFeedback(null);
+    setEditingMedication(medication);
+    setShowMedicationModal(true);
+  };
+
+  /**
+   * Registra una nueva administración o actualiza una existente.
+   * El descuento de stock es independiente de la dosis clínica.
+   */
+  const handleSaveMedication = (
     data: MedicationAdministrationData,
   ): string | null => {
     if (!selectedHospitalization || !selectedPatient) {
@@ -453,46 +486,153 @@ const HospitalizationView = () => {
 
     const product = getProduct(data.productId);
     if (!product) return "No se encontró el producto en inventario.";
-    if (data.quantity > product.currentStock) {
-      return `Stock insuficiente: quedan ${product.currentStock} ${product.unit}.`;
+
+    const wasEditing = Boolean(editingMedication);
+    const previousQuantity = editingMedication?.quantity ?? 0;
+    const availableStock = product.currentStock + previousQuantity;
+
+    if (data.stockQuantity > availableStock) {
+      return `Stock insuficiente: quedan ${availableStock} ${product.unit}.`;
     }
 
-    createMovement({
-      productId: product.id,
-      type: "retiro",
-      quantity: data.quantity,
-      reason: "Administración en hospitalización",
-      userName: user?.name,
-      userRole: user?.role,
-      patientName: selectedPatient.name,
-      isComplete: true,
-    });
+    const stockDelta = data.stockQuantity - previousQuantity;
 
-    addMedicationAdministration(selectedHospitalization.id, {
-      productId: product.id,
-      productName: product.name,
-      quantity: data.quantity,
-      unit: product.unit,
-      notes: data.notes,
-      createdBy: user?.name,
-    });
+    if (editingMedication) {
+      updateMedicationAdministration(
+        selectedHospitalization.id,
+        editingMedication.id,
+        {
+          dose: data.dose,
+          doseUnit: data.doseUnit,
+          quantity: data.stockQuantity,
+          unit: product.unit,
+          notes: data.notes,
+        },
+      );
+    } else {
+      addMedicationAdministration(selectedHospitalization.id, {
+        productId: product.id,
+        productName: product.name,
+        dose: data.dose,
+        doseUnit: data.doseUnit,
+        quantity: data.stockQuantity,
+        unit: product.unit,
+        notes: data.notes,
+        createdBy: user?.name,
+      });
+    }
+
+    if (stockDelta !== 0) {
+      createMovement({
+        productId: product.id,
+        type: stockDelta > 0 ? "retiro" : "devolucion",
+        quantity: Math.abs(stockDelta),
+        reason: wasEditing
+          ? "Ajuste de medicación administrada"
+          : "Administración en hospitalización",
+        userName: user?.name,
+        userRole: user?.role,
+        patientName: selectedPatient.name,
+        isComplete: true,
+      });
+    }
+
+    const doseLabel = `${data.dose} ${data.doseUnit}`;
 
     setShowMedicationModal(false);
-    setSelectedHospitalization(null);
+    setEditingMedication(null);
+
+    if (wasEditing) {
+      // La ficha de hospitalización sigue abierta para ver el cambio.
+      setFeedback({
+        type: "success",
+        message: `Se actualizó la administración de ${product.name} (${doseLabel}).`,
+      });
+      return null;
+    }
+
+    setSelectedHospitalizationId(null);
     setSelectedPatient(null);
     setFeedback({
       type: "success",
-      message: `Se administró ${data.quantity} ${product.unit} de ${product.name} y se descontó del inventario.`,
+      message:
+        data.stockQuantity > 0
+          ? `Se administró ${doseLabel} de ${product.name} y se descontaron ${data.stockQuantity} ${product.unit} del inventario.`
+          : `Se administró ${doseLabel} de ${product.name}. No se descontó stock.`,
     });
 
     return null;
+  };
+
+  const handleDeleteMedication = (medication: MedicationAdministration) => {
+    if (!selectedHospitalization || !selectedPatient) return;
+
+    const confirmed = window.confirm(
+      `¿Eliminar el registro de ${medication.productName} (${formatMedicationDose(medication)})?`,
+    );
+    if (!confirmed) return;
+
+    if (medication.quantity > 0) {
+      createMovement({
+        productId: medication.productId,
+        type: "devolucion",
+        quantity: medication.quantity,
+        reason: "Eliminación de registro de medicación",
+        userName: user?.name,
+        userRole: user?.role,
+        patientName: selectedPatient.name,
+        isComplete: true,
+      });
+    }
+
+    removeMedicationAdministration(
+      selectedHospitalization.id,
+      medication.id,
+    );
+
+    setFeedback({
+      type: "success",
+      message: `Se eliminó el registro de ${medication.productName}.`,
+    });
+  };
+
+  const handleAddBed = () => {
+    const bed = addBed();
+    setFeedback({
+      type: "success",
+      message: `Se agregó ${bed} al área de hospitalización.`,
+    });
+  };
+
+  const handleRemoveBed = (bed: string) => {
+    if (isBedOccupied(bed)) {
+      setFeedback({
+        type: "error",
+        message: `No puedes quitar ${bed}: está ocupada por un paciente hospitalizado.`,
+      });
+      return;
+    }
+
+    if (beds.length <= 1) {
+      setFeedback({
+        type: "error",
+        message: "Debe existir al menos una cama configurada.",
+      });
+      return;
+    }
+
+    removeBed(bed);
+    setFeedback({
+      type: "success",
+      message: `Se quitó ${bed} del área de hospitalización.`,
+    });
   };
 
   const handleOpenDetail = (
     hospitalization: Hospitalization,
     patient: Patient,
   ) => {
-    setSelectedHospitalization(hospitalization);
+    setSelectedHospitalizationId(hospitalization.id);
     setSelectedPatient(patient);
     setShowDetailModal(true);
   };
@@ -547,16 +687,17 @@ const HospitalizationView = () => {
     }
 
     const summary = hospitalization.dischargeSummary;
-    const message = [
-      owner?.name ? `Hola ${owner.name},` : "Hola,",
-      `le escribimos de VetCare+ por ${patient.name}.`,
-      summary?.nextControlAt
-        ? `Su próximo control es el ${formatDateOnly(summary.nextControlAt)}.`
-        : "",
-      summary?.indications ? `Indicaciones: ${summary.indications}` : "",
-    ]
-      .filter(Boolean)
-      .join(" ");
+    const message = buildDischargeMessage({
+      ownerName: owner?.name,
+      patientName: patient.name,
+      sucursal: hospitalization.sucursalId
+        ? getSucursalName(hospitalization.sucursalId)
+        : undefined,
+      nextControlDate: summary?.nextControlAt
+        ? formatDateOnly(summary.nextControlAt)
+        : undefined,
+      indications: summary?.indications,
+    });
 
     window.open(
       buildWhatsAppLink(phone, message),
@@ -674,7 +815,13 @@ const HospitalizationView = () => {
         </div>
 
         {/* Mapa de camas */}
-        <BedMap beds={bedMapItems} onOpenHospitalization={handleOpenDetailById} />
+        <BedMap
+          beds={bedMapItems}
+          onOpenHospitalization={handleOpenDetailById}
+          onAddBed={handleAddBed}
+          onRemoveBed={handleRemoveBed}
+          canRemoveBeds={beds.length > 1}
+        />
 
         {/* Pestañas */}
         <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
@@ -990,7 +1137,7 @@ const HospitalizationView = () => {
         onSave={handleSaveEvolution}
         onClose={() => {
           setShowEvolutionModal(false);
-          setSelectedHospitalization(null);
+          setSelectedHospitalizationId(null);
           setSelectedPatient(null);
         }}
       />
@@ -1003,21 +1150,27 @@ const HospitalizationView = () => {
         onConfirm={handleConfirmDischarge}
         onCancel={() => {
           setShowDischargeModal(false);
-          setSelectedHospitalization(null);
+          setSelectedHospitalizationId(null);
           setSelectedPatient(null);
         }}
       />
 
       {/* Modal de Administración de Medicación */}
       <MedicationAdministrationModal
+        key={editingMedication?.id ?? "new-medication"}
         isOpen={showMedicationModal}
         patient={selectedPatient}
         products={products}
-        onAdminister={handleAdministerMedication}
+        initial={editingMedication}
+        onAdminister={handleSaveMedication}
         onClose={() => {
+          const wasEditing = Boolean(editingMedication);
           setShowMedicationModal(false);
-          setSelectedHospitalization(null);
-          setSelectedPatient(null);
+          setEditingMedication(null);
+          if (!wasEditing) {
+            setSelectedHospitalizationId(null);
+            setSelectedPatient(null);
+          }
         }}
       />
 
@@ -1029,9 +1182,11 @@ const HospitalizationView = () => {
           selectedPatient ? getOwner(selectedPatient.ownerId) : undefined
         }
         hospitalization={selectedHospitalization}
+        onEditMedication={handleEditMedication}
+        onDeleteMedication={handleDeleteMedication}
         onClose={() => {
           setShowDetailModal(false);
-          setSelectedHospitalization(null);
+          setSelectedHospitalizationId(null);
           setSelectedPatient(null);
         }}
       />

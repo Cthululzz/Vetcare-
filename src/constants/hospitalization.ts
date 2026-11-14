@@ -12,6 +12,26 @@ export const CAMAS_HOSPITALIZACION = Array.from(
 );
 
 /**
+ * Unidades clínicas permitidas para registrar la dosis administrada.
+ * Son independientes de la unidad con la que se lleva el stock en inventario.
+ */
+export const UNIDADES_DOSIS = [
+  { value: "ml", label: "ml" },
+  { value: "mg", label: "mg" },
+  { value: "g", label: "g" },
+  { value: "gotas", label: "gotas" },
+  { value: "pastilla", label: "pastilla(s)" },
+  { value: "comprimido", label: "comprimido(s)" },
+  { value: "capsula", label: "cápsula(s)" },
+  { value: "sobre", label: "sobre(s)" },
+  { value: "aplicacion", label: "aplicación(es)" },
+  { value: "unidad", label: "unidad(es)" },
+  { value: "UI", label: "UI" },
+] as const;
+
+export const DEFAULT_DOSE_UNIT = "ml";
+
+/**
  * Frecuencias de monitoreo permitidas, en horas.
  */
 export const FRECUENCIAS_MONITOREO = [

@@ -9,10 +9,10 @@ import type {
 import { usePatients } from "./usePatients";
 import type { Patient } from "../types/patient";
 import {
-  CAMAS_HOSPITALIZACION,
   DEFAULT_MONITORING_FREQUENCY,
   calcularProximaRevision,
 } from "../constants/hospitalization";
+import { useHospitalBeds } from "./useHospitalBeds";
 
 const HOSPITALIZATIONS_KEY = "vet_hospitalizations";
 
@@ -89,6 +89,7 @@ export function useHospitalizations() {
   >(HOSPITALIZATIONS_KEY, []);
 
   const { getPatient } = usePatients();
+  const { beds } = useHospitalBeds();
 
   // ---------- ACCIONES ----------
 
@@ -113,7 +114,7 @@ export function useHospitalizations() {
       if (bed && occupiedBeds.has(bed)) return null;
 
       if (!bed) {
-        bed = CAMAS_HOSPITALIZACION.find((b) => !occupiedBeds.has(b));
+        bed = beds.find((b) => !occupiedBeds.has(b));
       }
 
       const monitoringFrequency =
@@ -142,7 +143,7 @@ export function useHospitalizations() {
       setHospitalizations((prev) => [...prev, record]);
       return record;
     },
-    [hospitalizations, setHospitalizations],
+    [hospitalizations, beds, setHospitalizations],
   );
 
   const updateHospitalization = useCallback(
@@ -235,6 +236,57 @@ export function useHospitalizations() {
     [hospitalizations, setHospitalizations],
   );
 
+  /**
+   * Actualiza una medicación ya registrada (dosis, notas o descuento de stock).
+   * El ajuste de stock lo realiza quien invoca (useInventoryMovements).
+   */
+  const updateMedicationAdministration = useCallback(
+    (
+      hospitalizationId: string,
+      administrationId: string,
+      updates: Partial<
+        Pick<
+          MedicationAdministration,
+          "dose" | "doseUnit" | "quantity" | "unit" | "notes"
+        >
+      >,
+    ) => {
+      setHospitalizations((prev) =>
+        prev.map((h) =>
+          h.id === hospitalizationId
+            ? {
+                ...h,
+                medications: (h.medications ?? []).map((medication) =>
+                  medication.id === administrationId
+                    ? { ...medication, ...updates }
+                    : medication,
+                ),
+              }
+            : h,
+        ),
+      );
+    },
+    [setHospitalizations],
+  );
+
+  const removeMedicationAdministration = useCallback(
+    (hospitalizationId: string, administrationId: string) => {
+      setHospitalizations((prev) =>
+        prev.map((h) =>
+          h.id === hospitalizationId
+            ? {
+                ...h,
+                medications: (h.medications ?? []).filter(
+                  (medication) => medication.id !== administrationId,
+                ),
+              }
+            : h,
+        ),
+      );
+    },
+    [setHospitalizations],
+  );
+
   const dischargePatient = useCallback(
     (hospitalizationId: string, details?: DischargeDetails) => {
       const dischargedAt = isoNow();
@@ -317,8 +369,8 @@ export function useHospitalizations() {
    */
   const getAvailableBeds = useCallback((): string[] => {
     const occupied = getOccupiedBeds(hospitalizations);
-    return CAMAS_HOSPITALIZACION.filter((bed) => !occupied.has(bed));
-  }, [hospitalizations]);
+    return beds.filter((bed) => !occupied.has(bed));
+  }, [hospitalizations, beds]);
 
   /**
    * Indica si una cama está ocupada por otra internación activa.
@@ -340,6 +392,8 @@ export function useHospitalizations() {
     updateHospitalization,
     addEvolution,
     addMedicationAdministration,
+    updateMedicationAdministration,
+    removeMedicationAdministration,
     dischargePatient,
     getActiveHospitalizations,
     getDischargedHospitalizations,
