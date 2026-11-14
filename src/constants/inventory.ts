@@ -31,3 +31,21 @@ export const CATEGORIAS_INVENTARIO = [
   { value: "vacuna", label: "Vacuna" },
   { value: "otro", label: "Otro" },
 ] as const;
+
+/**
+ * Presentaciones habituales en que llega un producto al inventario.
+ * El usuario puede escribir otra si no está en la lista.
+ */
+export const TIPOS_PRESENTACION = [
+  "sachet",
+  "caja",
+  "frasco",
+  "saco",
+  "bolsa",
+  "blíster",
+  "ampolla",
+  "tubo",
+  "pote",
+  "lata",
+  "unidad",
+] as const;

@@ -3,6 +3,10 @@ import { X, Filter, Search } from "lucide-react";
 import { useInventoryMovements } from "../../hooks/useInventoryMovements";
 import { useInventory } from "../../hooks/useInventory";
 import type { MovementType } from "../../types/inventory";
+import {
+  formatMovementPackages,
+  formatMovementQuantity,
+} from "../../utils/inventoryUnits";
 
 interface InventoryMovementHistoryProps {
   isOpen: boolean;
@@ -57,6 +61,7 @@ export const InventoryMovementHistory = ({
       ajuste: "Ajuste",
       vencimiento: "Vencimiento",
       devolucion: "Devolución",
+      merma: "Merma",
     };
     return labels[type];
   };
@@ -68,6 +73,7 @@ export const InventoryMovementHistory = ({
       ajuste: "bg-blue-500/10 text-blue-400 border-blue-500/20",
       vencimiento: "bg-amber-500/10 text-amber-400 border-amber-500/20",
       devolucion: "bg-purple-500/10 text-purple-400 border-purple-500/20",
+      merma: "bg-orange-500/10 text-orange-400 border-orange-500/20",
     };
     return colors[type];
   };
@@ -140,6 +146,7 @@ export const InventoryMovementHistory = ({
                 <option value="ajuste">Ajuste</option>
                 <option value="vencimiento">Vencimiento</option>
                 <option value="devolucion">Devolución</option>
+                <option value="merma">Merma</option>
               </select>
             </div>
 
@@ -283,7 +290,14 @@ export const InventoryMovementHistory = ({
                           </span>
                         </td>
                         <td className="py-3 text-sm text-slate-300">
-                          {movement.quantity}
+                          <div>
+                            {formatMovementQuantity(movement, product)}
+                          </div>
+                          {formatMovementPackages(movement) && (
+                            <div className="text-[11px] text-slate-500">
+                              {formatMovementPackages(movement)}
+                            </div>
+                          )}
                         </td>
                         <td className="py-3 text-sm text-slate-300">
                           {movement.userName || (

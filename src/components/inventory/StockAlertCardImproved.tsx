@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { PackageX, ChevronRight, X, AlertTriangle } from "lucide-react";
 import { useInventory } from "../../hooks/useInventory";
+import {
+  formatQuantity,
+  formatQuantityWithUnit,
+} from "../../utils/inventoryUnits";
 
 interface StockAlertCardProps {
   onNavigate: (path: string) => void;
@@ -63,13 +67,13 @@ export const StockAlertCard = ({ onNavigate }: StockAlertCardProps) => {
                     <p className="text-xs text-slate-400 mt-1">
                       Mínimo:{" "}
                       <span className="text-slate-300 font-medium">
-                        {product.minStock} {product.unit}
+                        {formatQuantityWithUnit(product.minStock, product.unit)}
                       </span>
                     </p>
                   </div>
                   <div className="text-right">
                     <span className="text-xl font-bold text-red-400">
-                      {product.currentStock}
+                      {formatQuantity(product.currentStock)}
                     </span>
                     <p className="text-[10px] text-slate-400 uppercase tracking-wider">
                       {product.unit}
@@ -125,7 +129,8 @@ export const StockAlertCard = ({ onNavigate }: StockAlertCardProps) => {
                         {product.name}
                       </h4>
                       <p className="text-xs text-slate-400">
-                        Stock mínimo: {product.minStock} {product.unit}
+                        Stock mínimo:{" "}
+                        {formatQuantityWithUnit(product.minStock, product.unit)}
                       </p>
                       {product.description && (
                         <p className="text-xs text-slate-500 mt-1">
@@ -135,7 +140,7 @@ export const StockAlertCard = ({ onNavigate }: StockAlertCardProps) => {
                     </div>
                     <div className="text-right">
                       <span className="text-2xl font-bold text-red-400">
-                        {product.currentStock}
+                        {formatQuantity(product.currentStock)}
                       </span>
                       <p className="text-xs text-slate-400">{product.unit}</p>
                     </div>

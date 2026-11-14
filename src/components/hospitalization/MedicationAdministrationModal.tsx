@@ -3,6 +3,13 @@ import { AlertCircle, Pill, X } from "lucide-react";
 import type { Patient } from "../../types/patient";
 import type { InventoryItem } from "../../types/inventory";
 import type { MedicationAdministration } from "../../types/hospitalization";
+import {
+  formatFraction,
+  formatFractionWithUnit,
+  formatPackageEquivalence,
+  formatQuantityWithUnit,
+  formatStockBreakdown,
+} from "../../utils/inventoryUnits";
 
 export interface MedicationAdministrationData {
   productId: string;
@@ -56,11 +63,23 @@ export const MedicationAdministrationModal = ({
 
   // Al editar, se devuelve primero el descuento anterior antes de aplicar el nuevo.
   const availableStock =
-    (selectedProduct?.currentStock ?? 0) + (initial?.quantity ?? 0);
+    (selectedProduct?.currentStock ?? 0) +
+    (initial?.quantity ?? initial?.dose ?? 0);
   const parsedQuantity = Number(quantity);
   const remainingStock = Number.isFinite(parsedQuantity)
     ? Math.max(0, availableStock - parsedQuantity)
     : availableStock;
+  const unit = selectedProduct?.unit ?? "";
+  const supportsFractions = ["comprimido", "pastilla", "capsula"].includes(
+    unit,
+  );
+  const remainingBreakdown = selectedProduct
+    ? formatStockBreakdown({ ...selectedProduct, currentStock: remainingStock })
+    : null;
+  const packageEquivalence =
+    selectedProduct && parsedQuantity > 0
+      ? formatPackageEquivalence(parsedQuantity, selectedProduct)
+      : null;
 
   if (!isOpen || !patient) return null;
 
@@ -93,7 +112,10 @@ export const MedicationAdministrationModal = ({
 
     if (parsedQuantity > availableStock) {
       setError(
-        `Stock insuficiente: quedan ${availableStock} ${selectedProduct.unit}.`,
+        `Stock insuficiente: quedan ${formatQuantityWithUnit(
+          availableStock,
+          selectedProduct.unit,
+        )}.`,
       );
       return;
     }
@@ -124,8 +146,8 @@ export const MedicationAdministrationModal = ({
             <div>
               <h2 className="text-xl font-bold text-white">
                 {isEditing
-                  ? "Editar Medicación Administrada"
-                  : "Administrar Medicación"}
+                  ? "Editar Medicación o Consumo"
+                  : "Registrar Medicación o Consumo"}
               </h2>
               <p className="text-sm text-slate-400 mt-0.5">
                 Paciente:{" "}
@@ -164,7 +186,8 @@ export const MedicationAdministrationModal = ({
               ) : (
                 selectableProducts.map((product) => (
                   <option key={product.id} value={product.id}>
-                    {product.name} — {product.currentStock} {product.unit}
+                    {product.name} —{" "}
+                    {formatQuantityWithUnit(product.currentStock, product.unit)}
                   </option>
                 ))
               )}
@@ -180,7 +203,7 @@ export const MedicationAdministrationModal = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
-                Cantidad administrada *
+                Cantidad administrada / consumida *
               </label>
               <div className="flex items-center gap-2">
                 <input
@@ -196,9 +219,39 @@ export const MedicationAdministrationModal = ({
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#ece883] transition-colors"
                 />
                 <span className="text-xs font-semibold text-[#ece883] shrink-0 min-w-12 text-right">
-                  {selectedProduct?.unit ?? "—"}
+                  {unit || "—"}
                 </span>
               </div>
+              {supportsFractions && (
+                <div className="flex gap-2 mt-2">
+                  {[0.25, 0.5, 1, 2].map((fraction) => (
+                    <button
+                      key={fraction}
+                      type="button"
+                      onClick={() => {
+                        setQuantity(String(fraction));
+                        setError("");
+                      }}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                        parsedQuantity === fraction
+                          ? "bg-[#ece883] text-slate-950"
+                          : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                      }`}
+                    >
+                      {formatFraction(fraction)}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {parsedQuantity > 0 && unit && (
+                <p className="text-[11px] text-slate-500 mt-1.5">
+                  Registro:{" "}
+                  <span className="text-slate-300 font-semibold">
+                    {formatFractionWithUnit(parsedQuantity, unit)}
+                  </span>
+                  {packageEquivalence ? ` (${packageEquivalence})` : ""}
+                </p>
+              )}
             </div>
 
             <div>
@@ -207,31 +260,34 @@ export const MedicationAdministrationModal = ({
               </label>
               <div className="w-full bg-slate-950/60 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-300">
                 {selectedProduct
-                  ? `${availableStock} ${selectedProduct.unit}`
+                  ? formatQuantityWithUnit(availableStock, selectedProduct.unit)
                   : "—"}
               </div>
             </div>
           </div>
 
           <p className="text-[11px] text-slate-500">
-            Anota cuánto se usó del producto: por ejemplo, 5 ml, 100 mg o 1
-            comprimido. Se descontará del inventario en la misma unidad del
-            producto, como cuando se abre el envase y se consume hasta agotarlo.
-            {selectedProduct && Number.isFinite(parsedQuantity) && parsedQuantity > 0 && (
-              <>
-                {" "}
-                Quedarán{" "}
-                <span className="text-slate-300 font-semibold">
-                  {remainingStock} {selectedProduct.unit}
-                </span>{" "}
-                en stock.
-              </>
-            )}
+            Anota cuánto se usó del producto: por ejemplo, 40 g de alimento, 5 ml
+            de suspensión, ½ comprimido o 100 mg. Se descontará del inventario en
+            la misma unidad del producto, como cuando se abre el envase y se
+            consume hasta agotarlo.
+            {selectedProduct &&
+              Number.isFinite(parsedQuantity) &&
+              parsedQuantity > 0 && (
+                <>
+                  {" "}
+                  Quedarán{" "}
+                  <span className="text-slate-300 font-semibold">
+                    {formatQuantityWithUnit(remainingStock, selectedProduct.unit)}
+                  </span>
+                  {remainingBreakdown ? ` (${remainingBreakdown})` : ""} en stock.
+                </>
+              )}
           </p>
 
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
-              Notas de administración
+              Notas de administración o consumo
             </label>
             <textarea
               value={notes}
@@ -244,8 +300,8 @@ export const MedicationAdministrationModal = ({
 
           <p className="text-[11px] text-slate-500">
             {isEditing
-              ? "Al guardar se ajustará el stock según la nueva cantidad administrada."
-              : "La cantidad administrada se restará automáticamente del stock del producto."}
+              ? "Al guardar se ajustará el stock según la nueva cantidad registrada."
+              : "La cantidad registrada se restará automáticamente del stock total del producto."}
           </p>
 
           {error && (
@@ -272,7 +328,7 @@ export const MedicationAdministrationModal = ({
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#ece883] hover:bg-[#e4df68] disabled:bg-slate-700 disabled:text-slate-500 text-slate-950 text-sm font-bold transition-colors shadow-lg shadow-[#ece883]/10 disabled:shadow-none disabled:cursor-not-allowed cursor-pointer"
           >
             <Pill className="w-4 h-4" />
-            {isEditing ? "Guardar Cambios" : "Registrar Administración"}
+            {isEditing ? "Guardar Cambios" : "Registrar"}
           </button>
         </div>
       </div>

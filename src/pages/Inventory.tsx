@@ -14,6 +14,11 @@ import { InventoryMovementForm } from "../components/inventory/InventoryMovement
 import { InventoryMovementHistory } from "../components/inventory/InventoryMovementHistory";
 import { InventoryProductForm } from "../components/inventory/InventoryProductForm";
 import { formatDateShort } from "../utils/dateUtils";
+import {
+  formatPresentation,
+  formatQuantityWithUnit,
+  formatStockBreakdown,
+} from "../utils/inventoryUnits";
 
 const Inventory = () => {
   const { searchProducts, getLowStockProducts, getProducts } = useInventory();
@@ -254,17 +259,39 @@ const Inventory = () => {
                         </p>
                       )}
 
+                      {formatPresentation(product) && (
+                        <span className="inline-flex text-[10px] px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 border border-slate-700 capitalize">
+                          {formatPresentation(product)}
+                        </span>
+                      )}
+
                       <div className="space-y-1.5">
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-slate-400">Stock actual:</span>
                           <span className="font-bold text-white">
-                            {product.currentStock} {product.unit}
+                            {formatQuantityWithUnit(
+                              product.currentStock,
+                              product.unit,
+                            )}
                           </span>
                         </div>
+                        {formatStockBreakdown(product) && (
+                          <div className="flex items-center justify-between text-xs gap-3">
+                            <span className="text-slate-500">
+                              Equivale a:
+                            </span>
+                            <span className="text-right text-slate-300">
+                              {formatStockBreakdown(product)}
+                            </span>
+                          </div>
+                        )}
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-slate-400">Stock mínimo:</span>
                           <span className="font-medium text-slate-300">
-                            {product.minStock} {product.unit}
+                            {formatQuantityWithUnit(
+                              product.minStock,
+                              product.unit,
+                            )}
                           </span>
                         </div>
                       </div>

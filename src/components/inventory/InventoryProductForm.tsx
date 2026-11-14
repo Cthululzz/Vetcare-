@@ -4,9 +4,17 @@ import { useInventory } from "../../hooks/useInventory";
 import { useInventoryTags } from "../../hooks/useInventoryTags";
 import {
   CATEGORIAS_INVENTARIO,
+  TIPOS_PRESENTACION,
   UNIDADES_INVENTARIO,
 } from "../../constants/inventory";
 import type { InventoryItem } from "../../types/inventory";
+import {
+  convertUnit,
+  formatPackagePlural,
+  formatQuantity,
+  formatQuantityWithUnit,
+  getContentUnitOptions,
+} from "../../utils/inventoryUnits";
 
 interface InventoryProductFormProps {
   isOpen: boolean;
@@ -14,10 +22,14 @@ interface InventoryProductFormProps {
   onCreated?: (product: InventoryItem) => void;
 }
 
+type StockMode = "packages" | "base";
+
 const toNumber = (value: string): number => {
   const parsed = Number(value || 0);
   return Number.isFinite(parsed) ? parsed : 0;
 };
+
+const roundQuantity = (value: number): number => Math.round(value * 100) / 100;
 
 export const InventoryProductForm = ({
   isOpen,
@@ -31,6 +43,10 @@ export const InventoryProductForm = ({
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState<string>("medicamento");
   const [unit, setUnit] = useState<string>("ml");
+  const [packageType, setPackageType] = useState("");
+  const [contentPerPackage, setContentPerPackage] = useState("");
+  const [contentUnit, setContentUnit] = useState<string>("ml");
+  const [stockMode, setStockMode] = useState<StockMode>("packages");
   const [currentStock, setCurrentStock] = useState("");
   const [minStock, setMinStock] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -43,12 +59,42 @@ export const InventoryProductForm = ({
   if (!isOpen) return null;
 
   const tags = getTags();
+  const contentUnitOptions = getContentUnitOptions(unit);
+
+  const parsedContent = toNumber(contentPerPackage);
+  const contentInBaseUnit =
+    convertUnit(parsedContent, contentUnit, unit) ?? null;
+  const presentationReady = Boolean(
+    packageType.trim() && contentInBaseUnit && contentInBaseUnit > 0,
+  );
+  const effectiveStockMode: StockMode = presentationReady
+    ? stockMode
+    : "base";
+
+  const packageLabel = formatPackagePlural(packageType.trim() || "envase", 0);
+  const stockLabel =
+    effectiveStockMode === "packages" ? packageLabel : unit;
+
+  const initialStockValue = toNumber(currentStock);
+  const minStockValue = toNumber(minStock);
+  const initialStockBase =
+    effectiveStockMode === "packages" && contentInBaseUnit
+      ? initialStockValue * contentInBaseUnit
+      : initialStockValue;
+  const minStockBase =
+    effectiveStockMode === "packages" && contentInBaseUnit
+      ? minStockValue * contentInBaseUnit
+      : minStockValue;
 
   const resetForm = () => {
     setName("");
     setDescription("");
     setCategory("medicamento");
     setUnit("ml");
+    setPackageType("");
+    setContentPerPackage("");
+    setContentUnit("ml");
+    setStockMode("packages");
     setCurrentStock("");
     setMinStock("");
     setSelectedTags([]);
@@ -62,6 +108,12 @@ export const InventoryProductForm = ({
   const handleClose = () => {
     resetForm();
     onClose();
+  };
+
+  const handleUnitChange = (nextUnit: string) => {
+    setUnit(nextUnit);
+    setContentUnit(nextUnit);
+    setError("");
   };
 
   const toggleTag = (tagName: string) => {
@@ -100,11 +152,36 @@ export const InventoryProductForm = ({
       return;
     }
 
-    const parsedStock = toNumber(currentStock);
-    const parsedMinStock = toNumber(minStock);
+    const hasAnyPresentationValue =
+      packageType.trim() || contentPerPackage.trim() || contentUnit !== unit;
 
-    if (parsedStock < 0 || parsedMinStock < 0) {
+    if (hasAnyPresentationValue) {
+      if (!packageType.trim()) {
+        setError("Indica el tipo de envase o deja la presentación vacía.");
+        return;
+      }
+      if (!contentPerPackage || parsedContent <= 0) {
+        setError("El contenido por envase debe ser mayor a cero.");
+        return;
+      }
+      if (!contentInBaseUnit || contentInBaseUnit <= 0) {
+        setError(
+          `La unidad del contenido no es compatible con la unidad de control (${unit}).`,
+        );
+        return;
+      }
+    }
+
+    if (initialStockValue < 0 || minStockValue < 0) {
       setError("Las cantidades de stock no pueden ser negativas.");
+      return;
+    }
+
+    if (
+      !Number.isFinite(initialStockBase) ||
+      !Number.isFinite(minStockBase)
+    ) {
+      setError("Revisa las cantidades de stock ingresadas.");
       return;
     }
 
@@ -114,8 +191,11 @@ export const InventoryProductForm = ({
       category,
       tags: selectedTags,
       unit,
-      currentStock: parsedStock,
-      minStock: parsedMinStock,
+      currentStock: roundQuantity(initialStockBase),
+      minStock: roundQuantity(minStockBase),
+      packageType: presentationReady ? packageType.trim() : undefined,
+      contentPerPackage: presentationReady ? parsedContent : undefined,
+      contentUnit: presentationReady ? contentUnit : undefined,
       batch: batch.trim() || undefined,
       expirationDate: expirationDate || undefined,
       location: location.trim() || undefined,
@@ -138,7 +218,7 @@ export const InventoryProductForm = ({
             <div>
               <h2 className="text-xl font-bold text-white">Nuevo Producto</h2>
               <p className="text-sm text-slate-400 mt-0.5">
-                Registra el producto con su unidad de medida real
+                Registra el stock total en la unidad que realmente se consume
               </p>
             </div>
           </div>
@@ -167,7 +247,7 @@ export const InventoryProductForm = ({
                 setName(event.target.value);
                 setError("");
               }}
-              placeholder="Ej. Amoxicilina 250 mg"
+              placeholder="Ej. Royal Canin Gastrointestinal Feline"
               className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#ece883] transition-colors"
             />
           </div>
@@ -205,11 +285,11 @@ export const InventoryProductForm = ({
 
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
-                Unidad de medida (pesaje) *
+                Unidad de control *
               </label>
               <select
                 value={unit}
-                onChange={(event) => setUnit(event.target.value)}
+                onChange={(event) => handleUnitChange(event.target.value)}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#ece883] transition-colors"
               >
                 {UNIDADES_INVENTARIO.map((option) => (
@@ -218,54 +298,186 @@ export const InventoryProductForm = ({
                   </option>
                 ))}
               </select>
+              <p className="text-[11px] text-slate-500 mt-1.5">
+                Es la unidad con la que se mide la dosis y se descuenta el
+                stock: g, ml, comprimido, etc.
+              </p>
             </div>
           </div>
 
-          <div className="rounded-xl border border-[#ece883]/20 bg-[#ece883]/5 px-4 py-3">
-            <p className="text-[11px] text-slate-300">
-              El stock se controla y descuenta en esta unidad. Por ejemplo, un
-              frasco de 100 ml se registra en <span className="text-[#ece883]">ml</span> y
-              una caja de 20 comprimidos en{" "}
-              <span className="text-[#ece883]">comprimidos</span>. Asumimos que el
-              envase se abre y se consume hasta agotarse.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Presentación */}
+          <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-4 space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
-                Stock inicial ({unit}) *
-              </label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={currentStock}
-                onChange={(event) => {
-                  setCurrentStock(event.target.value);
-                  setError("");
-                }}
-                placeholder="Ej. 100"
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#ece883] transition-colors"
-              />
+              <p className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                Presentación del producto (opcional)
+              </p>
+              <p className="text-[11px] text-slate-500 mt-1">
+                Sirve para ingresar cajas, sachets, frascos o sacos y convertir
+                automáticamente al total interno.
+              </p>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
-                Stock mínimo ({unit})
-              </label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={minStock}
-                onChange={(event) => {
-                  setMinStock(event.target.value);
-                  setError("");
-                }}
-                placeholder="Ej. 10"
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#ece883] transition-colors"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  Tipo de envase
+                </label>
+                <input
+                  type="text"
+                  list="tipos-presentacion"
+                  value={packageType}
+                  onChange={(event) => {
+                    setPackageType(event.target.value);
+                    setError("");
+                  }}
+                  placeholder="Ej. sachet, caja, saco"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#ece883] transition-colors"
+                />
+                <datalist id="tipos-presentacion">
+                  {TIPOS_PRESENTACION.map((type) => (
+                    <option key={type} value={type} />
+                  ))}
+                </datalist>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  Contenido por envase
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={contentPerPackage}
+                    onChange={(event) => {
+                      setContentPerPackage(event.target.value);
+                      setError("");
+                    }}
+                    placeholder="Ej. 85"
+                    className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#ece883] transition-colors"
+                  />
+                  <select
+                    value={contentUnit}
+                    onChange={(event) => {
+                      setContentUnit(event.target.value);
+                      setError("");
+                    }}
+                    className="w-24 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-[#ece883] transition-colors"
+                  >
+                    {contentUnitOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {presentationReady ? (
+              <p className="text-[11px] text-[#ece883]">
+                1 {packageType.trim()} = {formatQuantity(parsedContent)}{" "}
+                {contentUnit} = {formatQuantity(contentInBaseUnit ?? 0)} {unit}
+              </p>
+            ) : (
+              <p className="text-[11px] text-slate-500">
+                Sin presentación: el stock se controla directamente en {unit}.
+              </p>
+            )}
+          </div>
+
+          {/* Stock */}
+          <div className="space-y-3">
+            {presentationReady && (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                  Ingresar stock en:
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setStockMode("packages")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors capitalize ${
+                    effectiveStockMode === "packages"
+                      ? "bg-[#ece883] text-slate-950"
+                      : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                  }`}
+                >
+                  {packageLabel}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStockMode("base")}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                    effectiveStockMode === "base"
+                      ? "bg-[#ece883] text-slate-950"
+                      : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                  }`}
+                >
+                  {unit}
+                </button>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
+                  Stock inicial ({stockLabel}) *
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={currentStock}
+                  onChange={(event) => {
+                    setCurrentStock(event.target.value);
+                    setError("");
+                  }}
+                  placeholder={
+                    effectiveStockMode === "packages" ? "Ej. 25" : "Ej. 2.125"
+                  }
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#ece883] transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
+                  Stock mínimo ({stockLabel})
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={minStock}
+                  onChange={(event) => {
+                    setMinStock(event.target.value);
+                    setError("");
+                  }}
+                  placeholder={
+                    effectiveStockMode === "packages" ? "Ej. 3" : "Ej. 250"
+                  }
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#ece883] transition-colors"
+                />
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-[#ece883]/20 bg-[#ece883]/5 px-4 py-3 space-y-1">
+              <p className="text-xs text-slate-200">
+                Total interno guardado:{" "}
+                <span className="font-bold text-[#ece883]">
+                  {formatQuantityWithUnit(initialStockBase, unit)}
+                </span>
+              </p>
+              <p className="text-xs text-slate-400">
+                Stock mínimo equivalente:{" "}
+                <span className="font-semibold text-slate-200">
+                  {formatQuantityWithUnit(minStockBase, unit)}
+                </span>
+              </p>
+              <p className="text-[11px] text-slate-500">
+                Cada consumo o retiro se descuenta de este total, sin importar
+                si se ingresó por envases o por unidad de control.
+              </p>
             </div>
           </div>
 

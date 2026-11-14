@@ -52,6 +52,7 @@ import {
   buildReviewReminderMessage,
   buildWhatsAppLink,
 } from "../utils/whatsappUtils";
+import { formatFractionWithUnit, formatQuantityWithUnit } from "../utils/inventoryUnits";
 
 // ============================================
 // TIPOS INTERNOS
@@ -143,9 +144,9 @@ const dateInputToIso = (value?: string): string | undefined => {
 const formatMedicationDose = (
   medication: MedicationAdministration,
 ): string => {
-  const dose = medication.dose ?? medication.quantity;
-  const unit = medication.doseUnit ?? medication.unit ?? "";
-  return `${dose} ${unit}`.trim();
+  const amount = medication.dose ?? medication.quantity;
+  const unit = medication.doseUnit ?? medication.unit;
+  return unit ? formatFractionWithUnit(amount, unit) : `${amount}`;
 };
 
 const formatSpeciesAndBreed = (patient: Patient): string => {
@@ -491,11 +492,15 @@ const HospitalizationView = () => {
     if (!product) return "No se encontró el producto en inventario.";
 
     const wasEditing = Boolean(editingMedication);
-    const previousQuantity = editingMedication?.quantity ?? 0;
+    const previousQuantity =
+      editingMedication?.quantity ?? editingMedication?.dose ?? 0;
     const availableStock = product.currentStock + previousQuantity;
 
     if (data.quantity > availableStock) {
-      return `Stock insuficiente: quedan ${availableStock} ${product.unit}.`;
+      return `Stock insuficiente: quedan ${formatQuantityWithUnit(
+        availableStock,
+        product.unit,
+      )}.`;
     }
 
     const stockDelta = data.quantity - previousQuantity;
@@ -529,9 +534,10 @@ const HospitalizationView = () => {
         productId: product.id,
         type: stockDelta > 0 ? "retiro" : "devolucion",
         quantity: Math.abs(stockDelta),
+        unit: product.unit,
         reason: wasEditing
-          ? "Ajuste de medicación administrada"
-          : "Administración en hospitalización",
+          ? "Ajuste de medicación o consumo"
+          : "Medicación o consumo en hospitalización",
         userName: user?.name,
         userRole: user?.role,
         patientName: selectedPatient.name,
@@ -539,7 +545,7 @@ const HospitalizationView = () => {
       });
     }
 
-    const quantityLabel = `${data.quantity} ${product.unit}`;
+    const quantityLabel = formatFractionWithUnit(data.quantity, product.unit);
 
     setShowMedicationModal(false);
     setEditingMedication(null);
@@ -548,7 +554,7 @@ const HospitalizationView = () => {
       // La ficha de hospitalización sigue abierta para ver el cambio.
       setFeedback({
         type: "success",
-        message: `Se actualizó la administración de ${product.name} (${quantityLabel}).`,
+        message: `Se actualizó el registro de ${product.name} (${quantityLabel}).`,
       });
       return null;
     }
@@ -557,7 +563,7 @@ const HospitalizationView = () => {
     setSelectedPatient(null);
     setFeedback({
       type: "success",
-      message: `Se administró ${quantityLabel} de ${product.name} y se descontó del inventario.`,
+      message: `Se registró ${quantityLabel} de ${product.name} y se descontó del inventario.`,
     });
 
     return null;
@@ -571,12 +577,15 @@ const HospitalizationView = () => {
     );
     if (!confirmed) return;
 
-    if (medication.quantity > 0) {
+    const returnedQuantity = medication.quantity ?? medication.dose ?? 0;
+
+    if (returnedQuantity > 0) {
       createMovement({
         productId: medication.productId,
         type: "devolucion",
-        quantity: medication.quantity,
-        reason: "Eliminación de registro de medicación",
+        quantity: returnedQuantity,
+        unit: medication.unit ?? medication.doseUnit,
+        reason: "Eliminación de registro de medicación o consumo",
         userName: user?.name,
         userRole: user?.role,
         patientName: selectedPatient.name,
@@ -974,7 +983,7 @@ const HospitalizationView = () => {
                         }
                         className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/20 text-xs font-semibold transition-colors cursor-pointer"
                       >
-                        <Pill className="w-3.5 h-3.5" /> Medicación
+                        <Pill className="w-3.5 h-3.5" /> Medicación / consumo
                       </button>
                       <button
                         onClick={() => handleSendReviewReminder(item)}
@@ -1158,7 +1167,7 @@ const HospitalizationView = () => {
         }}
       />
 
-      {/* Modal de Administración de Medicación */}
+      {/* Modal de medicación y consumos */}
       <MedicationAdministrationModal
         key={editingMedication?.id ?? "new-medication"}
         isOpen={showMedicationModal}

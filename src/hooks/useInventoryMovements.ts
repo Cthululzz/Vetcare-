@@ -63,6 +63,11 @@ export function useInventoryMovements() {
     type: MovementType;
     quantity: number;
     reason?: string;
+    unit?: string;
+    packageQuantity?: number;
+    packageType?: string;
+    packageContent?: number;
+    packageContentUnit?: string;
     userName?: string;
     userRole?: string;
     patientName?: string;
@@ -85,12 +90,18 @@ export function useInventoryMovements() {
       let newStock = product.currentStock;
       if (data.type === "ingreso" || data.type === "devolucion") {
         newStock += data.quantity;
-      } else if (data.type === "retiro" || data.type === "vencimiento") {
+      } else if (
+        data.type === "retiro" ||
+        data.type === "vencimiento" ||
+        data.type === "merma"
+      ) {
         newStock = Math.max(0, newStock - data.quantity);
       } else if (data.type === "ajuste") {
         newStock = data.quantity;
       }
-      updateProduct(data.productId, { currentStock: newStock });
+      updateProduct(data.productId, {
+        currentStock: Math.round(newStock * 100) / 100,
+      });
     }
 
     return newMovement;

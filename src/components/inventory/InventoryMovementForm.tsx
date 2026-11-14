@@ -4,6 +4,13 @@ import { useInventory } from "../../hooks/useInventory";
 import { useInventoryMovements } from "../../hooks/useInventoryMovements";
 import { useInventoryReminders } from "../../hooks/useInventoryReminders";
 import type { MovementType } from "../../types/inventory";
+import {
+  formatPackageEquivalence,
+  formatPackagePlural,
+  formatQuantity,
+  formatQuantityWithUnit,
+  getContentInBaseUnit,
+} from "../../utils/inventoryUnits";
 
 interface InventoryMovementFormProps {
   isOpen: boolean;
@@ -11,6 +18,10 @@ interface InventoryMovementFormProps {
   currentUserName?: string;
   currentUserRole?: string;
 }
+
+type InputMode = "packages" | "base";
+
+const roundQuantity = (value: number): number => Math.round(value * 100) / 100;
 
 export const InventoryMovementForm = ({
   isOpen,
@@ -24,24 +35,99 @@ export const InventoryMovementForm = ({
 
   const [movementType, setMovementType] = useState<MovementType>("retiro");
   const [productId, setProductId] = useState("");
+  const [inputMode, setInputMode] = useState<InputMode>("packages");
   const [quantity, setQuantity] = useState("");
   const [reason, setReason] = useState("");
   const [patientName, setPatientName] = useState("");
   const [userName, setUserName] = useState(currentUserName);
   const [userRole, setUserRole] = useState(currentUserRole);
+  const [error, setError] = useState("");
 
   if (!isOpen) return null;
 
   const products = getProducts();
   const selectedProduct = products.find((product) => product.id === productId);
+  const contentInBaseUnit = selectedProduct
+    ? getContentInBaseUnit(selectedProduct)
+    : null;
+  const canUsePackages = Boolean(
+    movementType === "ingreso" &&
+      selectedProduct?.packageType &&
+      contentInBaseUnit &&
+      contentInBaseUnit > 0,
+  );
+  const effectiveInputMode: InputMode = canUsePackages ? inputMode : "base";
+
+  const parsedInput = Number(quantity || 0);
+  const baseQuantity =
+    effectiveInputMode === "packages" && contentInBaseUnit
+      ? parsedInput * contentInBaseUnit
+      : parsedInput;
+
+  const unit = selectedProduct?.unit ?? "";
+  const packageLabel = selectedProduct?.packageType
+    ? formatPackagePlural(selectedProduct.packageType, 0)
+    : "envases";
+
+  const currentStock = selectedProduct?.currentStock ?? 0;
+  const resultingStock =
+    movementType === "ingreso" || movementType === "devolucion"
+      ? currentStock + baseQuantity
+      : movementType === "ajuste"
+        ? baseQuantity
+        : Math.max(0, currentStock - baseQuantity);
+
+  const subtractsStock =
+    movementType === "retiro" ||
+    movementType === "vencimiento" ||
+    movementType === "merma";
 
   const handleSubmit = (e: React.FormEvent, isComplete: boolean) => {
     e.preventDefault();
+    setError("");
+
+    if (!selectedProduct) {
+      setError("Selecciona un producto del inventario.");
+      return;
+    }
+
+    if (!Number.isFinite(parsedInput) || parsedInput <= 0) {
+      setError("Ingresa una cantidad mayor a cero.");
+      return;
+    }
+
+    if (
+      subtractsStock &&
+      roundQuantity(baseQuantity) > selectedProduct.currentStock
+    ) {
+      setError(
+        `Stock insuficiente: disponible ${formatQuantityWithUnit(
+          selectedProduct.currentStock,
+          selectedProduct.unit,
+        )}.`,
+      );
+      return;
+    }
 
     const movement = createMovement({
       productId,
       type: movementType,
-      quantity: parseFloat(quantity),
+      quantity: roundQuantity(baseQuantity),
+      unit: selectedProduct.unit,
+      packageQuantity:
+        effectiveInputMode === "packages" ? parsedInput : undefined,
+      packageType:
+        effectiveInputMode === "packages"
+          ? selectedProduct.packageType
+          : undefined,
+      packageContent:
+        effectiveInputMode === "packages"
+          ? selectedProduct.contentPerPackage
+          : undefined,
+      packageContentUnit:
+        effectiveInputMode === "packages"
+          ? selectedProduct.contentUnit
+          : undefined,
       reason: reason || undefined,
       userName: isComplete ? userName : undefined,
       userRole: isComplete ? userRole : undefined,
@@ -56,11 +142,13 @@ export const InventoryMovementForm = ({
 
     // Reset form
     setProductId("");
+    setInputMode("packages");
     setQuantity("");
     setReason("");
     setPatientName("");
     setUserName(currentUserName);
     setUserRole(currentUserRole);
+    setError("");
     onClose();
   };
 
@@ -103,12 +191,16 @@ export const InventoryMovementForm = ({
                   "ajuste",
                   "vencimiento",
                   "devolucion",
+                  "merma",
                 ] as MovementType[]
               ).map((type) => (
                 <button
                   key={type}
                   type="button"
-                  onClick={() => setMovementType(type)}
+                  onClick={() => {
+                    setMovementType(type);
+                    setError("");
+                  }}
                   className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors capitalize ${
                     movementType === type
                       ? "bg-[#ece883] text-slate-950"
@@ -128,42 +220,129 @@ export const InventoryMovementForm = ({
             </label>
             <select
               value={productId}
-              onChange={(e) => setProductId(e.target.value)}
+              onChange={(e) => {
+                setProductId(e.target.value);
+                setQuantity("");
+                setError("");
+              }}
               required
               className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#ece883] transition-colors"
             >
               <option value="">Seleccionar producto...</option>
               {products.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.name} (Stock: {p.currentStock} {p.unit})
+                  {p.name} (Stock: {formatQuantityWithUnit(p.currentStock, p.unit)})
                 </option>
               ))}
             </select>
           </div>
 
+          {/* Modo de ingreso por envases */}
+          {canUsePackages && (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                Ingresar en:
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setInputMode("packages");
+                  setError("");
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors capitalize ${
+                  effectiveInputMode === "packages"
+                    ? "bg-[#ece883] text-slate-950"
+                    : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                }`}
+              >
+                {packageLabel}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setInputMode("base");
+                  setError("");
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                  effectiveInputMode === "base"
+                    ? "bg-[#ece883] text-slate-950"
+                    : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                }`}
+              >
+                {unit}
+              </button>
+            </div>
+          )}
+
           {/* Cantidad */}
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
-              Cantidad{selectedProduct ? ` (${selectedProduct.unit})` : ""} *
+              {effectiveInputMode === "packages"
+                ? `Cantidad recibida (${packageLabel})`
+                : movementType === "ajuste"
+                  ? `Nuevo stock total (${unit || "unidad"})`
+                  : `Cantidad (${unit || "unidad"})`}{" "}
+              *
             </label>
             <input
               type="number"
               step="0.01"
               min="0.01"
               value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
+              onChange={(e) => {
+                setQuantity(e.target.value);
+                setError("");
+              }}
               required
               placeholder={
-                selectedProduct ? `Ej. 10 ${selectedProduct.unit}` : "Ej. 10"
+                effectiveInputMode === "packages"
+                  ? "Ej. 25"
+                  : `Ej. 10 ${unit}`
               }
               className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#ece883] transition-colors"
             />
-            {selectedProduct && (
+            {movementType === "merma" && (
               <p className="text-[11px] text-slate-500 mt-1.5">
-                Stock actual: {selectedProduct.currentStock}{" "}
-                {selectedProduct.unit}. La cantidad se registra en la misma
-                unidad del producto.
+                Merma: descarte de un envase abierto, derrame o producto en mal
+                estado. Se descuenta del stock total.
               </p>
+            )}
+            {selectedProduct && parsedInput > 0 && (
+              <div className="text-[11px] text-slate-500 mt-1.5 space-y-0.5">
+                {effectiveInputMode === "packages" && contentInBaseUnit && (
+                  <p>
+                    ={" "}
+                    <span className="text-slate-300 font-semibold">
+                      {formatQuantityWithUnit(baseQuantity, selectedProduct.unit)}
+                    </span>{" "}
+                    ({formatQuantity(parsedInput)} {packageLabel} ×{" "}
+                    {formatQuantity(selectedProduct.contentPerPackage ?? 0)}{" "}
+                    {selectedProduct.contentUnit})
+                  </p>
+                )}
+                {effectiveInputMode === "base" &&
+                  formatPackageEquivalence(baseQuantity, selectedProduct) && (
+                    <p>
+                      {formatPackageEquivalence(baseQuantity, selectedProduct)}
+                    </p>
+                  )}
+                <p>
+                  Stock actual:{" "}
+                  {formatQuantityWithUnit(
+                    selectedProduct.currentStock,
+                    selectedProduct.unit,
+                  )}
+                </p>
+                <p>
+                  Quedará:{" "}
+                  <span className="text-slate-300 font-semibold">
+                    {formatQuantityWithUnit(
+                      resultingStock,
+                      selectedProduct.unit,
+                    )}
+                  </span>
+                </p>
+              </div>
             )}
           </div>
 
@@ -231,6 +410,12 @@ export const InventoryMovementForm = ({
                 placeholder="Nombre del paciente"
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#ece883] transition-colors"
               />
+            </div>
+          )}
+
+          {error && (
+            <div className="bg-red-500/10 border border-red-500/30 text-red-300 rounded-xl px-4 py-3 text-xs">
+              {error}
             </div>
           )}
         </form>

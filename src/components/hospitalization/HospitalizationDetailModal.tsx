@@ -16,6 +16,7 @@ import type {
   MedicationAdministration,
 } from "../../types/hospitalization";
 import { getSucursalName } from "../../constants/appConstants";
+import { formatFractionWithUnit } from "../../utils/inventoryUnits";
 
 interface HospitalizationDetailModalProps {
   isOpen: boolean;
@@ -65,9 +66,9 @@ const DataField = ({
 );
 
 const formatDose = (medication: MedicationAdministration): string => {
-  const dose = medication.dose ?? medication.quantity;
-  const unit = medication.doseUnit ?? medication.unit ?? "";
-  return `${dose} ${unit}`.trim();
+  const amount = medication.dose ?? medication.quantity;
+  const unit = medication.doseUnit ?? medication.unit;
+  return unit ? formatFractionWithUnit(amount, unit) : `${amount}`;
 };
 
 export const HospitalizationDetailModal = ({
@@ -314,16 +315,16 @@ export const HospitalizationDetailModal = ({
             )}
           </div>
 
-          {/* Medicación administrada */}
+          {/* Medicación y consumos */}
           <div className="space-y-3">
             <h3 className="text-xs font-bold uppercase tracking-wider text-[#ece883] flex items-center gap-2">
               <Pill className="w-4 h-4" />
-              Medicación administrada ({medications.length})
+              Medicación y consumos ({medications.length})
             </h3>
 
             {medications.length === 0 ? (
               <p className="text-xs text-slate-500 italic bg-slate-950/40 border border-slate-800/60 rounded-xl p-4">
-                No se ha registrado medicación desde inventario.
+                No se ha registrado medicación ni consumos desde inventario.
               </p>
             ) : (
               <div className="space-y-2">
@@ -358,7 +359,7 @@ export const HospitalizationDetailModal = ({
                             <button
                               type="button"
                               onClick={() => onEditMedication(medication)}
-                              title="Editar dosis"
+                              title="Editar cantidad"
                               className="p-1.5 rounded-lg text-slate-400 hover:text-[#ece883] hover:bg-slate-800 transition-colors cursor-pointer"
                             >
                               <Pencil className="w-3.5 h-3.5" />
