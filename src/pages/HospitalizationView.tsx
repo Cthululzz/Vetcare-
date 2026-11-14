@@ -478,7 +478,7 @@ const HospitalizationView = () => {
 
   /**
    * Registra una nueva administración o actualiza una existente.
-   * El descuento de stock es independiente de la dosis clínica.
+   * La cantidad administrada se descuenta siempre en la unidad del producto.
    */
   const handleSaveMedication = (
     data: MedicationAdministrationData,
@@ -494,21 +494,22 @@ const HospitalizationView = () => {
     const previousQuantity = editingMedication?.quantity ?? 0;
     const availableStock = product.currentStock + previousQuantity;
 
-    if (data.stockQuantity > availableStock) {
+    if (data.quantity > availableStock) {
       return `Stock insuficiente: quedan ${availableStock} ${product.unit}.`;
     }
 
-    const stockDelta = data.stockQuantity - previousQuantity;
+    const stockDelta = data.quantity - previousQuantity;
 
     if (editingMedication) {
       updateMedicationAdministration(
         selectedHospitalization.id,
         editingMedication.id,
         {
-          dose: data.dose,
-          doseUnit: data.doseUnit,
-          quantity: data.stockQuantity,
+          quantity: data.quantity,
           unit: product.unit,
+          // Los registros nuevos usan solo quantity + unit.
+          dose: undefined,
+          doseUnit: undefined,
           notes: data.notes,
         },
       );
@@ -516,9 +517,7 @@ const HospitalizationView = () => {
       addMedicationAdministration(selectedHospitalization.id, {
         productId: product.id,
         productName: product.name,
-        dose: data.dose,
-        doseUnit: data.doseUnit,
-        quantity: data.stockQuantity,
+        quantity: data.quantity,
         unit: product.unit,
         notes: data.notes,
         createdBy: user?.name,
@@ -540,7 +539,7 @@ const HospitalizationView = () => {
       });
     }
 
-    const doseLabel = `${data.dose} ${data.doseUnit}`;
+    const quantityLabel = `${data.quantity} ${product.unit}`;
 
     setShowMedicationModal(false);
     setEditingMedication(null);
@@ -549,7 +548,7 @@ const HospitalizationView = () => {
       // La ficha de hospitalización sigue abierta para ver el cambio.
       setFeedback({
         type: "success",
-        message: `Se actualizó la administración de ${product.name} (${doseLabel}).`,
+        message: `Se actualizó la administración de ${product.name} (${quantityLabel}).`,
       });
       return null;
     }
@@ -558,10 +557,7 @@ const HospitalizationView = () => {
     setSelectedPatient(null);
     setFeedback({
       type: "success",
-      message:
-        data.stockQuantity > 0
-          ? `Se administró ${doseLabel} de ${product.name} y se descontaron ${data.stockQuantity} ${product.unit} del inventario.`
-          : `Se administró ${doseLabel} de ${product.name}. No se descontó stock.`,
+      message: `Se administró ${quantityLabel} de ${product.name} y se descontó del inventario.`,
     });
 
     return null;

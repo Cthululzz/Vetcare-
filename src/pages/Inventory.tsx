@@ -1,13 +1,22 @@
 import { useState } from "react";
-import { Package, Search, Plus, Filter, AlertTriangle } from "lucide-react";
+import {
+  Package,
+  PackagePlus,
+  Search,
+  Plus,
+  Filter,
+  AlertTriangle,
+} from "lucide-react";
 import { Footer } from "../components/common/Footer";
 import { useInventory } from "../hooks/useInventory";
 import { useInventoryTags } from "../hooks/useInventoryTags";
 import { InventoryMovementForm } from "../components/inventory/InventoryMovementForm";
 import { InventoryMovementHistory } from "../components/inventory/InventoryMovementHistory";
+import { InventoryProductForm } from "../components/inventory/InventoryProductForm";
+import { formatDateShort } from "../utils/dateUtils";
 
 const Inventory = () => {
-  const { searchProducts, getLowStockProducts } = useInventory();
+  const { searchProducts, getLowStockProducts, getProducts } = useInventory();
   const { getTags } = useInventoryTags();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -15,6 +24,7 @@ const Inventory = () => {
   const [lowStockOnly, setLowStockOnly] = useState(false);
   const [showMovementForm, setShowMovementForm] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [showProductForm, setShowProductForm] = useState(false);
 
   const tags = getTags();
   const products = searchProducts(searchQuery, {
@@ -22,6 +32,11 @@ const Inventory = () => {
     lowStockOnly,
   });
   const lowStockProducts = getLowStockProducts();
+  const totalProducts = getProducts().length;
+  const hasFilters =
+    searchQuery.trim().length > 0 ||
+    selectedTags.length > 0 ||
+    lowStockOnly;
 
   const toggleTag = (tagName: string) => {
     setSelectedTags((prev) =>
@@ -53,20 +68,27 @@ const Inventory = () => {
                 Gestión completa de medicamentos, insumos y control de stock
               </p>
             </div>
-            <div className="flex gap-3">
+            <div className="flex flex-wrap gap-3">
               <button
                 onClick={() => setShowHistory(true)}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-semibold transition-colors"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-semibold transition-colors cursor-pointer"
               >
                 <Filter className="w-4 h-4" />
                 Historial
               </button>
               <button
                 onClick={() => setShowMovementForm(true)}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#ece883] hover:bg-[#e4df68] text-slate-950 text-sm font-bold transition-colors shadow-md shadow-[#ece883]/10"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-semibold transition-colors cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
                 Registrar Movimiento
+              </button>
+              <button
+                onClick={() => setShowProductForm(true)}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#ece883] hover:bg-[#e4df68] text-slate-950 text-sm font-bold transition-colors shadow-md shadow-[#ece883]/10 cursor-pointer"
+              >
+                <PackagePlus className="w-4 h-4" />
+                Nuevo Producto
               </button>
             </div>
           </div>
@@ -83,7 +105,7 @@ const Inventory = () => {
                 Total Productos
               </p>
               <h3 className="text-xl font-bold text-white">
-                {products.length}
+                {totalProducts}
               </h3>
             </div>
           </div>
@@ -178,9 +200,29 @@ const Inventory = () => {
           {products.length === 0 ? (
             <div className="text-center py-12">
               <Package className="w-12 h-12 text-slate-600 mx-auto mb-3 stroke-1" />
-              <p className="text-sm text-slate-400">
-                No hay productos que coincidan con los filtros
-              </p>
+              {hasFilters ? (
+                <p className="text-sm text-slate-400">
+                  No hay productos que coincidan con los filtros.
+                </p>
+              ) : (
+                <>
+                  <p className="text-sm text-slate-300 font-medium">
+                    Aún no hay productos registrados en el inventario.
+                  </p>
+                  <p className="text-xs text-slate-500 max-w-md mx-auto mt-1">
+                    Registra tu primer producto con su unidad de medida (ml, mg,
+                    comprimidos, etc.) para controlar el stock y descontar la
+                    medicación desde hospitalización.
+                  </p>
+                  <button
+                    onClick={() => setShowProductForm(true)}
+                    className="inline-flex items-center gap-2 mt-4 px-4 py-2.5 rounded-xl bg-[#ece883] hover:bg-[#e4df68] text-slate-950 text-sm font-bold transition-colors shadow-md shadow-[#ece883]/10 cursor-pointer"
+                  >
+                    <PackagePlus className="w-4 h-4" />
+                    Crear primer producto
+                  </button>
+                </>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -245,6 +287,19 @@ const Inventory = () => {
                           Lote: {product.batch}
                         </p>
                       )}
+
+                      {(product.expirationDate || product.location) && (
+                        <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-slate-500">
+                          {product.expirationDate && (
+                            <span>
+                              Vence: {formatDateShort(product.expirationDate)}
+                            </span>
+                          )}
+                          {product.location && (
+                            <span>Ubicación: {product.location}</span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -257,6 +312,11 @@ const Inventory = () => {
       <Footer />
 
       {/* Modals */}
+      <InventoryProductForm
+        isOpen={showProductForm}
+        onClose={() => setShowProductForm(false)}
+      />
+
       <InventoryMovementForm
         isOpen={showMovementForm}
         onClose={() => setShowMovementForm(false)}

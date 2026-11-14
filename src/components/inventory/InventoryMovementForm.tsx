@@ -33,6 +33,7 @@ export const InventoryMovementForm = ({
   if (!isOpen) return null;
 
   const products = getProducts();
+  const selectedProduct = products.find((product) => product.id === productId);
 
   const handleSubmit = (e: React.FormEvent, isComplete: boolean) => {
     e.preventDefault();
@@ -143,7 +144,7 @@ export const InventoryMovementForm = ({
           {/* Cantidad */}
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
-              Cantidad *
+              Cantidad{selectedProduct ? ` (${selectedProduct.unit})` : ""} *
             </label>
             <input
               type="number"
@@ -152,9 +153,18 @@ export const InventoryMovementForm = ({
               value={quantity}
               onChange={(e) => setQuantity(e.target.value)}
               required
-              placeholder="Ej. 10"
+              placeholder={
+                selectedProduct ? `Ej. 10 ${selectedProduct.unit}` : "Ej. 10"
+              }
               className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#ece883] transition-colors"
             />
+            {selectedProduct && (
+              <p className="text-[11px] text-slate-500 mt-1.5">
+                Stock actual: {selectedProduct.currentStock}{" "}
+                {selectedProduct.unit}. La cantidad se registra en la misma
+                unidad del producto.
+              </p>
+            )}
           </div>
 
           {/* Motivo */}

@@ -18,13 +18,13 @@ export interface MedicationAdministration {
   date: string; // ISO
   productId: string;
   productName: string;
-  /** Dosis clínica administrada (ej. 1 pastilla, 5 ml). */
+  /** Cantidad administrada en la unidad del producto; también es el descuento de stock. */
+  quantity: number;
+  /** Unidad de medida del producto (ej. ml, mg, comprimido). */
+  unit?: string;
+  /** Dosis clínica de registros antiguos. Los nuevos usan quantity + unit. */
   dose?: number;
   doseUnit?: string;
-  /** Unidades descontadas del inventario. Puede ser 0 si no se descuenta stock. */
-  quantity: number;
-  /** Unidad de inventario del producto (ej. caja, frasco, pastilla). */
-  unit?: string;
   notes?: string;
   createdBy?: string;
 }
