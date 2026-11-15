@@ -39,6 +39,57 @@ export const formatDateShort = (dateStr: string): string => {
   return `${String(day).padStart(2, "0")}/${String(month).padStart(2, "0")}/${year}`;
 };
 
+const pad2 = (value: number): string => String(value).padStart(2, "0");
+
+/**
+ * Formatea un Date local a "dd/mm/aaaa".
+ */
+export const formatDateDMY = (date: Date): string =>
+  `${pad2(date.getDate())}/${pad2(date.getMonth() + 1)}/${date.getFullYear()}`;
+
+/**
+ * Formatea un Date local a "dd/mm/aaaa HH:MM".
+ */
+export const formatDateTimeDMY = (date: Date): string =>
+  `${formatDateDMY(date)} ${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
+
+/**
+ * Formatea una fecha-hora ISO a "dd/mm/aaaa HH:MM" en hora local.
+ */
+export const formatDateTimeShort = (dateStr?: string): string => {
+  if (!dateStr) return "";
+  const date = new Date(dateStr);
+  if (Number.isNaN(date.getTime())) return "";
+  return formatDateTimeDMY(date);
+};
+
+/**
+ * Convierte una fecha escrita como "dd/mm/aaaa" a ISO "aaaa-mm-dd".
+ * Devuelve null si el texto o la fecha no son válidos.
+ */
+export const parseDisplayDateToIso = (value: string): string | null => {
+  const match = value.trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!match) return null;
+
+  const day = Number(match[1]);
+  const month = Number(match[2]);
+  const year = Number(match[3]);
+  if (year < 1900 || year > 2200 || month < 1 || month > 12 || day < 1) {
+    return null;
+  }
+
+  const date = new Date(year, month - 1, day);
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    return null;
+  }
+
+  return `${year}-${pad2(month)}-${pad2(day)}`;
+};
+
 /**
  * Formatea hora 24h a formato legible: "14:30" → "2:30 PM"
  */

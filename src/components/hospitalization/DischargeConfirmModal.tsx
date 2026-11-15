@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Calendar, CheckCircle, ClipboardList, X } from "lucide-react";
+import { DateInput } from "../common/DateInput";
 import type { Patient } from "../../types/patient";
 import type { Hospitalization } from "../../types/hospitalization";
 
@@ -162,16 +163,15 @@ export const DischargeConfirmModal = ({
             <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
               Próximo control
             </label>
-            <div className="relative">
-              <Calendar className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <input
-                type="date"
-                name="nextControlAt"
-                value={formData.nextControlAt}
-                onChange={handleChange}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#ece883] transition-colors"
-              />
-            </div>
+            <DateInput
+              name="nextControlAt"
+              value={formData.nextControlAt ?? ""}
+              onChange={(isoDate) =>
+                setFormData((prev) => ({ ...prev, nextControlAt: isoDate }))
+              }
+              icon={<Calendar className="w-4 h-4" />}
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#ece883] transition-colors"
+            />
           </div>
 
           {error && (

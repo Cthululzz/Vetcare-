@@ -9,7 +9,8 @@ import {
   Phone,
   Mail,
 } from "lucide-react";
-import { formatDateLatam } from "../../../utils/dateUtils";
+import { formatDateShort } from "../../../utils/dateUtils";
+import { DateInput } from "../../common/DateInput";
 import {
   ESPECIES_MASCOTA,
   TIPOS_CITA,
@@ -149,7 +150,7 @@ export const AppointmentForm = ({
         </h2>
         <p className="text-xs sm:text-sm text-slate-400 mt-1">
           {isPreselectedDate && formData.fecha
-            ? `Agendando para el día ${formatDateLatam(formData.fecha)}`
+            ? `Agendando para el día ${formatDateShort(formData.fecha)}`
             : "Complete los datos del paciente, tipo de atención y detalles médicos."}
         </p>
       </div>
@@ -300,20 +301,26 @@ export const AppointmentForm = ({
                     seleccionada:
                   </span>
                   <span className="text-[#ece883] font-bold">
-                    {formatDateLatam(formData.fecha)}
+                    {formatDateShort(formData.fecha)}
                   </span>
                 </div>
               ) : (
                 initialData?.patientName && (
-                  <FormField
-                    label="Modificar Fecha"
-                    name="fecha"
-                    type="date"
-                    value={formData.fecha}
-                    onChange={handleChange}
-                    icon={<Calendar className="w-4 h-4" />}
-                    fieldClassName={`${fieldClassName} [color-scheme:dark]`}
-                  />
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+                      Modificar Fecha
+                    </label>
+                    <DateInput
+                      name="fecha"
+                      value={formData.fecha}
+                      onChange={(isoDate) =>
+                        setFormData((prev) => ({ ...prev, fecha: isoDate }))
+                      }
+                      required
+                      icon={<Calendar className="w-4 h-4" />}
+                      className={fieldClassName}
+                    />
+                  </div>
                 )
               )}
 

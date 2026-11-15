@@ -1,6 +1,7 @@
 import { useLocalStorage } from "./useLocalStorage";
 import type { InventoryMovement, MovementType } from "../types/inventory";
 import { useInventory } from "./useInventory";
+import { getLocalTodayStr } from "../utils/dateUtils";
 
 const MOVEMENTS_KEY = "vet_inventory_movements";
 
@@ -10,6 +11,12 @@ function generateId(): string {
 
 function isoNow(): string {
   return new Date().toISOString();
+}
+
+/** Fecha local "aaaa-mm-dd" de un instante ISO, para comparar filtros por día. */
+function localDateOf(isoDateTime: string): string {
+  const date = new Date(isoDateTime);
+  return Number.isNaN(date.getTime()) ? "" : getLocalTodayStr(date);
 }
 
 export function useInventoryMovements() {
@@ -44,11 +51,13 @@ export function useInventoryMovements() {
     }
 
     if (filters?.startDate) {
-      result = result.filter((m) => m.date >= filters.startDate!);
+      result = result.filter(
+        (m) => localDateOf(m.date) >= filters.startDate!,
+      );
     }
 
     if (filters?.endDate) {
-      result = result.filter((m) => m.date <= filters.endDate!);
+      result = result.filter((m) => localDateOf(m.date) <= filters.endDate!);
     }
 
     if (filters?.pendingOnly) {

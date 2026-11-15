@@ -47,6 +47,7 @@ import {
   calcularProximaRevision,
 } from "../constants/hospitalization";
 import { getSucursalName } from "../constants/appConstants";
+import { formatDateShort, formatDateTimeShort } from "../utils/dateUtils";
 import {
   buildDischargeMessage,
   buildReviewReminderMessage,
@@ -88,50 +89,23 @@ interface FeedbackMessage {
 // ============================================
 
 /**
- * Formatea fecha ISO a formato legible relativo.
+ * Formatea una fecha-hora ISO a "dd/mm/aaaa HH:MM".
  */
-const formatRelativeDate = (dateStr?: string): string => {
+const formatTimestamp = (dateStr?: string): string => {
   if (!dateStr) return "No registrado";
-
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-  const diffDays = Math.floor(diffHours / 24);
-
-  if (diffDays === 0) {
-    if (diffHours === 0) return "Hoy";
-    if (diffHours === 1) return "Hace 1 hora";
-    return `Hace ${diffHours} horas`;
-  }
-  if (diffDays === 1) return "Ayer";
-  if (diffDays < 7) return `Hace ${diffDays} días`;
-
-  return date.toLocaleDateString("es-CL", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
+  return formatDateTimeShort(dateStr) || "No registrado";
 };
 
 const formatDateTime = (dateStr?: string): string => {
   if (!dateStr) return "No programada";
-  return new Date(dateStr).toLocaleString("es-CL", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return formatDateTimeShort(dateStr) || "No programada";
 };
 
 const formatDateOnly = (value?: string): string => {
   if (!value) return "No programado";
-  if (value.length === 10) {
-    const [year, month, day] = value.split("-");
-    return `${day}/${month}/${year}`;
-  }
-  return new Date(value).toLocaleDateString("es-CL");
+  if (value.length === 10) return formatDateShort(value);
+  const formatted = formatDateTimeShort(value);
+  return formatted ? formatted.slice(0, 10) : "No programado";
 };
 
 const localDateTimeToIso = (value?: string): string | undefined => {
@@ -947,7 +921,7 @@ const HospitalizationView = () => {
                         </p>
                       )}
                       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
-                        <span>Ingreso: {formatRelativeDate(item.admissionDate)}</span>
+                        <span>Ingreso: {formatTimestamp(item.admissionDate)}</span>
                         <span>
                           Peso:{" "}
                           {item.hospitalization.weightAtAdmission != null
@@ -1093,7 +1067,7 @@ const HospitalizationView = () => {
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
                           <span>
                             Alta:{" "}
-                            {formatRelativeDate(
+                            {formatTimestamp(
                               hospitalization.dischargedAt ??
                                 hospitalization.admittedAt,
                             )}

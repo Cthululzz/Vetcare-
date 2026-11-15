@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { X, Filter, Search } from "lucide-react";
+import { DateInput } from "../common/DateInput";
+import { formatDateTimeShort } from "../../utils/dateUtils";
 import { useInventoryMovements } from "../../hooks/useInventoryMovements";
 import { useInventory } from "../../hooks/useInventory";
 import type { MovementType } from "../../types/inventory";
@@ -79,16 +81,7 @@ export const InventoryMovementHistory = ({
     return colors[type];
   };
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString("es-CL", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
+  const formatDate = (dateStr: string) => formatDateTimeShort(dateStr);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
@@ -170,13 +163,12 @@ export const InventoryMovementHistory = ({
               <label className="block text-xs font-semibold text-slate-400 mb-1">
                 Fecha Inicio
               </label>
-              <input
-                type="date"
+              <DateInput
                 value={filters.startDate}
-                onChange={(e) =>
-                  setFilters({ ...filters, startDate: e.target.value })
+                onChange={(isoDate) =>
+                  setFilters({ ...filters, startDate: isoDate })
                 }
-                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-[#ece883] transition-colors"
+                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#ece883] transition-colors"
               />
             </div>
 
@@ -184,13 +176,12 @@ export const InventoryMovementHistory = ({
               <label className="block text-xs font-semibold text-slate-400 mb-1">
                 Fecha Fin
               </label>
-              <input
-                type="date"
+              <DateInput
                 value={filters.endDate}
-                onChange={(e) =>
-                  setFilters({ ...filters, endDate: e.target.value })
+                onChange={(isoDate) =>
+                  setFilters({ ...filters, endDate: isoDate })
                 }
-                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-[#ece883] transition-colors"
+                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#ece883] transition-colors"
               />
             </div>
 

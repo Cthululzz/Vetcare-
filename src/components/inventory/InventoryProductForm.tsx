@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Package, Save, X } from "lucide-react";
+import { DateInput } from "../common/DateInput";
 import { useInventory } from "../../hooks/useInventory";
 import { useInventoryTags } from "../../hooks/useInventoryTags";
 import {
@@ -495,11 +496,11 @@ export const InventoryProductForm = ({
               <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
                 Vencimiento
               </label>
-              <input
-                type="date"
+              <DateInput
                 value={expirationDate}
-                onChange={(event) => setExpirationDate(event.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#ece883] transition-colors"
+                onChange={setExpirationDate}
+                placeholder="dd/mm/aaaa"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#ece883] transition-colors"
               />
             </div>
 

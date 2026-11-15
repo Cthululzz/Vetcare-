@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { X, Save, Activity, CalendarClock } from "lucide-react";
+import { X, Save, Activity, CalendarClock, Clock } from "lucide-react";
+import { DateInput } from "../common/DateInput";
 import type { Patient } from "../../types/patient";
 
 interface EvolutionFormModalProps {
@@ -50,6 +51,26 @@ export const EvolutionFormModal = ({
   const handleClose = () => {
     setFormData(EMPTY_FORM);
     onClose();
+  };
+
+  const nextReviewDate = formData.nextReviewAt?.slice(0, 10) ?? "";
+  const nextReviewTime = formData.nextReviewAt?.slice(11, 16) ?? "";
+
+  const handleNextReviewDate = (isoDate: string) => {
+    setFormData((prev) => {
+      const time = prev.nextReviewAt?.slice(11, 16) || "09:00";
+      return { ...prev, nextReviewAt: isoDate ? `${isoDate}T${time}` : "" };
+    });
+  };
+
+  const handleNextReviewTime = (time: string) => {
+    setFormData((prev) => {
+      const date = prev.nextReviewAt?.slice(0, 10);
+      return {
+        ...prev,
+        nextReviewAt: date && time ? `${date}T${time}` : "",
+      };
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -155,15 +176,23 @@ export const EvolutionFormModal = ({
             <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
               Próxima revisión
             </label>
-            <div className="relative">
-              <CalendarClock className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <input
-                type="datetime-local"
-                name="nextReviewAt"
-                value={formData.nextReviewAt}
-                onChange={handleChange}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#ece883] transition-colors"
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <DateInput
+                value={nextReviewDate}
+                onChange={handleNextReviewDate}
+                icon={<CalendarClock className="w-4 h-4" />}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#ece883] transition-colors"
               />
+              <div className="relative">
+                <Clock className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="time"
+                  value={nextReviewTime}
+                  onChange={(e) => handleNextReviewTime(e.target.value)}
+                  disabled={!nextReviewDate}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#ece883] transition-colors disabled:opacity-50"
+                />
+              </div>
             </div>
             <p className="text-[11px] text-slate-500 mt-1">
               Si lo dejas vacío, se programará según la frecuencia de monitoreo

@@ -17,6 +17,7 @@ import type {
 } from "../../types/hospitalization";
 import { getSucursalName } from "../../constants/appConstants";
 import { formatFractionWithUnit } from "../../utils/inventoryUnits";
+import { formatDateShort, formatDateTimeShort } from "../../utils/dateUtils";
 
 interface HospitalizationDetailModalProps {
   isOpen: boolean;
@@ -30,22 +31,14 @@ interface HospitalizationDetailModalProps {
 
 const formatDateTime = (value?: string): string => {
   if (!value) return "No registrado";
-  return new Date(value).toLocaleString("es-CL", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return formatDateTimeShort(value) || "No registrado";
 };
 
 const formatDateValue = (value?: string): string => {
   if (!value) return "No programado";
-  if (value.length === 10) {
-    const [year, month, day] = value.split("-");
-    return `${day}/${month}/${year}`;
-  }
-  return new Date(value).toLocaleDateString("es-CL");
+  if (value.length === 10) return formatDateShort(value);
+  const formatted = formatDateTimeShort(value);
+  return formatted ? formatted.slice(0, 10) : "No programado";
 };
 
 const DataField = ({

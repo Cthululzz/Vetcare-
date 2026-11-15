@@ -1,5 +1,5 @@
 import { getPetIcon } from "../../../utils/formatters";
-import { formatDateLatam } from "../../../utils/dateUtils";
+import { formatDateShort } from "../../../utils/dateUtils";
 import { getSucursalName } from "../../../constants/appConstants";
 import type { Appointment } from "../../../types/appointment";
 import type { Patient, Owner } from "../../../types/patient";
@@ -78,7 +78,7 @@ export const ConsultationForm = ({
           />
           {previewBirthDate && (
             <p className="text-[10px] text-slate-500 mt-1 pl-1">
-              ≈ Nacimiento estimado: {formatDateLatam(previewBirthDate)}
+              ≈ Nacimiento estimado: {formatDateShort(previewBirthDate)}
             </p>
           )}
         </div>

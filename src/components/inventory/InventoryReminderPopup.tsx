@@ -3,6 +3,7 @@ import { Bell, X, CheckCircle } from "lucide-react";
 import { useInventoryReminders } from "../../hooks/useInventoryReminders";
 import { useInventoryMovements } from "../../hooks/useInventoryMovements";
 import { useInventory } from "../../hooks/useInventory";
+import { formatDateTimeShort } from "../../utils/dateUtils";
 
 export const InventoryReminderPopup = () => {
   const { getRemindersToNotify, markAsNotified } = useInventoryReminders();
@@ -80,16 +81,7 @@ export const InventoryReminderPopup = () => {
     setIsVisible(false);
   };
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString("es-CL", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
+  const formatDate = (dateStr: string) => formatDateTimeShort(dateStr);
 
   if (!isVisible || pendingMovements.length === 0) return null;
 
