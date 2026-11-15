@@ -29,7 +29,27 @@ export const CATEGORIAS_INVENTARIO = [
   { value: "insumo", label: "Insumo clínico" },
   { value: "alimento", label: "Alimento" },
   { value: "vacuna", label: "Vacuna" },
+  { value: "suplemento", label: "Suplemento" },
   { value: "otro", label: "Otro" },
+] as const;
+
+/**
+ * Unidades con que se puede expresar el contenido de un envase.
+ * El stock interno se guarda en g, mg, ml o en unidades de conteo.
+ */
+export const UNIDADES_CONTENIDO = [
+  { value: "g", label: "g — gramos" },
+  { value: "kg", label: "kg — kilogramos" },
+  { value: "mg", label: "mg — miligramos" },
+  { value: "ml", label: "ml — mililitros" },
+  { value: "L", label: "L — litros" },
+  { value: "comprimido", label: "comprimidos" },
+  { value: "pastilla", label: "pastillas" },
+  { value: "capsula", label: "cápsulas" },
+  { value: "gotas", label: "gotas" },
+  { value: "sobre", label: "sobres" },
+  { value: "unidad", label: "unidades" },
+  { value: "UI", label: "UI — unidades internacionales" },
 ] as const;
 
 /**
@@ -37,7 +57,9 @@ export const CATEGORIAS_INVENTARIO = [
  * El usuario puede escribir otra si no está en la lista.
  */
 export const TIPOS_PRESENTACION = [
+  "lata",
   "sachet",
+  "sobre",
   "caja",
   "frasco",
   "saco",
@@ -46,6 +68,20 @@ export const TIPOS_PRESENTACION = [
   "ampolla",
   "tubo",
   "pote",
-  "lata",
   "unidad",
 ] as const;
+
+/**
+ * Unidades de stock interno que se derivan del contenido del envase.
+ * Los pesos se guardan en g (o mg) y los volúmenes en ml.
+ */
+const UNIDAD_INTERNA_POR_CONTENIDO: Record<string, string> = {
+  kg: "g",
+  g: "g",
+  mg: "mg",
+  L: "ml",
+  ml: "ml",
+};
+
+export const getInternalUnit = (contentUnit: string): string =>
+  UNIDAD_INTERNA_POR_CONTENIDO[contentUnit] ?? contentUnit;

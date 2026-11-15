@@ -127,12 +127,23 @@ const getUnitName = (value: number, unit: string): string => {
 export const formatQuantityWithUnit = (value: number, unit: string): string =>
   `${formatQuantity(value)} ${getUnitName(value, unit)}`.trim();
 
+/** Devuelve el envase en singular a partir de lo que escribió el usuario. */
+export const normalizePackageName = (type: string): string => {
+  const clean = type.trim();
+  if (!clean) return "";
+  return clean.endsWith("s") && clean.length > 1 ? clean.slice(0, -1) : clean;
+};
+
 export const formatPackagePlural = (type: string, quantity: number): string => {
   if (!type) return "";
-  if (Math.abs(quantity) === 1) return type;
-  if (type.endsWith("z")) return `${type.slice(0, -1)}ces`;
-  if (type.endsWith("d")) return `${type}es`;
-  return `${type}s`;
+  const clean = type.trim();
+  const alreadyPlural = clean.endsWith("s") && clean.length > 1;
+
+  if (Math.abs(quantity) === 1) return normalizePackageName(clean);
+  if (alreadyPlural) return clean;
+  if (clean.endsWith("z")) return `${clean.slice(0, -1)}ces`;
+  if (clean.endsWith("d")) return `${clean}es`;
+  return `${clean}s`;
 };
 
 /**
@@ -192,38 +203,58 @@ export const formatPresentation = (
     return null;
   }
 
-  return `${item.packageType} de ${formatQuantity(
-    item.contentPerPackage,
-  )} ${item.contentUnit}`;
+  return `${formatPackagePlural(
+    item.packageType,
+    1,
+  )} de ${formatQuantity(item.contentPerPackage)} ${item.contentUnit}`;
 };
 
 /**
- * Descompone el stock en envases completos + cantidad suelta.
- * Ej: 1.765 g con sachets de 85 g → "20 sachets + 65 g".
+ * Descompone una cantidad en envases completos + cantidad suelta.
+ * Ej: 15.950 g con latas de 400 g → "39 latas + 350 g"; 200 g → "½ lata".
  */
-export const formatStockBreakdown = (item: InventoryItem): string | null => {
+export const formatQuantityBreakdown = (
+  quantity: number,
+  item: Pick<
+    InventoryItem,
+    "packageType" | "contentPerPackage" | "contentUnit" | "unit"
+  >,
+): string | null => {
   const contentInBase = getContentInBaseUnit(item);
   if (!item.packageType || !contentInBase || contentInBase <= 0) return null;
+  if (quantity <= 0) return formatQuantityWithUnit(0, item.unit);
 
-  const fullPackages = Math.floor(item.currentStock / contentInBase);
-  const remainder =
-    Math.round((item.currentStock - fullPackages * contentInBase) * 100) / 100;
+  const fullPackages = Math.floor(quantity / contentInBase);
+  const remainder = roundQuantity(quantity - fullPackages * contentInBase);
 
-  const parts: string[] = [];
-  if (fullPackages > 0) {
-    parts.push(
-      `${formatInteger(fullPackages)} ${formatPackagePlural(
-        item.packageType,
-        fullPackages,
-      )}`,
+  if (fullPackages === 0) {
+    const fraction = formatFraction(roundQuantity(quantity / contentInBase));
+    const hasSimpleFraction = ["¼", "½", "¾"].some((symbol) =>
+      fraction.includes(symbol),
     );
+    return hasSimpleFraction
+      ? `${fraction} ${formatPackagePlural(item.packageType, 1)}`
+      : null;
   }
+
+  const parts: string[] = [
+    `${formatInteger(fullPackages)} ${formatPackagePlural(
+      item.packageType,
+      fullPackages,
+    )}`,
+  ];
   if (remainder > 0) {
     parts.push(formatFractionWithUnit(remainder, item.unit));
   }
 
-  return parts.length > 0 ? parts.join(" + ") : formatQuantityWithUnit(0, item.unit);
+  return parts.join(" + ");
 };
+
+/**
+ * Desglose del stock actual en envases completos + cantidad suelta.
+ */
+export const formatStockBreakdown = (item: InventoryItem): string | null =>
+  formatQuantityBreakdown(item.currentStock, item);
 
 /**
  * Expresa una cantidad en envases, con fracciones simples: 400 g de una lata
@@ -248,14 +279,14 @@ export const formatQuantityInPackages = (
 
   return `${display} ${
     singular
-      ? item.packageType
+      ? formatPackagePlural(item.packageType, 1)
       : formatPackagePlural(item.packageType, packages)
   }`.trim();
 };
 
 /**
- * Texto principal de una cantidad: envases cuando el control es en peso o
- * volumen, o la unidad de control (comprimidos, gotas) en el resto de casos.
+ * Texto principal de una cantidad: envases completos + cantidad suelta cuando
+ * el control es en peso o volumen, o la unidad de control (comprimidos, gotas).
  */
 export const formatQuantityDisplay = (
   quantity: number,
@@ -265,8 +296,8 @@ export const formatQuantityDisplay = (
   >,
 ): string => {
   if (isMeasuredUnit(item.unit)) {
-    const packages = formatQuantityInPackages(quantity, item);
-    if (packages) return packages;
+    const breakdown = formatQuantityBreakdown(quantity, item);
+    if (breakdown) return breakdown;
   }
 
   return formatFractionWithUnit(quantity, item.unit);
@@ -288,9 +319,14 @@ export const getStockDisplay = (item: InventoryItem): StockDisplay => {
     isMeasuredUnit(item.unit) && Boolean(getContentInBaseUnit(item));
 
   if (usesPackages) {
+    const primary =
+      formatQuantityBreakdown(item.currentStock, item) ??
+      formatQuantityWithUnit(item.currentStock, item.unit);
+    const total = formatQuantityWithUnit(item.currentStock, item.unit);
+
     return {
-      primary: formatQuantityDisplay(item.currentStock, item),
-      detail: formatQuantityWithUnit(item.currentStock, item.unit),
+      primary,
+      detail: total !== primary ? total : null,
       detailLabel: "Total interno",
     };
   }

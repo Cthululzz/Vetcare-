@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { X, Save, Clock } from "lucide-react";
+import { AlertTriangle, X, Save, Clock } from "lucide-react";
 import { useInventory } from "../../hooks/useInventory";
 import { useInventoryMovements } from "../../hooks/useInventoryMovements";
 import { useInventoryReminders } from "../../hooks/useInventoryReminders";
@@ -8,6 +8,7 @@ import {
   formatPackageEquivalence,
   formatPackagePlural,
   formatQuantity,
+  formatQuantityDisplay,
   formatQuantityWithUnit,
   getContentInBaseUnit,
   getStockDisplay,
@@ -44,6 +45,9 @@ export const InventoryMovementForm = ({
   const [userName, setUserName] = useState(currentUserName);
   const [userRole, setUserRole] = useState(currentUserRole);
   const [error, setError] = useState("");
+  const [stockWarning, setStockWarning] = useState<
+    { kind: "ajuste"; isComplete: boolean } | { kind: "insuficiente" } | null
+  >(null);
 
   if (!isOpen) return null;
 
@@ -89,32 +93,38 @@ export const InventoryMovementForm = ({
     movementType === "vencimiento" ||
     movementType === "merma";
 
-  const handleSubmit = (e: React.FormEvent, isComplete: boolean) => {
-    e.preventDefault();
+  const adjustmentDifference = selectedProduct
+    ? roundQuantity(selectedProduct.currentStock - baseQuantity)
+    : 0;
+  const adjustmentMissing = adjustmentDifference > 0;
+  const adjustmentDifferenceDisplay = selectedProduct
+    ? formatQuantityDisplay(Math.abs(adjustmentDifference), selectedProduct)
+    : "";
+
+  const shortageDifference = selectedProduct
+    ? roundQuantity(baseQuantity - selectedProduct.currentStock)
+    : 0;
+  const shortageDisplay = selectedProduct
+    ? formatQuantityDisplay(shortageDifference, selectedProduct)
+    : "";
+  const requestedDisplay = selectedProduct
+    ? getStockDisplay({ ...selectedProduct, currentStock: baseQuantity })
+    : null;
+
+  const resetForm = () => {
+    setProductId("");
+    setInputMode("packages");
+    setQuantity("");
+    setReason("");
+    setPatientName("");
+    setUserName(currentUserName);
+    setUserRole(currentUserRole);
     setError("");
+    setStockWarning(null);
+  };
 
-    if (!selectedProduct) {
-      setError("Selecciona un producto del inventario.");
-      return;
-    }
-
-    if (!Number.isFinite(parsedInput) || parsedInput <= 0) {
-      setError("Ingresa una cantidad mayor a cero.");
-      return;
-    }
-
-    if (
-      subtractsStock &&
-      roundQuantity(baseQuantity) > selectedProduct.currentStock
-    ) {
-      setError(
-        `Stock insuficiente: disponible ${formatQuantityWithUnit(
-          selectedProduct.currentStock,
-          selectedProduct.unit,
-        )}.`,
-      );
-      return;
-    }
+  const submitMovement = (isComplete: boolean) => {
+    if (!selectedProduct) return;
 
     const movement = createMovement({
       productId,
@@ -147,16 +157,46 @@ export const InventoryMovementForm = ({
       createReminder(movement.id, currentUserName);
     }
 
-    // Reset form
-    setProductId("");
-    setInputMode("packages");
-    setQuantity("");
-    setReason("");
-    setPatientName("");
-    setUserName(currentUserName);
-    setUserRole(currentUserRole);
-    setError("");
+    resetForm();
     onClose();
+  };
+
+  const handleSubmit = (e: React.FormEvent, isComplete: boolean) => {
+    e.preventDefault();
+    setError("");
+
+    if (!selectedProduct) {
+      setError("Selecciona un producto del inventario.");
+      return;
+    }
+
+    if (!Number.isFinite(parsedInput) || parsedInput <= 0) {
+      setError("Ingresa una cantidad mayor a cero.");
+      return;
+    }
+
+    if (
+      subtractsStock &&
+      roundQuantity(baseQuantity) > selectedProduct.currentStock
+    ) {
+      setStockWarning({ kind: "insuficiente" });
+      return;
+    }
+
+    // En un ajuste, si el conteo no coincide con el sistema, se pide confirmar.
+    if (movementType === "ajuste" && Math.abs(adjustmentDifference) > 0.01) {
+      setStockWarning({ kind: "ajuste", isComplete });
+      return;
+    }
+
+    submitMovement(isComplete);
+  };
+
+  const handleConfirmAdjustment = () => {
+    if (stockWarning?.kind !== "ajuste") return;
+    const pending = stockWarning;
+    setStockWarning(null);
+    submitMovement(pending.isComplete);
   };
 
   const showUserInfo = movementType === "retiro";
@@ -206,7 +246,7 @@ export const InventoryMovementForm = ({
                   type="button"
                   onClick={() => {
                     setMovementType(type);
-                    setInputMode(type === "ingreso" ? "packages" : "base");
+                    setInputMode(type === "ajuste" ? "base" : "packages");
                     setError("");
                   }}
                   className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors capitalize ${
@@ -472,6 +512,117 @@ export const InventoryMovementForm = ({
           </div>
         </div>
       </div>
+
+      {/* Pop up de diferencias de stock (ajuste o stock insuficiente) */}
+      {stockWarning && selectedProduct && stockDisplay && resultingDisplay && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-slate-900 border border-amber-500/40 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
+            <div className="flex items-start gap-3 p-6 border-b border-slate-800">
+              <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-white">
+                  {stockWarning.kind === "ajuste"
+                    ? "El stock no coincide"
+                    : "Stock insuficiente"}
+                </h2>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  {stockWarning.kind === "ajuste"
+                    ? "El conteo ingresado es distinto al stock del sistema."
+                    : "La cantidad solicitada supera lo disponible. No se registrará el movimiento."}
+                </p>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-3 text-sm">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-slate-400">
+                  {stockWarning.kind === "ajuste"
+                    ? "Stock del sistema"
+                    : "Disponible"}
+                </span>
+                <span className="text-right font-semibold text-white">
+                  {stockDisplay.primary}
+                  {stockDisplay.detail && (
+                    <span className="block text-[11px] text-slate-500">
+                      {stockDisplay.detail}
+                    </span>
+                  )}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-slate-400">
+                  {stockWarning.kind === "ajuste"
+                    ? "Conteo ingresado"
+                    : "Solicitado"}
+                </span>
+                <span className="text-right font-semibold text-white">
+                  {(stockWarning.kind === "ajuste"
+                    ? resultingDisplay
+                    : requestedDisplay
+                  )?.primary ?? "—"}
+                  {(stockWarning.kind === "ajuste"
+                    ? resultingDisplay
+                    : requestedDisplay
+                  )?.detail && (
+                    <span className="block text-[11px] text-slate-500">
+                      {
+                        (stockWarning.kind === "ajuste"
+                          ? resultingDisplay
+                          : requestedDisplay
+                        )?.detail
+                      }
+                    </span>
+                  )}
+                </span>
+              </div>
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-amber-200">
+                <span className="font-bold">
+                  {stockWarning.kind === "ajuste"
+                    ? `${adjustmentMissing ? "Faltan" : "Sobran"} ${adjustmentDifferenceDisplay}`
+                    : `Faltan ${shortageDisplay}`}
+                </span>
+                <p className="text-[11px] text-amber-200/70 mt-1">
+                  {stockWarning.kind === "ajuste"
+                    ? `Al confirmar, el stock quedará en ${resultingDisplay.primary}.`
+                    : "Ajusta la cantidad o registra un ingreso antes de continuar."}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 p-6 border-t border-slate-800">
+              {stockWarning.kind === "ajuste" ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setStockWarning(null)}
+                    className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold transition-colors cursor-pointer"
+                  >
+                    Volver a contar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleConfirmAdjustment}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-sm font-bold transition-colors cursor-pointer"
+                  >
+                    <AlertTriangle className="w-4 h-4" />
+                    Registrar ajuste
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setStockWarning(null)}
+                  className="px-5 py-2.5 rounded-xl bg-[#ece883] hover:bg-[#e4df68] text-slate-950 text-sm font-bold transition-colors cursor-pointer"
+                >
+                  Corregir cantidad
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
