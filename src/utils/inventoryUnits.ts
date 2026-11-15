@@ -147,21 +147,33 @@ export const formatPackagePlural = (type: string, quantity: number): string => {
 };
 
 /**
- * Muestra una fracción simple cuando aplica: 0.5 → ½, 1.25 → 1¼.
+ * Muestra una fracción simple cuando aplica: 0.5 → ½, 1.25 → 1¼, 0.125 → ⅛.
  */
 export const formatFraction = (value: number): string => {
   const rounded = Math.round(value * 100) / 100;
   const whole = Math.floor(rounded);
-  const decimals = Math.round((rounded - whole) * 100);
-  const fractions: Record<number, string> = {
-    25: "¼",
-    50: "½",
-    75: "¾",
+  const fractionOfUnit = value - whole;
+  const eighths = Math.round(fractionOfUnit * 8);
+  const eighthSymbols: Record<number, string> = {
+    1: "⅛",
+    2: "¼",
+    3: "⅜",
+    4: "½",
+    5: "⅝",
+    6: "¾",
+    7: "⅞",
   };
 
-  const fraction = fractions[decimals];
-  if (!fraction) return formatQuantity(rounded);
-  return whole > 0 ? `${whole}${fraction}` : fraction;
+  if (
+    eighths > 0 &&
+    eighths < 8 &&
+    Math.abs(fractionOfUnit - eighths / 8) < 0.01
+  ) {
+    const symbol = eighthSymbols[eighths];
+    return whole > 0 ? `${whole}${symbol}` : symbol;
+  }
+
+  return formatQuantity(rounded);
 };
 
 /**
