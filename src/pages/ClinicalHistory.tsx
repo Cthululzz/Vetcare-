@@ -35,6 +35,7 @@ import {
   getPatientDisplayAge,
 } from "../utils/dateUtils";
 import { formatSpeciesLabel } from "../utils/formatters";
+import { formatWeightWithUnit } from "../utils/weight";
 
 type TypeFilter = MedicalRecordType | "all";
 
@@ -166,7 +167,12 @@ const ClinicalHistory = () => {
     },
     {
       label: "Último peso",
-      value: summary.lastWeight ? `${summary.lastWeight.value} kg` : "S/C",
+      value: summary.lastWeight
+        ? formatWeightWithUnit(
+            summary.lastWeight.value,
+            summary.lastWeight.unit,
+          )
+        : "S/C",
       detail: summary.lastWeight
         ? `Registrado el ${formatDateShort(getRecordDateOnly(summary.lastWeight.date))}`
         : "Sin peso registrado",

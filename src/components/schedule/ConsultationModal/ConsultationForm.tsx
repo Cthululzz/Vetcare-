@@ -3,6 +3,7 @@ import { formatDateShort } from "../../../utils/dateUtils";
 import { getSucursalName } from "../../../constants/appConstants";
 import type { Appointment } from "../../../types/appointment";
 import type { Patient, Owner } from "../../../types/patient";
+import type { WeightUnit } from "../../../utils/weight";
 
 interface ConsultationFormProps {
   appointment: Appointment;
@@ -11,6 +12,7 @@ interface ConsultationFormProps {
   formData: {
     edad: string;
     peso: string;
+    weightUnit: WeightUnit;
     condicionesPrevias: string;
     recomendaciones: string;
     notas: string;
@@ -20,6 +22,7 @@ interface ConsultationFormProps {
   onChange: (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => void;
+  onWeightUnitChange: (unit: WeightUnit) => void;
 }
 
 export const ConsultationForm = ({
@@ -30,6 +33,7 @@ export const ConsultationForm = ({
   showCondicionesPrevias,
   previewBirthDate,
   onChange,
+  onWeightUnitChange,
 }: ConsultationFormProps) => {
   const sucursalName = getSucursalName(appointment.sucursalId);
 
@@ -85,18 +89,38 @@ export const ConsultationForm = ({
 
         <div>
           <label className="block text-xs font-semibold text-slate-300 mb-1">
-            Peso actual (kg)
+            Peso actual
           </label>
-          <input
-            type="number"
-            step="0.1"
-            min="0"
-            name="peso"
-            value={formData.peso}
-            onChange={onChange}
-            placeholder="Ej. 12.5"
-            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-blue-500"
-          />
+          <div className="flex gap-2">
+            <input
+              type="number"
+              step={formData.weightUnit === "kg" ? "0.1" : "any"}
+              min="0"
+              name="peso"
+              value={formData.peso}
+              onChange={onChange}
+              placeholder={
+                formData.weightUnit === "kg" ? "Ej. 12.5" : "Ej. 850"
+              }
+              className="flex-1 min-w-0 bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-blue-500"
+            />
+            <select
+              value={formData.weightUnit}
+              onChange={(event) =>
+                onWeightUnitChange(
+                  event.target.value === "g" ? "g" : "kg",
+                )
+              }
+              className="bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-2.5 text-sm font-semibold text-white focus:outline-none focus:border-blue-500 cursor-pointer"
+              aria-label="Unidad del peso"
+            >
+              <option value="kg">kg</option>
+              <option value="g">g</option>
+            </select>
+          </div>
+          <p className="text-[10px] text-slate-500 mt-1 pl-1">
+            Elige si el peso está en kilogramos o gramos.
+          </p>
         </div>
       </div>
 

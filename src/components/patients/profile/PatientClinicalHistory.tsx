@@ -12,6 +12,7 @@ import {
 import type { MedicalRecord } from "../../../types/patient";
 import { getRecordType } from "../../../utils/clinicalHistory";
 import { RECORD_TYPE_META } from "../history/recordTypeMeta";
+import { formatWeightWithUnit } from "../../../utils/weight";
 
 interface PatientClinicalHistoryProps {
   history: MedicalRecord[];
@@ -133,12 +134,17 @@ export const PatientClinicalHistory = ({
                   {latestConsultation.weight ? (
                     <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-xs font-bold text-[#ece883]">
                       <Weight className="w-3.5 h-3.5" />
-                      <span>{latestConsultation.weight} kg</span>
+                      <span>
+                        {formatWeightWithUnit(
+                          latestConsultation.weight,
+                          latestConsultation.weightUnit,
+                        )}
+                      </span>
                     </div>
                   ) : (
                     <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-xs font-semibold text-slate-400">
                       <Weight className="w-3.5 h-3.5 text-slate-500" />
-                      <span>No registrado kg</span>
+                      <span>No registrado</span>
                     </div>
                   )}
                 </div>
@@ -200,11 +206,15 @@ export const PatientClinicalHistory = ({
                         <div className="flex items-center gap-3">
                           {entry.weight ? (
                             <span className="text-xs font-semibold text-slate-300">
-                              ⚖️ {entry.weight} kg
+                              ⚖️{" "}
+                              {formatWeightWithUnit(
+                                entry.weight,
+                                entry.weightUnit,
+                              )}
                             </span>
                           ) : (
                             <span className="text-xs font-semibold text-slate-500">
-                              ⚖️ No registrado kg
+                              ⚖️ No registrado
                             </span>
                           )}
 

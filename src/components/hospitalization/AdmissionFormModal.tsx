@@ -13,12 +13,18 @@ import {
   FRECUENCIAS_MONITOREO,
 } from "../../constants/hospitalization";
 import { PetAvatar } from "../common/PetAvatar";
+import {
+  convertWeight,
+  DEFAULT_WEIGHT_UNIT,
+  type WeightUnit,
+} from "../../utils/weight";
 
 export interface AdmissionData {
   patientId: string;
   reason: string;
   diagnosis?: string;
   weight: number;
+  weightUnit?: WeightUnit;
   bed: string;
   monitoringFrequency: number;
   initialTreatment?: string;
@@ -47,6 +53,7 @@ export const AdmissionFormModal = ({
   const [reason, setReason] = useState("");
   const [diagnosis, setDiagnosis] = useState("");
   const [weight, setWeight] = useState("");
+  const [weightUnit, setWeightUnit] = useState<WeightUnit>(DEFAULT_WEIGHT_UNIT);
   const [bed, setBed] = useState("");
   const [monitoringFrequency, setMonitoringFrequency] = useState(
     DEFAULT_MONITORING_FREQUENCY,
@@ -82,6 +89,7 @@ export const AdmissionFormModal = ({
     setReason("");
     setDiagnosis("");
     setWeight("");
+    setWeightUnit(DEFAULT_WEIGHT_UNIT);
     setBed("");
     setMonitoringFrequency(DEFAULT_MONITORING_FREQUENCY);
     setInitialTreatment("");
@@ -108,7 +116,9 @@ export const AdmissionFormModal = ({
 
     const parsedWeight = Number(weight);
     if (!Number.isFinite(parsedWeight) || parsedWeight <= 0) {
-      setError("Ingresa el peso del paciente en kg (mayor a cero).");
+      setError(
+        `Ingresa el peso del paciente en ${weightUnit} (mayor a cero).`,
+      );
       return;
     }
 
@@ -122,6 +132,7 @@ export const AdmissionFormModal = ({
       reason: reason.trim(),
       diagnosis: diagnosis.trim() || undefined,
       weight: parsedWeight,
+      weightUnit,
       bed: selectedBed,
       monitoringFrequency,
       initialTreatment: initialTreatment.trim() || undefined,
@@ -273,20 +284,42 @@ export const AdmissionFormModal = ({
 
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
-                Peso al ingreso (kg) *
+                Peso al ingreso *
               </label>
-              <input
-                type="number"
-                min="0.01"
-                step="0.01"
-                value={weight}
-                onChange={(event) => {
-                  setWeight(event.target.value);
-                  setError("");
-                }}
-                placeholder="Ej. 12.5"
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#ece883] transition-colors"
-              />
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  min="0"
+                  step={weightUnit === "kg" ? "0.01" : "any"}
+                  value={weight}
+                  onChange={(event) => {
+                    setWeight(event.target.value);
+                    setError("");
+                  }}
+                  placeholder={weightUnit === "kg" ? "Ej. 12.5" : "Ej. 850"}
+                  className="flex-1 min-w-0 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#ece883] transition-colors"
+                />
+                <select
+                  value={weightUnit}
+                  onChange={(event) => {
+                    const unit: WeightUnit =
+                      event.target.value === "g" ? "g" : "kg";
+                    const numeric = Number(weight);
+                    if (weight.trim() && Number.isFinite(numeric)) {
+                      setWeight(
+                        String(convertWeight(numeric, weightUnit, unit)),
+                      );
+                    }
+                    setWeightUnit(unit);
+                    setError("");
+                  }}
+                  aria-label="Unidad del peso"
+                  className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-sm font-semibold text-white focus:outline-none focus:border-[#ece883] transition-colors cursor-pointer"
+                >
+                  <option value="kg">kg</option>
+                  <option value="g">g</option>
+                </select>
+              </div>
             </div>
 
             <div>

@@ -218,6 +218,7 @@ export function useScheduleActions() {
       appointment,
       notes,
       weight,
+      weightUnit,
       recommendations,
       shouldFinish,
     } = consultationData;
@@ -227,6 +228,7 @@ export function useScheduleActions() {
       notas: notes,
       recomendaciones: recommendations,
       pesoActual: weight,
+      pesoActualUnit: weightUnit,
     });
 
     // 2. Solo al finalizar: registro en historial + estado finalizada
@@ -235,6 +237,7 @@ export function useScheduleActions() {
         date: new Date().toISOString(),
         notes,
         weight,
+        weightUnit,
         recommendations,
         type: "consulta",
         veterinarian: getDoctorName(appointment.doctorId),
@@ -253,19 +256,22 @@ export function useScheduleActions() {
    * Persiste el borrador, registra el ingreso y mantiene la consulta abierta.
    */
   const handleHospitalize = (data: ConsultationData) => {
-    const { patient, appointment, notes, weight, recommendations } = data;
+    const { patient, appointment, notes, weight, weightUnit, recommendations } =
+      data;
 
     // 1. Persistir borrador en la cita
     updateAppointment(appointment.id, {
       notas: notes,
       recomendaciones: recommendations,
       pesoActual: weight,
+      pesoActualUnit: weightUnit,
     });
 
     // 2. Registrar ingreso a hospitalización (hereda la sucursal de la cita)
     admitPatient(patient.id, notes || undefined, {
       sucursalId: appointment.sucursalId,
       weight,
+      weightUnit,
     });
 
     // 3. La consulta queda en curso (el paciente sigue en atención)

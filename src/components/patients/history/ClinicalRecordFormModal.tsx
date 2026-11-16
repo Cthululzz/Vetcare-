@@ -10,6 +10,11 @@ import {
   MEDICAL_RECORD_TYPE_LABELS,
 } from "../../../utils/clinicalHistory";
 import { getLocalTodayStr } from "../../../utils/dateUtils";
+import {
+  convertWeight,
+  normalizeWeightUnit,
+  type WeightUnit,
+} from "../../../utils/weight";
 
 interface ClinicalRecordFormModalProps {
   isOpen: boolean;
@@ -52,6 +57,9 @@ export const ClinicalRecordFormModal = ({
   );
   const [weight, setWeight] = useState(
     record?.weight != null ? String(record.weight) : "",
+  );
+  const [weightUnit, setWeightUnit] = useState<WeightUnit>(
+    normalizeWeightUnit(record?.weightUnit),
   );
   const [nextVisitAt, setNextVisitAt] = useState(
     record?.nextVisitAt ? getRecordDateOnly(record.nextVisitAt) : "",
@@ -99,6 +107,7 @@ export const ClinicalRecordFormModal = ({
         diagnosis: diagnosis.trim() || undefined,
         recommendations: recommendations.trim() || undefined,
         weight: weightValue,
+        weightUnit: weightValue != null ? weightUnit : undefined,
         nextVisitAt: nextVisitAt || undefined,
         veterinarian: veterinarian.trim() || undefined,
       });
@@ -110,6 +119,7 @@ export const ClinicalRecordFormModal = ({
         diagnosis: diagnosis.trim() || undefined,
         recommendations: recommendations.trim() || undefined,
         weight: weightValue,
+        weightUnit: weightValue != null ? weightUnit : undefined,
         nextVisitAt: nextVisitAt || undefined,
         veterinarian: veterinarian.trim() || undefined,
       });
@@ -229,17 +239,41 @@ export const ClinicalRecordFormModal = ({
           </label>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <label className="space-y-1.5">
-              <span className={labelClass}>Peso (kg, opcional)</span>
-              <input
-                type="text"
-                inputMode="decimal"
-                value={weight}
-                onChange={(event) => setWeight(event.target.value)}
-                placeholder="Ej: 12,5"
-                className={fieldClass}
-              />
-            </label>
+            <div className="space-y-1.5">
+              <span className={`${labelClass} block`}>Peso (opcional)</span>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={weight}
+                  onChange={(event) => setWeight(event.target.value)}
+                  placeholder={weightUnit === "kg" ? "Ej: 12,5" : "Ej: 850"}
+                  className={fieldClass}
+                />
+                <select
+                  value={weightUnit}
+                  onChange={(event) => {
+                    const unit: WeightUnit =
+                      event.target.value === "g" ? "g" : "kg";
+                    const parsed = Number(weight.replace(",", "."));
+                    if (weight.trim() && Number.isFinite(parsed)) {
+                      setWeight(
+                        String(convertWeight(parsed, weightUnit, unit)).replace(
+                          ".",
+                          ",",
+                        ),
+                      );
+                    }
+                    setWeightUnit(unit);
+                  }}
+                  aria-label="Unidad del peso"
+                  className={`${fieldClass} w-20 cursor-pointer font-semibold`}
+                >
+                  <option value="kg">kg</option>
+                  <option value="g">g</option>
+                </select>
+              </div>
+            </div>
 
             <DateInput
               value={nextVisitAt}

@@ -4,6 +4,7 @@ import type {
   TipoCita,
   EstadoCita,
 } from "../constants/appConstants";
+import type { WeightUnit } from "../utils/weight";
 
 export interface Appointment {
   id: string;
@@ -30,6 +31,8 @@ export interface Appointment {
   // --- Datos clínicos del momento (snapshot, no duplicados) ---
   // Estos SÍ tienen sentido guardarlos porque el paciente puede cambiar
   pesoActual?: number;
+  /** Unidad del peso registrado en la consulta. Si falta, se interpreta como kg. */
+  pesoActualUnit?: WeightUnit;
   edadAlMomento?: string; // string descriptivo opcional: "8 años 3 meses"
 
   // --- Metadata ---

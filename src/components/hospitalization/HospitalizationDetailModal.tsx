@@ -20,6 +20,7 @@ import { getSucursalName } from "../../constants/appConstants";
 import { formatFractionWithUnit } from "../../utils/inventoryUnits";
 import { formatDateShort, formatDateTimeShort } from "../../utils/dateUtils";
 import { isMedicationPlanOverdue } from "../../utils/hospitalizationTasks";
+import { formatWeightWithUnit } from "../../utils/weight";
 import { PetAvatar } from "../common/PetAvatar";
 
 interface HospitalizationDetailModalProps {
@@ -159,7 +160,10 @@ export const HospitalizationDetailModal = ({
               label="Peso al ingreso"
               value={
                 hospitalization.weightAtAdmission != null
-                  ? `${hospitalization.weightAtAdmission} kg`
+                  ? formatWeightWithUnit(
+                      hospitalization.weightAtAdmission,
+                      hospitalization.weightAtAdmissionUnit,
+                    )
                   : undefined
               }
             />

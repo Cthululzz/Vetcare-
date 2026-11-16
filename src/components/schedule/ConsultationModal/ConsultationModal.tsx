@@ -15,6 +15,12 @@ import { ConsultationForm } from "./ConsultationForm";
 import { usePrescriptionFlow } from "./usePrescriptionFlow";
 import type { Appointment } from "../../../types/appointment";
 import type { Patient, Owner } from "../../../types/patient";
+import {
+  convertWeight,
+  normalizeWeightUnit,
+  DEFAULT_WEIGHT_UNIT,
+  type WeightUnit,
+} from "../../../utils/weight";
 
 // ============================================
 // TIPOS EXPORTADOS
@@ -25,6 +31,7 @@ export interface ConsultationData {
   appointment: Appointment;
   notes: string;
   weight?: number;
+  weightUnit?: WeightUnit;
   recommendations?: string;
   shouldFinish: boolean;
 }
@@ -60,6 +67,7 @@ export const ConsultationModal = ({
   const [formData, setFormData] = useState({
     edad: "",
     peso: "",
+    weightUnit: DEFAULT_WEIGHT_UNIT,
     condicionesPrevias: "",
     recomendaciones: "",
     notas: "",
@@ -114,6 +122,7 @@ export const ConsultationModal = ({
     appointment,
     notes: formData.notas,
     weight: formData.peso ? parseFloat(formData.peso) : undefined,
+    weightUnit: formData.weightUnit,
     recommendations: formData.recomendaciones,
     shouldFinish,
   });
@@ -139,6 +148,7 @@ export const ConsultationModal = ({
         edad: edadInicial,
         peso:
           appointment.pesoActual != null ? String(appointment.pesoActual) : "",
+        weightUnit: normalizeWeightUnit(appointment.pesoActualUnit),
         condicionesPrevias:
           patient.conditions ||
           appointment.condicionesPrevias ||
@@ -163,6 +173,23 @@ export const ConsultationModal = ({
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    setHasUnsavedChanges(true);
+  };
+
+  /**
+   * Al cambiar de kg a g (o viceversa) se convierte el valor ya ingresado
+   * para no perder la equivalencia del peso.
+   */
+  const handleWeightUnitChange = (unit: WeightUnit) => {
+    setFormData((prev) => {
+      if (prev.weightUnit === unit) return prev;
+      const numeric = Number(prev.peso);
+      const converted =
+        prev.peso.trim() && Number.isFinite(numeric)
+          ? String(convertWeight(numeric, prev.weightUnit, unit))
+          : prev.peso;
+      return { ...prev, peso: converted, weightUnit: unit };
+    });
     setHasUnsavedChanges(true);
   };
 
@@ -232,6 +259,7 @@ export const ConsultationModal = ({
               showCondicionesPrevias={showCondicionesPrevias}
               previewBirthDate={previewBirthDate}
               onChange={handleChange}
+              onWeightUnitChange={handleWeightUnitChange}
             />
 
             {/* Botones de acción */}

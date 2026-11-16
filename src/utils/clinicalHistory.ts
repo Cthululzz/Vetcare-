@@ -7,6 +7,7 @@
 
 import type { MedicalRecord, MedicalRecordType } from "../types/patient";
 import { getLocalTodayStr } from "./dateUtils";
+import { normalizeWeightUnit, type WeightUnit } from "./weight";
 
 export const MEDICAL_RECORD_TYPES: MedicalRecordType[] = [
   "consulta",
@@ -78,7 +79,7 @@ export interface ClinicalHistorySummary {
   total: number;
   consultations: number;
   lastRecord?: MedicalRecord;
-  lastWeight?: { value: number; date: string };
+  lastWeight?: { value: number; date: string; unit: WeightUnit };
   nextVisit?: { date: string; recordId: string };
 }
 
@@ -113,7 +114,11 @@ export const buildClinicalHistorySummary = (
     ).length,
     lastRecord: sorted[0],
     lastWeight: withWeight
-      ? { value: withWeight.weight as number, date: withWeight.date }
+      ? {
+          value: withWeight.weight as number,
+          date: withWeight.date,
+          unit: normalizeWeightUnit(withWeight.weightUnit),
+        }
       : undefined,
     nextVisit: nextVisit
       ? {

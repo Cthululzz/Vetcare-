@@ -1,5 +1,6 @@
 import type { Appointment } from "../../types/appointment";
 import type { Patient, Owner } from "../../types/patient";
+import type { WeightUnit } from "../../utils/weight";
 
 export type TabType = "hoy" | "semana" | "mes";
 
@@ -14,6 +15,7 @@ export interface ConsultationData {
   appointment: Appointment;
   notes: string;
   weight?: number;
+  weightUnit?: WeightUnit;
   recommendations?: string;
   shouldFinish: boolean;
 }

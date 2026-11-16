@@ -12,6 +12,7 @@ import {
   getRecordType,
 } from "../../../utils/clinicalHistory";
 import { formatDateShort, formatDateTimeShort } from "../../../utils/dateUtils";
+import { formatWeightWithUnit } from "../../../utils/weight";
 import { RECORD_TYPE_META } from "./recordTypeMeta";
 
 interface ClinicalRecordCardProps {
@@ -60,7 +61,7 @@ export const ClinicalRecordCard = ({
             {record.weight ? (
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-[11px] font-bold text-[#ece883]">
                 <Weight className="w-3.5 h-3.5" />
-                {record.weight} kg
+                {formatWeightWithUnit(record.weight, record.weightUnit)}
               </span>
             ) : null}
           </div>

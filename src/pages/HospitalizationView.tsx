@@ -46,6 +46,7 @@ import type { MedicationPlanInput } from "../hooks/useHospitalizations";
 import { HospitalizationDetailModal } from "../components/hospitalization/HospitalizationDetailModal";
 import { ChangeBedModal } from "../components/hospitalization/ChangeBedModal";
 import { BedMap } from "../components/hospitalization/BedMap";
+import { formatWeightWithUnit } from "../utils/weight";
 import type { Patient, Owner } from "../types/patient";
 import type {
   Hospitalization,
@@ -313,6 +314,7 @@ const HospitalizationView = () => {
       bed: data.bed,
       diagnosis: data.diagnosis,
       weight: data.weight,
+      weightUnit: data.weightUnit,
       monitoringFrequency: data.monitoringFrequency,
       nextReviewAt,
       notes: data.initialTreatment,
@@ -331,11 +333,12 @@ const HospitalizationView = () => {
       type: "hospitalizacion",
       veterinarian: user?.name,
       weight: data.weight,
+      weightUnit: data.weightUnit,
       notes: [
         "INGRESO A HOSPITALIZACIÓN",
         `Motivo: ${data.reason}`,
         data.diagnosis ? `Diagnóstico presuntivo: ${data.diagnosis}` : "",
-        `Peso al ingreso: ${data.weight} kg`,
+        `Peso al ingreso: ${formatWeightWithUnit(data.weight, data.weightUnit)}`,
         `Cama: ${data.bed}`,
         `Sucursal: ${getSucursalName(data.sucursalId)}`,
         `Frecuencia de monitoreo: cada ${data.monitoringFrequency} horas`,
@@ -1126,7 +1129,10 @@ const HospitalizationView = () => {
                           <span>
                             Peso:{" "}
                             {item.hospitalization.weightAtAdmission != null
-                              ? `${item.hospitalization.weightAtAdmission} kg`
+                              ? formatWeightWithUnit(
+                                  item.hospitalization.weightAtAdmission,
+                                  item.hospitalization.weightAtAdmissionUnit,
+                                )
                               : "No registrado"}
                           </span>
                           <span
@@ -1386,7 +1392,6 @@ const HospitalizationView = () => {
 
       {/* Modal para cambiar de cama */}
       <ChangeBedModal
-        key={selectedHospitalizationId ?? "no-bed"}
         isOpen={showChangeBedModal}
         patient={selectedPatient}
         hospitalization={selectedHospitalization}

@@ -3,6 +3,7 @@ import type {
   Genero,
   EstadoVacuna,
 } from "../constants/appConstants";
+import type { WeightUnit } from "../utils/weight";
 
 export interface Owner {
   id: string;
@@ -26,6 +27,8 @@ export interface MedicalRecord {
   date: string;
   notes: string;
   weight?: number;
+  /** Unidad del peso. Si falta, se interpreta como kg (registros antiguos). */
+  weightUnit?: WeightUnit;
   recommendations?: string;
   /** Tipo de evento clínico. Los registros antiguos no lo tienen y se infieren. */
   type?: MedicalRecordType;

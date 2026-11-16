@@ -14,6 +14,7 @@ import {
   calcularProximaRevision,
 } from "../constants/hospitalization";
 import { useHospitalBeds } from "./useHospitalBeds";
+import type { WeightUnit } from "../utils/weight";
 
 const HOSPITALIZATIONS_KEY = "vet_hospitalizations";
 
@@ -70,6 +71,7 @@ export interface AdmitPatientOptions {
   bed?: string;
   diagnosis?: string;
   weight?: number;
+  weightUnit?: WeightUnit;
   monitoringFrequency?: number;
   nextReviewAt?: string;
   notes?: string;
@@ -154,6 +156,7 @@ export function useHospitalizations() {
         bed,
         diagnosis: options?.diagnosis,
         weightAtAdmission: options?.weight,
+        weightAtAdmissionUnit: options?.weightUnit,
         monitoringFrequency,
         nextReviewAt,
         notes: options?.notes,

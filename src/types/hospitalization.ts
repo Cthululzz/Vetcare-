@@ -1,3 +1,5 @@
+import type { WeightUnit } from "../utils/weight";
+
 export type HospitalizationStatus = "activa" | "alta";
 
 export interface HospitalizationEvolution {
@@ -78,8 +80,10 @@ export interface Hospitalization {
   // Datos de internación
   bed?: string;
   diagnosis?: string;
-  /** Peso del paciente al momento del ingreso, en kg. */
+  /** Peso del paciente al momento del ingreso. */
   weightAtAdmission?: number;
+  /** Unidad del peso de ingreso. Si falta, se interpreta como kg. */
+  weightAtAdmissionUnit?: WeightUnit;
   monitoringFrequency?: number; // horas entre revisiones
   nextReviewAt?: string; // ISO
   sucursalId?: string;
