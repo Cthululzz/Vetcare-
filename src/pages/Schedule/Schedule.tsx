@@ -1,5 +1,12 @@
 import { useState, useMemo } from "react";
-import { Plus, Calendar as CalendarIcon, X, ChevronLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import {
+  Plus,
+  Calendar as CalendarIcon,
+  X,
+  ChevronLeft,
+  MessageCircle,
+} from "lucide-react";
 import { AppointmentForm } from "../../components/schedule/AppointmentForm/AppointmentForm";
 import { AppointmentCard } from "../../components/schedule/AppointmentCard";
 import { MonthCalendarView } from "../../components/schedule/MonthCalendarView";
@@ -12,9 +19,13 @@ import {
   sortAppointmentsByDateTime,
 } from "../../utils/dateUtils";
 import { useScheduleActions } from "./useScheduleActions";
+import { usePatients } from "../../hooks/usePatients";
+import { useAppointmentReminders } from "../../hooks/useAppointmentReminders";
+import { buildDueAppointmentReminders } from "../../utils/appointmentReminders";
 import type { TabType } from "./types";
 
 const Schedule = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabType>("hoy");
   const [currentCalendarDate, setCurrentCalendarDate] = useState(new Date());
   const [showCompleted, setShowCompleted] = useState(false);
@@ -65,6 +76,19 @@ const Schedule = () => {
 
   const weekDays = useMemo(() => getWeekDays(), []);
 
+  const { getPatient, getOwner } = usePatients();
+  const { sentReminders } = useAppointmentReminders();
+  const pendingReminderCount = useMemo(
+    () =>
+      buildDueAppointmentReminders(
+        appointments,
+        sentReminders,
+        getPatient,
+        getOwner,
+      ).length,
+    [appointments, sentReminders, getPatient, getOwner],
+  );
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -80,21 +104,42 @@ const Schedule = () => {
             </p>
           </div>
 
-          {/* Toggle de citas finalizadas */}
-          <label className="flex items-center gap-3 cursor-pointer select-none">
-            <span className="text-sm text-slate-300 font-medium whitespace-nowrap">
-              Mostrar citas finalizadas
-            </span>
-            <div className="relative">
-              <input
-                type="checkbox"
-                checked={showCompleted}
-                onChange={(e) => setShowCompleted(e.target.checked)}
-                className="sr-only peer"
-              />
-              <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#ece883]/50 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 after:border-slate-700 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#ece883] peer-checked:after:bg-white"></div>
-            </div>
-          </label>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <button
+              type="button"
+              onClick={() => navigate("/tareas?tab=recordatorios")}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 hover:border-[#ece883]/40 text-slate-200 text-sm font-semibold transition-colors cursor-pointer"
+              title="Ver recordatorios de citas por enviar"
+            >
+              <MessageCircle className="w-4 h-4 text-[#ece883]" />
+              Recordatorios
+              <span
+                className={`text-[10px] px-2 py-0.5 rounded-full border font-bold ${
+                  pendingReminderCount > 0
+                    ? "bg-[#ece883]/15 border-[#ece883]/30 text-[#ece883]"
+                    : "bg-slate-900 border-slate-700 text-slate-400"
+                }`}
+              >
+                {pendingReminderCount}
+              </span>
+            </button>
+
+            {/* Toggle de citas finalizadas */}
+            <label className="flex items-center gap-3 cursor-pointer select-none">
+              <span className="text-sm text-slate-300 font-medium whitespace-nowrap">
+                Mostrar citas finalizadas
+              </span>
+              <div className="relative">
+                <input
+                  type="checkbox"
+                  checked={showCompleted}
+                  onChange={(e) => setShowCompleted(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#ece883]/50 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 after:border-slate-700 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#ece883] peer-checked:after:bg-white"></div>
+              </div>
+            </label>
+          </div>
         </div>
       </div>
 

@@ -7,17 +7,22 @@ import {
   Trash2,
   ChevronDown,
   ChevronUp,
+  History,
 } from "lucide-react";
 import type { MedicalRecord } from "../../../types/patient";
+import { getRecordType } from "../../../utils/clinicalHistory";
+import { RECORD_TYPE_META } from "../history/recordTypeMeta";
 
 interface PatientClinicalHistoryProps {
   history: MedicalRecord[];
-  onDeleteMedicalRecord: (recordId: string) => void;
+  onDeleteMedicalRecord?: (recordId: string) => void;
+  onOpenFullHistory?: () => void;
 }
 
 export const PatientClinicalHistory = ({
   history = [],
   onDeleteMedicalRecord,
+  onOpenFullHistory,
 }: PatientClinicalHistoryProps) => {
   const [showFullHistory, setShowFullHistory] = useState(false);
 
@@ -30,6 +35,7 @@ export const PatientClinicalHistory = ({
   const pastHistory = sortedHistory.length > 1 ? sortedHistory.slice(1) : [];
 
   const handleDelete = (recordId: string) => {
+    if (!onDeleteMedicalRecord) return;
     if (
       window.confirm(
         "¿Estás seguro de que deseas eliminar este registro clínico?",
@@ -42,6 +48,19 @@ export const PatientClinicalHistory = ({
   const formatDateDisplay = (dateStr: string) => {
     const [year, month, day] = dateStr.split("T")[0].split("-");
     return `${day}/${month}/${year}`;
+  };
+
+  const renderTypeBadge = (record: MedicalRecord) => {
+    const meta = RECORD_TYPE_META[getRecordType(record)];
+    const Icon = meta.icon;
+    return (
+      <span
+        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-[10px] font-bold ${meta.badgeClass}`}
+      >
+        <Icon className="w-3 h-3" />
+        {meta.label}
+      </span>
+    );
   };
 
   return (
@@ -57,15 +76,27 @@ export const PatientClinicalHistory = ({
         </span>
       </div>
 
+      {onOpenFullHistory && (
+        <button
+          type="button"
+          onClick={onOpenFullHistory}
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-950/60 hover:bg-slate-950 border border-slate-800 hover:border-[#ece883]/40 text-xs font-bold text-[#ece883] transition-colors cursor-pointer"
+        >
+          <History className="w-4 h-4" />
+          Ver historial clínico completo
+        </button>
+      )}
+
       {sortedHistory.length === 0 ? (
         <div className="bg-slate-950/30 border border-slate-800/60 rounded-2xl p-10 text-center space-y-2">
           <FileText className="w-10 h-10 text-slate-600 mx-auto stroke-1" />
           <p className="text-sm font-medium text-slate-400">
-            Aún no hay consultas finalizadas registradas para este paciente.
+            Aún no hay registros clínicos para este paciente.
           </p>
           <p className="text-xs text-slate-500">
-            Las notas aparecerán aquí automáticamente en cuanto finalices una
-            consulta desde la agenda.
+            Las consultas aparecerán aquí automáticamente al finalizarlas desde
+            la agenda. También puedes agregar vacunas, exámenes y notas desde el
+            historial clínico completo.
           </p>
         </div>
       ) : (
@@ -74,9 +105,9 @@ export const PatientClinicalHistory = ({
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                Última Consulta Registrada
+                Último registro
               </p>
-              {latestConsultation && (
+              {latestConsultation && onDeleteMedicalRecord && (
                 <button
                   type="button"
                   onClick={() => handleDelete(latestConsultation.id)}
@@ -97,6 +128,7 @@ export const PatientClinicalHistory = ({
                   <div className="flex items-center gap-2 text-xs font-bold text-slate-200">
                     <Calendar className="w-4 h-4 text-[#ece883]" />
                     <span>{formatDateDisplay(latestConsultation.date)}</span>
+                    {renderTypeBadge(latestConsultation)}
                   </div>
                   {latestConsultation.weight ? (
                     <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-xs font-bold text-[#ece883]">
@@ -143,7 +175,7 @@ export const PatientClinicalHistory = ({
                 onClick={() => setShowFullHistory(!showFullHistory)}
                 className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-slate-950/60 hover:bg-slate-950 border border-slate-800 text-xs font-bold text-[#ece883] transition-colors cursor-pointer"
               >
-                <span>Ver consultas anteriores ({pastHistory.length})</span>
+                <span>Ver registros anteriores ({pastHistory.length})</span>
                 {showFullHistory ? (
                   <ChevronUp className="w-4 h-4" />
                 ) : (
@@ -162,6 +194,7 @@ export const PatientClinicalHistory = ({
                         <div className="flex items-center gap-2 text-xs font-medium text-slate-400">
                           <Calendar className="w-3.5 h-3.5 text-slate-500" />
                           <span>{formatDateDisplay(entry.date)}</span>
+                          {renderTypeBadge(entry)}
                         </div>
 
                         <div className="flex items-center gap-3">
@@ -175,14 +208,16 @@ export const PatientClinicalHistory = ({
                             </span>
                           )}
 
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(entry.id)}
-                            className="text-red-400 hover:text-red-300 p-1 rounded hover:bg-red-500/10 transition-colors cursor-pointer"
-                            title="Eliminar este registro"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                          {onDeleteMedicalRecord && (
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(entry.id)}
+                              className="text-red-400 hover:text-red-300 p-1 rounded hover:bg-red-500/10 transition-colors cursor-pointer"
+                              title="Eliminar este registro"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                         </div>
                       </div>
 

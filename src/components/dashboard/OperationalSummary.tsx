@@ -71,7 +71,7 @@ export const OperationalSummary = ({
               {tareas}
             </div>
             <p className="text-xs sm:text-sm text-slate-400">
-              Acciones clínicas y seguimientos por completar.
+              Dosis, revisiones y recordatorios de las próximas 24 horas.
             </p>
           </div>
           <div className="relative z-10 mt-4 pt-3.5 border-t border-slate-800/80 flex items-center justify-between text-xs font-medium text-emerald-400 group-hover:underline">
@@ -82,7 +82,7 @@ export const OperationalSummary = ({
 
         {/* Alertas (Amarillo / #ece883) */}
         <div
-          onClick={() => onNavigate("/alertas")}
+          onClick={() => onNavigate("/tareas?tab=alertas")}
           className="relative overflow-hidden bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl p-5.5 transition-all cursor-pointer group shadow-sm flex flex-col justify-between"
         >
           <div className="pointer-events-none absolute w-[260px] h-[260px] bg-[#ece883]/10 blur-[90px] rounded-full -top-14 -right-14 group-hover:bg-[#ece883]/20 transition-all" />
@@ -100,11 +100,11 @@ export const OperationalSummary = ({
               {alertas}
             </div>
             <p className="text-xs sm:text-sm text-slate-400">
-              Situaciones clínicas urgentes.
+              Dosis y revisiones que ya pasaron su horario.
             </p>
           </div>
           <div className="relative z-10 mt-4 pt-3.5 border-t border-slate-800/80 flex items-center justify-between text-xs font-medium text-[#ece883] group-hover:underline">
-            <span>Revisar alertas del sistema</span>
+            <span>Revisar alertas activas</span>
             <ArrowRight className="w-4 h-4" />
           </div>
         </div>

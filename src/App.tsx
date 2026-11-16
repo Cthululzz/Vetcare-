@@ -1,14 +1,19 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, Link } from "react-router-dom";
 import Dashboard from "./pages/Dashboard";
 import Patients from "./pages/Patients";
 import PatientRecords from "./pages/PatientRecords";
+import ClinicalHistory from "./pages/ClinicalHistory";
 import Schedule from "./pages/Schedule/Schedule";
 import HospitalizationView from "./pages/HospitalizationView";
 import Inventory from "./pages/Inventory"; // ← AGREGAR
+import Tasks from "./pages/Tasks";
+import Configuration from "./pages/Configuration";
 import Login from "./pages/Login";
 import AppLayout from "./components/common/AppLayout";
 import { DevAuthBypass } from "./components/common/DevAuthBypass";
 import { useAuth } from "./hooks/useAuth";
+import { usePermissions } from "./hooks/usePermissions";
+import { PERMISSIONS, type Permission } from "./utils/permissions";
 import type { ReactNode } from "react";
 
 // ============================================
@@ -29,6 +34,39 @@ function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  return <>{children}</>;
+}
+
+// ============================================
+// PERMISOS POR RUTA
+// ============================================
+function RequirePermission({
+  permission,
+  children,
+}: {
+  permission: Permission;
+  children: ReactNode;
+}) {
+  const { can } = usePermissions();
+
+  if (!can(permission)) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-6">
+        <h1 className="text-2xl font-black text-white mb-2">Sin acceso</h1>
+        <p className="text-sm text-slate-400 max-w-md mb-6">
+          Tu rol no tiene permiso para entrar a esta sección. Si necesitas
+          acceso, contacta al administrador de la clínica.
+        </p>
+        <Link
+          to="/"
+          className="px-5 py-2.5 rounded-xl bg-[#ece883] hover:bg-[#e4df68] text-slate-950 text-sm font-bold transition-colors"
+        >
+          Volver al inicio
+        </Link>
+      </div>
+    );
   }
 
   return <>{children}</>;
@@ -65,14 +103,70 @@ function App() {
           }
         >
           <Route path="/" element={<Dashboard />} />
-          <Route path="/pacientes" element={<Patients />} />
-          <Route path="/pacientes/fichas" element={<PatientRecords />} />
+          <Route
+            path="/pacientes"
+            element={
+              <RequirePermission permission={PERMISSIONS.PATIENTS_VIEW}>
+                <Patients />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/pacientes/fichas"
+            element={
+              <RequirePermission permission={PERMISSIONS.PATIENTS_VIEW}>
+                <PatientRecords />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/pacientes/:patientId/historial"
+            element={
+              <RequirePermission permission={PERMISSIONS.CLINICAL_HISTORY_VIEW}>
+                <ClinicalHistory />
+              </RequirePermission>
+            }
+          />
           <Route
             path="/pacientes/hospitalizados"
-            element={<HospitalizationView />}
+            element={
+              <RequirePermission permission={PERMISSIONS.CLINICAL_HISTORY_VIEW}>
+                <HospitalizationView />
+              </RequirePermission>
+            }
           />
-          <Route path="/agenda" element={<Schedule />} />
-          <Route path="/inventario" element={<Inventory />} /> {/* ← AGREGAR */}
+          <Route
+            path="/agenda"
+            element={
+              <RequirePermission permission={PERMISSIONS.APPOINTMENTS_VIEW}>
+                <Schedule />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/tareas"
+            element={
+              <RequirePermission permission={PERMISSIONS.CLINICAL_HISTORY_VIEW}>
+                <Tasks />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/inventario"
+            element={
+              <RequirePermission permission={PERMISSIONS.INVENTORY_VIEW}>
+                <Inventory />
+              </RequirePermission>
+            }
+          />
+          <Route
+            path="/configuracion"
+            element={
+              <RequirePermission permission={PERMISSIONS.SYSTEM_ADMIN}>
+                <Configuration />
+              </RequirePermission>
+            }
+          />
         </Route>
 
         <Route

@@ -4,6 +4,7 @@ import { usePatients } from "../../hooks/usePatients";
 import { useHospitalizations } from "../../hooks/useHospitalizations";
 import type { Appointment } from "../../types/appointment";
 import type { AppointmentFormData } from "../../components/schedule/AppointmentForm/AppointmentForm";
+import { getDoctorName } from "../../constants/appConstants";
 import { getLocalTodayStr } from "../../utils/dateUtils";
 import type { EditingState, ConsultationData, DayDetail } from "./types";
 
@@ -14,6 +15,7 @@ export function useScheduleActions() {
     updateAppointment,
     deleteAppointment,
     updateStatus,
+    hasScheduleConflict,
   } = useAppointments();
 
   const {
@@ -90,7 +92,28 @@ export function useScheduleActions() {
     setEditingState(null);
   };
 
-  const handleSaveAppointment = (data: AppointmentFormData) => {
+  const handleSaveAppointment = (data: AppointmentFormData): string | null => {
+    // 0. Validaciones básicas
+    if (!data.ownerName.trim() || !data.ownerPhone.trim()) {
+      return "Completa el nombre y el teléfono del propietario.";
+    }
+    if (!data.patientName.trim()) {
+      return "Ingresa el nombre del paciente.";
+    }
+    if (!data.fecha || !data.hora) {
+      return "Selecciona la fecha y la hora de la cita.";
+    }
+    if (
+      hasScheduleConflict(
+        data.doctorId,
+        data.fecha,
+        data.hora,
+        editingState?.appointmentId,
+      )
+    ) {
+      return "Ese profesional ya tiene una cita agendada en esa fecha y hora. Elige otro horario o doctor.";
+    }
+
     try {
       // 1. Buscar o crear dueño
       let owner = getOwnerByPhone(data.ownerPhone);
@@ -172,8 +195,10 @@ export function useScheduleActions() {
       }
 
       handleCloseModal();
+      return null;
     } catch (error) {
       console.error("Error en handleSaveAppointment:", error);
+      return "Ocurrió un error al guardar la cita. Inténtalo nuevamente.";
     }
   };
 
@@ -211,6 +236,8 @@ export function useScheduleActions() {
         notes,
         weight,
         recommendations,
+        type: "consulta",
+        veterinarian: getDoctorName(appointment.doctorId),
       });
       updateStatus(appointment.id, "finalizada");
     } else {

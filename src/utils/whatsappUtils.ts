@@ -78,3 +78,45 @@ export const buildDischargeMessage = (params: {
     .filter(Boolean)
     .join(" ");
 };
+
+// ============================================
+// RECORDATORIOS DE CITAS
+// ============================================
+// Se envían dos avisos al propietario: 24 horas y 1 hora antes de la cita.
+// El texto cambia según el aviso para que el mensaje tenga sentido.
+
+export type AppointmentReminderKind = "24h" | "1h";
+
+export const buildAppointmentReminderMessage = (params: {
+  patientName: string;
+  ownerName?: string;
+  dateLabel: string;
+  timeLabel: string;
+  doctorName?: string;
+  sucursal?: string;
+  kind: AppointmentReminderKind;
+}): string => {
+  const sender = params.sucursal?.trim() || "la clínica veterinaria";
+  const patient = params.patientName?.trim() || "su mascota";
+  const greeting = params.ownerName
+    ? `${buildTimeGreeting()}, ${params.ownerName}.`
+    : `${buildTimeGreeting()},`;
+
+  const when =
+    params.kind === "24h"
+      ? `Le recordamos que ${patient} tiene una hora agendada para el ${params.dateLabel} a las ${params.timeLabel}.`
+      : `Le recordamos que ${patient} tiene una hora agendada para hoy a las ${params.timeLabel}.`;
+
+  const professional = params.doctorName
+    ? `La atención será con ${params.doctorName}.`
+    : "";
+
+  const closing =
+    params.kind === "24h"
+      ? "Si necesita reagendar, responda a este mensaje."
+      : "Le esperamos. Si no puede asistir, responda a este mensaje.";
+
+  return [greeting, `Le escribimos de ${sender}.`, when, professional, closing]
+    .filter(Boolean)
+    .join(" ");
+};

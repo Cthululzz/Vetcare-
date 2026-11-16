@@ -6,13 +6,18 @@ import {
   Plus,
   Filter,
   AlertTriangle,
+  Pencil,
+  CheckCircle,
 } from "lucide-react";
 import { Footer } from "../components/common/Footer";
 import { useInventory } from "../hooks/useInventory";
 import { useInventoryTags } from "../hooks/useInventoryTags";
+import { usePermissions } from "../hooks/usePermissions";
 import { InventoryMovementForm } from "../components/inventory/InventoryMovementForm";
 import { InventoryMovementHistory } from "../components/inventory/InventoryMovementHistory";
 import { InventoryProductForm } from "../components/inventory/InventoryProductForm";
+import { InventoryProductEditModal } from "../components/inventory/InventoryProductEditModal";
+import type { InventoryItem } from "../types/inventory";
 import { formatDateShort } from "../utils/dateUtils";
 import {
   formatPresentation,
@@ -23,6 +28,7 @@ import {
 const Inventory = () => {
   const { searchProducts, getLowStockProducts, getProducts } = useInventory();
   const { getTags } = useInventoryTags();
+  const { canManageInventory } = usePermissions();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -30,6 +36,10 @@ const Inventory = () => {
   const [showMovementForm, setShowMovementForm] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showProductForm, setShowProductForm] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<InventoryItem | null>(
+    null,
+  );
+  const [feedback, setFeedback] = useState("");
 
   const tags = getTags();
   const products = searchProducts(searchQuery, {
@@ -81,23 +91,44 @@ const Inventory = () => {
                 <Filter className="w-4 h-4" />
                 Historial
               </button>
-              <button
-                onClick={() => setShowMovementForm(true)}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-semibold transition-colors cursor-pointer"
-              >
-                <Plus className="w-4 h-4" />
-                Registrar Movimiento
-              </button>
-              <button
-                onClick={() => setShowProductForm(true)}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#ece883] hover:bg-[#e4df68] text-slate-950 text-sm font-bold transition-colors shadow-md shadow-[#ece883]/10 cursor-pointer"
-              >
-                <PackagePlus className="w-4 h-4" />
-                Nuevo Producto
-              </button>
+              {canManageInventory && (
+                <button
+                  onClick={() => setShowMovementForm(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-semibold transition-colors cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  Registrar Movimiento
+                </button>
+              )}
+              {canManageInventory && (
+                <button
+                  onClick={() => setShowProductForm(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#ece883] hover:bg-[#e4df68] text-slate-950 text-sm font-bold transition-colors shadow-md shadow-[#ece883]/10 cursor-pointer"
+                >
+                  <PackagePlus className="w-4 h-4" />
+                  Nuevo Producto
+                </button>
+              )}
             </div>
           </div>
         </div>
+
+        {/* Mensaje de retroalimentación */}
+        {feedback && (
+          <div className="flex items-start justify-between gap-3 rounded-xl border px-4 py-3 text-sm bg-emerald-500/10 border-emerald-500/30 text-emerald-300">
+            <span className="flex items-start gap-2">
+              <CheckCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              {feedback}
+            </span>
+            <button
+              type="button"
+              onClick={() => setFeedback("")}
+              className="text-xs font-semibold opacity-70 hover:opacity-100 cursor-pointer"
+            >
+              Cerrar
+            </button>
+          </div>
+        )}
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -219,13 +250,15 @@ const Inventory = () => {
                     frasco) y su unidad de consumo (g, ml, comprimido) para
                     controlar el stock y descontar porciones o medicación.
                   </p>
-                  <button
-                    onClick={() => setShowProductForm(true)}
-                    className="inline-flex items-center gap-2 mt-4 px-4 py-2.5 rounded-xl bg-[#ece883] hover:bg-[#e4df68] text-slate-950 text-sm font-bold transition-colors shadow-md shadow-[#ece883]/10 cursor-pointer"
-                  >
-                    <PackagePlus className="w-4 h-4" />
-                    Crear primer producto
-                  </button>
+                  {canManageInventory && (
+                    <button
+                      onClick={() => setShowProductForm(true)}
+                      className="inline-flex items-center gap-2 mt-4 px-4 py-2.5 rounded-xl bg-[#ece883] hover:bg-[#e4df68] text-slate-950 text-sm font-bold transition-colors shadow-md shadow-[#ece883]/10 cursor-pointer"
+                    >
+                      <PackagePlus className="w-4 h-4" />
+                      Crear primer producto
+                    </button>
+                  )}
                 </>
               )}
             </div>
@@ -243,15 +276,27 @@ const Inventory = () => {
                     className="bg-slate-950/60 border border-slate-800 hover:border-slate-700 rounded-xl p-5 transition-all"
                   >
                     <div className="space-y-3">
-                      <div className="flex items-start justify-between">
+                      <div className="flex items-start justify-between gap-2">
                         <h4 className="text-base font-bold text-white">
                           {product.name}
                         </h4>
-                        <span
-                          className={`text-xs font-semibold ${stockStatus.color}`}
-                        >
-                          {stockStatus.label}
-                        </span>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span
+                            className={`text-xs font-semibold ${stockStatus.color}`}
+                          >
+                            {stockStatus.label}
+                          </span>
+                          {canManageInventory && (
+                            <button
+                              type="button"
+                              onClick={() => setEditingProduct(product)}
+                              title="Editar producto"
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-[#ece883] hover:bg-slate-800 transition-colors cursor-pointer"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
                       </div>
 
                       {product.description && (
@@ -337,6 +382,22 @@ const Inventory = () => {
       <InventoryProductForm
         isOpen={showProductForm}
         onClose={() => setShowProductForm(false)}
+        onCreated={(product) =>
+          setFeedback(`Se creó el producto "${product.name}".`)
+        }
+      />
+
+      <InventoryProductEditModal
+        key={editingProduct?.id ?? "edit-product"}
+        isOpen={Boolean(editingProduct)}
+        product={editingProduct}
+        onClose={() => setEditingProduct(null)}
+        onSaved={(product) =>
+          setFeedback(`Se actualizó el producto "${product.name}".`)
+        }
+        onDeleted={(product) =>
+          setFeedback(`Se dio de baja el producto "${product.name}".`)
+        }
       />
 
       <InventoryMovementForm

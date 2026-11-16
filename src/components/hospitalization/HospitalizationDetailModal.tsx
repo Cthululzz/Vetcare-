@@ -4,9 +4,10 @@ import {
   CalendarClock,
   ClipboardList,
   HeartPulse,
+  Mail,
   Pencil,
+  Phone,
   Pill,
-  Stethoscope,
   Trash2,
   X,
 } from "lucide-react";
@@ -18,6 +19,8 @@ import type {
 import { getSucursalName } from "../../constants/appConstants";
 import { formatFractionWithUnit } from "../../utils/inventoryUnits";
 import { formatDateShort, formatDateTimeShort } from "../../utils/dateUtils";
+import { isMedicationPlanOverdue } from "../../utils/hospitalizationTasks";
+import { PetAvatar } from "../common/PetAvatar";
 
 interface HospitalizationDetailModalProps {
   isOpen: boolean;
@@ -87,25 +90,51 @@ export const HospitalizationDetailModal = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
       <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-3xl max-h-[92vh] overflow-hidden flex flex-col shadow-2xl">
         {/* Header */}
-        <div className="flex items-start justify-between p-6 border-b border-slate-800">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-[#ece883]/10 text-[#ece883] border border-[#ece883]/20">
-              <Stethoscope className="w-5 h-5" />
-            </div>
-            <div>
+        <div className="flex items-start justify-between gap-4 p-6 border-b border-slate-800">
+          <div className="flex items-start gap-4 min-w-0">
+            <PetAvatar
+              species={patient.species}
+              gender={patient.gender}
+              size="md"
+              breed={patient.breed}
+            />
+            <div className="min-w-0 space-y-0.5">
               <h2 className="text-xl font-bold text-white">
                 Ficha de Hospitalización
               </h2>
-              <p className="text-sm text-slate-400 mt-0.5">
-                {patient.name}
-                {owner ? ` • ${owner.name}` : ""}
+              <p className="text-sm text-slate-300 break-words">
+                <span className="font-semibold text-white">{patient.name}</span>
                 {hospitalization.bed ? ` • ${hospitalization.bed}` : ""}
               </p>
+              <div className="text-xs text-slate-400 space-y-0.5">
+                <p className="break-words">
+                  Propietario:{" "}
+                  <span className="text-slate-200">
+                    {owner?.name || "Sin propietario"}
+                  </span>
+                </p>
+                {(owner?.phone || owner?.email) && (
+                  <p className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
+                    {owner?.phone && (
+                      <span className="inline-flex items-center gap-1">
+                        <Phone className="w-3 h-3 text-slate-500" />
+                        {owner.phone}
+                      </span>
+                    )}
+                    {owner?.email && (
+                      <span className="inline-flex items-center gap-1 break-all">
+                        <Mail className="w-3 h-3 text-slate-500" />
+                        {owner.email}
+                      </span>
+                    )}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
+            className="p-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
@@ -307,6 +336,75 @@ export const HospitalizationDetailModal = ({
               </div>
             )}
           </div>
+
+          {/* Plan de remedios */}
+          {hospitalization.status === "activa" && (
+            <div className="space-y-3">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[#ece883] flex items-center gap-2">
+                <Pill className="w-4 h-4" />
+                Plan de remedios ({(hospitalization.medicationPlans ?? []).filter((plan) => plan.isActive).length} activos)
+              </h3>
+
+              {(hospitalization.medicationPlans ?? []).length === 0 ? (
+                <p className="text-xs text-slate-500 italic bg-slate-950/40 border border-slate-800/60 rounded-xl p-4">
+                  Este paciente aún no tiene un plan de remedios programado.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {[...(hospitalization.medicationPlans ?? [])]
+                    .sort((a, b) => {
+                      if (a.isActive !== b.isActive) return a.isActive ? -1 : 1;
+                      return a.nextDoseAt.localeCompare(b.nextDoseAt);
+                    })
+                    .map((plan) => {
+                      const overdue = isMedicationPlanOverdue(plan);
+
+                      return (
+                        <div
+                          key={plan.id}
+                          className={`rounded-xl px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border ${
+                            plan.isActive
+                              ? overdue
+                                ? "bg-red-500/5 border-red-500/20"
+                                : "bg-slate-950/60 border-slate-800"
+                              : "bg-slate-950/30 border-slate-800/60 opacity-70"
+                          }`}
+                        >
+                          <div>
+                            <p className="text-sm font-semibold text-white">
+                              {plan.productName}
+                            </p>
+                            <p className="text-[11px] text-slate-500">
+                              {formatFractionWithUnit(
+                                plan.dose,
+                                plan.unit ?? "",
+                              )}{" "}
+                              cada {plan.frequencyHours} h
+                              {plan.durationDays
+                                ? ` · ${plan.durationDays} días`
+                                : ""}
+                            </p>
+                          </div>
+                          <span
+                            className={`text-xs font-semibold shrink-0 ${
+                              !plan.isActive
+                                ? "text-slate-500"
+                                : overdue
+                                  ? "text-red-400"
+                                  : "text-emerald-300"
+                            }`}
+                          >
+                            {plan.isActive
+                              ? `${overdue ? "Dosis atrasada: " : "Próxima dosis: "}${formatDateTime(plan.nextDoseAt)}`
+                              : "Plan detenido"}
+                          </span>
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Medicación y consumos */}
           <div className="space-y-3">

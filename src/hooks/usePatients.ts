@@ -136,6 +136,39 @@ export function usePatients() {
     );
   };
 
+  const updateMedicalRecord = (
+    patientId: string,
+    recordId: string,
+    updates: Partial<Omit<MedicalRecord, "id">>,
+  ) => {
+    setPatients((prev) =>
+      prev.map((p) =>
+        p.id === patientId
+          ? {
+              ...p,
+              history: p.history.map((record) =>
+                record.id === recordId ? { ...record, ...updates } : record,
+              ),
+              updatedAt: isoNow(),
+            }
+          : p,
+      ),
+    );
+  };
+
+  const deleteMedicalRecord = (patientId: string, recordId: string) => {    setPatients((prev) =>
+      prev.map((p) =>
+        p.id === patientId
+          ? {
+              ...p,
+              history: p.history.filter((record) => record.id !== recordId),
+              updatedAt: isoNow(),
+            }
+          : p,
+      ),
+    );
+  };
+
   // ---------- CONSULTA (lógica de negocio compuesta) ----------
   // Esta función orquesta: crear/obtener dueño + crear/actualizar paciente + agregar historial
   const registerFromConsultation = (params: {
@@ -232,6 +265,8 @@ export function usePatients() {
 
     // Historial
     addMedicalRecord,
+    updateMedicalRecord,
+    deleteMedicalRecord,
 
     // Consulta (lógica compuesta)
     registerFromConsultation,

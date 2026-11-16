@@ -56,7 +56,7 @@ export interface AppointmentFormData {
 }
 
 interface AppointmentFormProps {
-  onSaveAppointment: (data: AppointmentFormData) => void;
+  onSaveAppointment: (data: AppointmentFormData) => string | null | void;
   onCancel?: () => void;
   initialData?: Partial<AppointmentFormData>;
 }
@@ -94,6 +94,7 @@ export const AppointmentForm = ({
   const [formData, setFormData] =
     useState<AppointmentFormData>(INITIAL_FORM_STATE);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   const isPreselectedDate = Boolean(
     initialData?.fecha && !initialData?.patientName,
@@ -114,7 +115,12 @@ export const AppointmentForm = ({
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    onSaveAppointment(formData);
+    const message = onSaveAppointment(formData);
+    if (message) {
+      setSubmitError(message);
+      return;
+    }
+    setSubmitError("");
     setIsSubmitted(true);
   };
 
@@ -350,6 +356,11 @@ export const AppointmentForm = ({
         </div>
 
         <div className="flex items-center justify-end gap-3 pt-2">
+          {submitError && (
+            <p className="mr-auto text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+              {submitError}
+            </p>
+          )}
           {onCancel && (
             <button
               type="button"

@@ -4,17 +4,22 @@ import {
   Activity,
   AlertTriangle,
   ArrowLeft,
+  ArrowRightLeft,
   BedDouble,
   Bell,
   CalendarClock,
   CheckCircle,
   History,
+  Mail,
   MessageCircle,
+  Phone,
   Pill,
   Plus,
   Stethoscope,
+  User,
 } from "lucide-react";
 import { Footer } from "../components/common/Footer";
+import { PetAvatar } from "../components/common/PetAvatar";
 import { usePatients } from "../hooks/usePatients";
 import {
   isReviewOverdue,
@@ -25,6 +30,7 @@ import { useInventory } from "../hooks/useInventory";
 import { useInventoryMovements } from "../hooks/useInventoryMovements";
 import { useHospitalBeds } from "../hooks/useHospitalBeds";
 import { useAuth } from "../hooks/useAuth";
+import { usePermissions } from "../hooks/usePermissions";
 import { AdmissionFormModal } from "../components/hospitalization/AdmissionFormModal";
 import type { AdmissionData } from "../components/hospitalization/AdmissionFormModal";
 import {
@@ -35,12 +41,16 @@ import { DischargeConfirmModal } from "../components/hospitalization/DischargeCo
 import type { DischargeData } from "../components/hospitalization/DischargeConfirmModal";
 import { MedicationAdministrationModal } from "../components/hospitalization/MedicationAdministrationModal";
 import type { MedicationAdministrationData } from "../components/hospitalization/MedicationAdministrationModal";
+import { MedicationPlanModal } from "../components/hospitalization/MedicationPlanModal";
+import type { MedicationPlanInput } from "../hooks/useHospitalizations";
 import { HospitalizationDetailModal } from "../components/hospitalization/HospitalizationDetailModal";
+import { ChangeBedModal } from "../components/hospitalization/ChangeBedModal";
 import { BedMap } from "../components/hospitalization/BedMap";
 import type { Patient, Owner } from "../types/patient";
 import type {
   Hospitalization,
   MedicationAdministration,
+  MedicationPlan,
 } from "../types/hospitalization";
 import {
   DEFAULT_MONITORING_FREQUENCY,
@@ -50,7 +60,6 @@ import { getSucursalName } from "../constants/appConstants";
 import { formatDateShort, formatDateTimeShort } from "../utils/dateUtils";
 import {
   buildDischargeMessage,
-  buildReviewReminderMessage,
   buildWhatsAppLink,
 } from "../utils/whatsappUtils";
 import {
@@ -59,6 +68,7 @@ import {
   formatQuantityDisplay,
   isMeasuredUnit,
 } from "../utils/inventoryUnits";
+import { isMedicationPlanOverdue } from "../utils/hospitalizationTasks";
 
 // ============================================
 // TIPOS INTERNOS
@@ -77,6 +87,10 @@ interface HospitalizedPatientView {
   nextReviewAt?: string;
   reviewPending: boolean;
   reviewOverdue: boolean;
+  /** Próxima dosis del plan de remedios activo más próximo. */
+  nextDoseAt?: string;
+  nextDoseOverdue: boolean;
+  activePlanCount: number;
 }
 
 interface FeedbackMessage {
@@ -128,17 +142,6 @@ const formatMedicationDose = (
   return unit ? formatFractionWithUnit(amount, unit) : `${amount}`;
 };
 
-const formatSpeciesAndBreed = (patient: Patient): string => {
-  const speciesLabels: Record<string, string> = {
-    perro: "Perro",
-    gato: "Gato",
-    exoticos: "Exótico",
-  };
-
-  const species = speciesLabels[patient.species] || patient.species;
-  return patient.breed ? `${species} (${patient.breed})` : species;
-};
-
 const buildEvolutionNotes = (data: EvolutionData): string => {
   let notes = `EVOLUCIÓN HOSPITALIZACIÓN\n\n${data.notes}`;
 
@@ -175,10 +178,16 @@ const HospitalizationView = () => {
   const {
     hospitalizations,
     admitPatient,
+    changeBed,
     addEvolution,
     addMedicationAdministration,
     updateMedicationAdministration,
     removeMedicationAdministration,
+    addMedicationPlan,
+    updateMedicationPlan,
+    setMedicationPlanActive,
+    removeMedicationPlan,
+    administerPlanDose,
     dischargePatient,
     getActiveHospitalizations,
     getDischargedHospitalizations,
@@ -190,6 +199,7 @@ const HospitalizationView = () => {
   const { getProducts, getProduct } = useInventory();
   const { createMovement } = useInventoryMovements();
   const { user } = useAuth();
+  const { canAccessClinicalFlow } = usePermissions();
 
   // Estados de pestañas y modales
   const [activeTab, setActiveTab] = useState<TabType>("activos");
@@ -197,7 +207,9 @@ const HospitalizationView = () => {
   const [showEvolutionModal, setShowEvolutionModal] = useState(false);
   const [showDischargeModal, setShowDischargeModal] = useState(false);
   const [showMedicationModal, setShowMedicationModal] = useState(false);
+  const [showPlanModal, setShowPlanModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showChangeBedModal, setShowChangeBedModal] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [selectedHospitalizationId, setSelectedHospitalizationId] = useState<
     string | null
@@ -218,18 +230,33 @@ const HospitalizationView = () => {
       const nextReviewAt = hospitalization.nextReviewAt;
       const reviewOverdue = isReviewOverdue(hospitalization);
 
+      const activePlans = (hospitalization.medicationPlans ?? [])
+        .filter((plan) => plan.isActive && plan.nextDoseAt)
+        .sort((a, b) => a.nextDoseAt.localeCompare(b.nextDoseAt));
+      const nextDoseAt = activePlans[0]?.nextDoseAt;
+      const nextDoseOverdue = activePlans[0]
+        ? isMedicationPlanOverdue(activePlans[0])
+        : false;
+
       return {
         hospitalization,
         patient,
         owner: getOwner(patient.ownerId),
         bed: hospitalization.bed || "Sin cama",
-        status: reviewOverdue ? "Revisión vencida" : "En observación",
+        status: reviewOverdue
+          ? "Revisión vencida"
+          : nextDoseOverdue
+            ? "Dosis atrasada"
+            : "En observación",
         reason: hospitalization.reason || "No especificado",
         diagnosis: hospitalization.diagnosis,
         admissionDate: hospitalization.admittedAt,
         nextReviewAt,
         reviewPending: isReviewPending(hospitalization),
         reviewOverdue,
+        nextDoseAt,
+        nextDoseOverdue,
+        activePlanCount: activePlans.length,
       };
     });
 
@@ -248,6 +275,8 @@ const HospitalizationView = () => {
     return {
       bed,
       patientName: entry?.patient.name,
+      species: entry?.patient.species,
+      gender: entry?.patient.gender,
       hospitalizationId: entry?.hospitalization.id,
     };
   });
@@ -299,6 +328,8 @@ const HospitalizationView = () => {
 
     addMedicalRecord(data.patientId, {
       date: new Date().toISOString(),
+      type: "hospitalizacion",
+      veterinarian: user?.name,
       weight: data.weight,
       notes: [
         "INGRESO A HOSPITALIZACIÓN",
@@ -378,6 +409,8 @@ const HospitalizationView = () => {
 
     addMedicalRecord(patientId, {
       date: new Date().toISOString(),
+      type: "hospitalizacion",
+      veterinarian: user?.name,
       notes: buildEvolutionNotes(evolutionData),
       recommendations: `Continuar monitoreo según evolución. Próxima revisión: ${formatDateTime(nextReviewAt)}.`,
     });
@@ -416,6 +449,9 @@ const HospitalizationView = () => {
 
     addMedicalRecord(selectedPatient.id, {
       date: new Date().toISOString(),
+      type: "hospitalizacion",
+      veterinarian: user?.name,
+      diagnosis: data.diagnosis,
       notes: [
         "ALTA MÉDICA - Fin de hospitalización",
         `Diagnóstico de alta: ${data.diagnosis}`,
@@ -642,29 +678,163 @@ const HospitalizationView = () => {
     }
   };
 
-  const handleSendReviewReminder = (item: HospitalizedPatientView) => {
-    const phone = item.owner?.phone;
-    if (!phone) {
+  const handleOpenChangeBed = (
+    hospitalization: Hospitalization,
+    patient: Patient,
+  ) => {
+    setFeedback(null);
+    setSelectedHospitalizationId(hospitalization.id);
+    setSelectedPatient(patient);
+    setShowChangeBedModal(true);
+  };
+
+  const handleConfirmChangeBed = (bed: string) => {
+    if (!selectedHospitalization) return;
+
+    const previousBed = selectedHospitalization.bed || "Sin cama";
+    const patientName = selectedPatient?.name ?? "El paciente";
+
+    const changed = changeBed(selectedHospitalization.id, bed);
+
+    setShowChangeBedModal(false);
+    setSelectedHospitalizationId(null);
+    setSelectedPatient(null);
+
+    if (!changed) {
       setFeedback({
         type: "error",
-        message: "El propietario no tiene teléfono registrado.",
+        message:
+          "No se pudo cambiar la cama. Puede que ya esté ocupada; actualiza e inténtalo nuevamente.",
       });
       return;
     }
 
-    const message = buildReviewReminderMessage({
-      patientName: item.patient.name,
-      reviewDate: formatDateTime(item.nextReviewAt),
-      sucursal: item.hospitalization.sucursalId
-        ? getSucursalName(item.hospitalization.sucursalId)
-        : undefined,
+    setFeedback({
+      type: "success",
+      message: `${patientName} pasó de ${previousBed} a ${bed}.`,
+    });
+  };
+
+  const handleOpenPlan = (
+    hospitalization: Hospitalization,
+    patient: Patient,
+  ) => {
+    setFeedback(null);
+    setSelectedHospitalizationId(hospitalization.id);
+    setSelectedPatient(patient);
+    setShowPlanModal(true);
+  };
+
+  const handleCreatePlan = (data: MedicationPlanInput): string | null => {
+    if (!selectedHospitalization) {
+      return "No hay una hospitalización seleccionada.";
+    }
+
+    const plan = addMedicationPlan(selectedHospitalization.id, data, user?.name);
+    if (!plan) {
+      return "No se pudo crear el plan. Verifica que la hospitalización siga activa.";
+    }
+
+    setFeedback({
+      type: "success",
+      message: `Se programó ${plan.productName} cada ${plan.frequencyHours} h. La primera dosis quedó agendada.`,
+    });
+    return null;
+  };
+
+  const handleUpdatePlan = (
+    planId: string,
+    data: MedicationPlanInput,
+  ): string | null => {
+    if (!selectedHospitalization) {
+      return "No hay una hospitalización seleccionada.";
+    }
+
+    updateMedicationPlan(selectedHospitalization.id, planId, data);
+    setFeedback({
+      type: "success",
+      message: `Se actualizó el plan de ${data.productName}.`,
+    });
+    return null;
+  };
+
+  const handleTogglePlan = (planId: string, isActive: boolean) => {
+    if (!selectedHospitalization) return;
+
+    setMedicationPlanActive(selectedHospitalization.id, planId, isActive);
+    setFeedback({
+      type: "success",
+      message: isActive
+        ? "El plan de remedios se reactivó."
+        : "El plan de remedios se detuvo. Su historial se conserva.",
+    });
+  };
+
+  const handleDeletePlan = (planId: string) => {
+    if (!selectedHospitalization) return;
+
+    removeMedicationPlan(selectedHospitalization.id, planId);
+    setFeedback({
+      type: "success",
+      message: "Se eliminó el plan de remedios. El historial de dosis se conserva.",
+    });
+  };
+
+  /**
+   * Administra la dosis programada: descuenta stock y avanza el horario.
+   */
+  const handleAdministerPlanDose = (plan: MedicationPlan): string | null => {
+    if (!selectedHospitalization || !selectedPatient) {
+      return "No hay una hospitalización seleccionada.";
+    }
+
+    const product = getProduct(plan.productId);
+    if (!product) {
+      return "El remedio ya no existe en el inventario.";
+    }
+
+    if (plan.dose > product.currentStock) {
+      return `Stock insuficiente: quedan ${formatQuantityDisplay(
+        product.currentStock,
+        product,
+      )}.`;
+    }
+
+    const administration = administerPlanDose(
+      selectedHospitalization.id,
+      plan.id,
+      { createdBy: user?.name },
+    );
+
+    if (!administration) {
+      return "No se pudo administrar la dosis. El plan puede estar detenido.";
+    }
+
+    createMovement({
+      productId: product.id,
+      type: "retiro",
+      quantity: plan.dose,
+      unit: product.unit,
+      reason: "Dosis del plan de remedios en hospitalización",
+      userName: user?.name,
+      userRole: user?.role,
+      patientName: selectedPatient.name,
+      isComplete: true,
     });
 
-    window.open(
-      buildWhatsAppLink(phone, message),
-      "_blank",
-      "noopener,noreferrer",
-    );
+    const baseLabel = formatFractionWithUnit(plan.dose, product.unit);
+    const equivalence = isMeasuredUnit(product.unit)
+      ? formatPackageEquivalence(plan.dose, product)
+      : null;
+    const quantityLabel = equivalence
+      ? `${baseLabel} (${equivalence})`
+      : baseLabel;
+
+    setFeedback({
+      type: "success",
+      message: `Se administró ${quantityLabel} de ${plan.productName} y se descontó del inventario.`,
+    });
+    return null;
   };
 
   const handleSendDischargeReminder = (
@@ -727,12 +897,14 @@ const HospitalizationView = () => {
               </p>
             </div>
 
-            <button
-              onClick={handleOpenAdmission}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#ece883] hover:bg-[#e4df68] text-slate-950 text-sm font-bold transition-colors shadow-md shadow-[#ece883]/10 cursor-pointer self-start sm:self-auto"
-            >
-              <Plus className="w-4 h-4" /> Ingresar Paciente
-            </button>
+            {canAccessClinicalFlow && (
+              <button
+                onClick={handleOpenAdmission}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#ece883] hover:bg-[#e4df68] text-slate-950 text-sm font-bold transition-colors shadow-md shadow-[#ece883]/10 cursor-pointer self-start sm:self-auto"
+              >
+                <Plus className="w-4 h-4" /> Ingresar Paciente
+              </button>
+            )}
           </div>
         </div>
 
@@ -884,61 +1056,105 @@ const HospitalizationView = () => {
                     key={item.hospitalization.id}
                     className="bg-slate-950/60 border border-slate-800 hover:border-slate-700 rounded-xl p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 transition-all"
                   >
-                    <div className="space-y-1.5 min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-base font-bold text-white">
-                          {item.patient.name}
-                        </h3>
-                        <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold">
-                          {item.bed}
-                        </span>
-                        <span
-                          className={`text-[10px] px-2 py-0.5 rounded-md border font-semibold ${
-                            item.reviewOverdue
-                              ? "bg-red-500/10 text-red-400 border-red-500/20"
-                              : "bg-blue-500/10 text-blue-400 border-blue-500/20"
-                          }`}
-                        >
-                          {item.status}
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-400">
-                        Propietario:{" "}
-                        <span className="text-slate-200">
-                          {item.owner?.name || "Sin propietario"}
-                        </span>{" "}
-                        ({formatSpeciesAndBreed(item.patient)})
-                      </p>
-                      <p className="text-sm text-slate-300 font-medium italic">
-                        Motivo: "{item.reason}"
-                      </p>
-                      {item.diagnosis && (
-                        <p className="text-xs text-slate-400">
-                          Diagnóstico:{" "}
-                          <span className="text-slate-200">
-                            {item.diagnosis}
+                    <div className="flex items-start gap-4 min-w-0">
+                      <PetAvatar
+                        species={item.patient.species}
+                        gender={item.patient.gender}
+                        size="md"
+                        breed={item.patient.breed}
+                      />
+
+                      <div className="space-y-1.5 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="text-base font-bold text-white break-words">
+                            {item.patient.name}
+                          </h3>
+                          <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold">
+                            {item.bed}
                           </span>
+                          <span
+                            className={`text-[10px] px-2 py-0.5 rounded-md border font-semibold ${
+                              item.reviewOverdue
+                                ? "bg-red-500/10 text-red-400 border-red-500/20"
+                                : "bg-blue-500/10 text-blue-400 border-blue-500/20"
+                            }`}
+                          >
+                            {item.status}
+                          </span>
+                        </div>
+
+                        <div className="space-y-0.5 text-xs">
+                          <p className="flex items-center gap-1.5 text-slate-300">
+                            <User className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                            <span className="font-semibold text-white break-words min-w-0">
+                              {item.owner?.name || "Sin propietario"}
+                            </span>
+                          </p>
+                          {(item.owner?.phone || item.owner?.email) && (
+                            <p className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-slate-400">
+                              {item.owner?.phone && (
+                                <span className="inline-flex items-center gap-1">
+                                  <Phone className="w-3 h-3 text-slate-500" />
+                                  {item.owner.phone}
+                                </span>
+                              )}
+                              {item.owner?.email && (
+                                <span className="inline-flex items-center gap-1 break-all">
+                                  <Mail className="w-3 h-3 text-slate-500" />
+                                  {item.owner.email}
+                                </span>
+                              )}
+                            </p>
+                          )}
+                        </div>
+
+                        <p className="text-sm text-slate-300 font-medium italic">
+                          Motivo: "{item.reason}"
                         </p>
-                      )}
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
-                        <span>Ingreso: {formatTimestamp(item.admissionDate)}</span>
-                        <span>
-                          Peso:{" "}
-                          {item.hospitalization.weightAtAdmission != null
-                            ? `${item.hospitalization.weightAtAdmission} kg`
-                            : "No registrado"}
-                        </span>
-                        <span
-                          className={`inline-flex items-center gap-1 ${
-                            item.reviewOverdue ? "text-red-400" : ""
-                          }`}
-                        >
-                          <CalendarClock className="w-3.5 h-3.5" />
-                          Próxima revisión:{" "}
-                          {item.nextReviewAt
-                            ? formatDateTime(item.nextReviewAt)
-                            : "Sin programar"}
-                        </span>
+                        {item.diagnosis && (
+                          <p className="text-xs text-slate-400">
+                            Diagnóstico:{" "}
+                            <span className="text-slate-200">
+                              {item.diagnosis}
+                            </span>
+                          </p>
+                        )}
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
+                          <span>
+                            Ingreso: {formatTimestamp(item.admissionDate)}
+                          </span>
+                          <span>
+                            Peso:{" "}
+                            {item.hospitalization.weightAtAdmission != null
+                              ? `${item.hospitalization.weightAtAdmission} kg`
+                              : "No registrado"}
+                          </span>
+                          <span
+                            className={`inline-flex items-center gap-1 ${
+                              item.reviewOverdue ? "text-red-400" : ""
+                            }`}
+                          >
+                            <CalendarClock className="w-3.5 h-3.5" />
+                            Próxima revisión:{" "}
+                            {item.nextReviewAt
+                              ? formatDateTime(item.nextReviewAt)
+                              : "Sin programar"}
+                          </span>
+                          <span
+                            className={`inline-flex items-center gap-1 ${
+                              item.nextDoseOverdue ? "text-red-400" : ""
+                            }`}
+                          >
+                            <Pill className="w-3.5 h-3.5" />
+                            Próxima dosis:{" "}
+                            {item.nextDoseAt
+                              ? formatDateTime(item.nextDoseAt)
+                              : "Sin programar"}
+                            {item.activePlanCount > 1
+                              ? ` (+${item.activePlanCount - 1})`
+                              : ""}
+                          </span>
+                        </div>
                       </div>
                     </div>
 
@@ -953,48 +1169,58 @@ const HospitalizationView = () => {
                       </button>
                       <button
                         onClick={() =>
-                          handleRegistrarEvolucion(
+                          handleOpenChangeBed(
                             item.hospitalization,
                             item.patient,
                           )
                         }
                         className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-colors cursor-pointer"
                       >
-                        <Activity className="w-3.5 h-3.5" /> Evolución
+                        <ArrowRightLeft className="w-3.5 h-3.5" /> Cambiar cama
                       </button>
-                      <button
-                        onClick={() =>
-                          handleOpenMedication(
-                            item.hospitalization,
-                            item.patient,
-                          )
-                        }
-                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/20 text-xs font-semibold transition-colors cursor-pointer"
-                      >
-                        <Pill className="w-3.5 h-3.5" /> Medicación / consumo
-                      </button>
-                      <button
-                        onClick={() => handleSendReviewReminder(item)}
-                        disabled={!item.owner?.phone || !item.nextReviewAt}
-                        title={
-                          !item.nextReviewAt
-                            ? "Programa una próxima revisión para enviar el recordatorio"
-                            : item.owner?.phone
-                              ? "Enviar recordatorio por WhatsApp"
-                              : "El propietario no tiene teléfono registrado"
-                        }
-                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 disabled:bg-slate-800 disabled:text-slate-500 text-emerald-300 border border-emerald-500/20 disabled:border-slate-800 text-xs font-semibold transition-colors disabled:cursor-not-allowed cursor-pointer"
-                      >
-                        <MessageCircle className="w-3.5 h-3.5" /> Recordar
-                      </button>
-                      <button
-                        onClick={() =>
-                          handleDarDeAlta(item.hospitalization, item.patient)
-                        }
-                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 text-xs font-semibold transition-colors cursor-pointer"
-                      >
-                        <CheckCircle className="w-3.5 h-3.5" /> Alta
-                      </button>
+                      {canAccessClinicalFlow && (
+                        <>
+                          <button
+                            onClick={() =>
+                              handleRegistrarEvolucion(
+                                item.hospitalization,
+                                item.patient,
+                              )
+                            }
+                            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-colors cursor-pointer"
+                          >
+                            <Activity className="w-3.5 h-3.5" /> Evolución
+                          </button>
+                          <button
+                            onClick={() =>
+                              handleOpenMedication(
+                                item.hospitalization,
+                                item.patient,
+                              )
+                            }
+                            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/20 text-xs font-semibold transition-colors cursor-pointer"
+                          >
+                            <Pill className="w-3.5 h-3.5" /> Medicación /
+                            consumo
+                          </button>
+                          <button
+                            onClick={() =>
+                              handleOpenPlan(item.hospitalization, item.patient)
+                            }
+                            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#ece883]/10 hover:bg-[#ece883]/20 text-[#ece883] border border-[#ece883]/20 text-xs font-semibold transition-colors cursor-pointer"
+                          >
+                            <Pill className="w-3.5 h-3.5" /> Plan de remedios
+                          </button>
+                          <button
+                            onClick={() =>
+                              handleDarDeAlta(item.hospitalization, item.patient)
+                            }
+                            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 text-xs font-semibold transition-colors cursor-pointer"
+                          >
+                            <CheckCircle className="w-3.5 h-3.5" /> Alta
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -1035,48 +1261,76 @@ const HospitalizationView = () => {
                       key={hospitalization.id}
                       className="bg-slate-950/60 border border-slate-800 rounded-xl p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4"
                     >
-                      <div className="space-y-1.5 min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="text-base font-bold text-white">
-                            {patient.name}
-                          </h3>
-                          <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 border border-slate-700 font-semibold">
-                            {hospitalization.bed || "Sin cama"}
-                          </span>
-                          <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold">
-                            Alta
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-400">
-                          Propietario:{" "}
-                          <span className="text-slate-200">
-                            {owner?.name || "Sin propietario"}
-                          </span>{" "}
-                          ({formatSpeciesAndBreed(patient)})
-                        </p>
-                        <p className="text-sm text-slate-300">
-                          <span className="text-slate-500">Diagnóstico de alta: </span>
-                          {summary?.diagnosis || "No registrado"}
-                        </p>
-                        {summary?.indications && (
-                          <p className="text-xs text-slate-400">
-                            <span className="text-slate-500">Indicaciones: </span>
-                            {summary.indications}
-                          </p>
-                        )}
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
-                          <span>
-                            Alta:{" "}
-                            {formatTimestamp(
-                              hospitalization.dischargedAt ??
-                                hospitalization.admittedAt,
+                      <div className="flex items-start gap-4 min-w-0">
+                        <PetAvatar
+                          species={patient.species}
+                          gender={patient.gender}
+                          size="md"
+                          breed={patient.breed}
+                        />
+
+                        <div className="space-y-1.5 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="text-base font-bold text-white break-words">
+                              {patient.name}
+                            </h3>
+                            <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 border border-slate-700 font-semibold">
+                              {hospitalization.bed || "Sin cama"}
+                            </span>
+                            <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold">
+                              Alta
+                            </span>
+                          </div>
+
+                          <div className="space-y-0.5 text-xs">
+                            <p className="flex items-center gap-1.5 text-slate-300">
+                              <User className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                              <span className="font-semibold text-white break-words min-w-0">
+                                {owner?.name || "Sin propietario"}
+                              </span>
+                            </p>
+                            {(owner?.phone || owner?.email) && (
+                              <p className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-slate-400">
+                                {owner?.phone && (
+                                  <span className="inline-flex items-center gap-1">
+                                    <Phone className="w-3 h-3 text-slate-500" />
+                                    {owner.phone}
+                                  </span>
+                                )}
+                                {owner?.email && (
+                                  <span className="inline-flex items-center gap-1 break-all">
+                                    <Mail className="w-3 h-3 text-slate-500" />
+                                    {owner.email}
+                                  </span>
+                                )}
+                              </p>
                             )}
-                          </span>
-                          <span className="inline-flex items-center gap-1">
-                            <CalendarClock className="w-3.5 h-3.5" />
-                            Próximo control:{" "}
-                            {formatDateOnly(summary?.nextControlAt)}
-                          </span>
+                          </div>
+
+                          <p className="text-sm text-slate-300">
+                            <span className="text-slate-500">Diagnóstico de alta: </span>
+                            {summary?.diagnosis || "No registrado"}
+                          </p>
+                          {summary?.indications && (
+                            <p className="text-xs text-slate-400">
+                              <span className="text-slate-500">Indicaciones: </span>
+                              {summary.indications}
+                            </p>
+                          )}
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
+                            <span>
+                              Alta:{" "}
+                              {formatTimestamp(
+                                hospitalization.dischargedAt ??
+                                  hospitalization.admittedAt,
+                              )}
+                            </span>
+                            <span className="inline-flex items-center gap-1">
+                              <CalendarClock className="w-3.5 h-3.5" />
+                              Próximo control:{" "}
+                              {formatDateOnly(summary?.nextControlAt)}
+                            </span>
+                          </div>
                         </div>
                       </div>
 
@@ -1130,6 +1384,21 @@ const HospitalizationView = () => {
         onClose={() => setShowAdmissionModal(false)}
       />
 
+      {/* Modal para cambiar de cama */}
+      <ChangeBedModal
+        key={selectedHospitalizationId ?? "no-bed"}
+        isOpen={showChangeBedModal}
+        patient={selectedPatient}
+        hospitalization={selectedHospitalization}
+        availableBeds={availableBeds}
+        onConfirm={handleConfirmChangeBed}
+        onCancel={() => {
+          setShowChangeBedModal(false);
+          setSelectedHospitalizationId(null);
+          setSelectedPatient(null);
+        }}
+      />
+
       {/* Modal de Registrar Evolución */}
       <EvolutionFormModal
         isOpen={showEvolutionModal}
@@ -1174,6 +1443,25 @@ const HospitalizationView = () => {
         }}
       />
 
+      {/* Modal del plan de remedios */}
+      <MedicationPlanModal
+        key={selectedHospitalizationId ?? "no-plan"}
+        isOpen={showPlanModal}
+        patient={selectedPatient}
+        hospitalization={selectedHospitalization}
+        products={products}
+        onCreate={handleCreatePlan}
+        onUpdate={handleUpdatePlan}
+        onToggleActive={handleTogglePlan}
+        onDelete={handleDeletePlan}
+        onAdminister={handleAdministerPlanDose}
+        onClose={() => {
+          setShowPlanModal(false);
+          setSelectedHospitalizationId(null);
+          setSelectedPatient(null);
+        }}
+      />
+
       {/* Modal de Ficha / Timeline */}
       <HospitalizationDetailModal
         isOpen={showDetailModal}
@@ -1182,8 +1470,12 @@ const HospitalizationView = () => {
           selectedPatient ? getOwner(selectedPatient.ownerId) : undefined
         }
         hospitalization={selectedHospitalization}
-        onEditMedication={handleEditMedication}
-        onDeleteMedication={handleDeleteMedication}
+        onEditMedication={
+          canAccessClinicalFlow ? handleEditMedication : undefined
+        }
+        onDeleteMedication={
+          canAccessClinicalFlow ? handleDeleteMedication : undefined
+        }
         onClose={() => {
           setShowDetailModal(false);
           setSelectedHospitalizationId(null);

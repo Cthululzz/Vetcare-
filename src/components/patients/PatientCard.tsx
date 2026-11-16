@@ -1,8 +1,9 @@
 import type { Patient } from "../../types/patient";
-import { Cat, Dog, Star, Heart, Calendar, BedDouble } from "lucide-react";
+import { Heart, Calendar, BedDouble } from "lucide-react";
 import { usePatients } from "../../hooks/usePatients";
 import { useHospitalizations } from "../../hooks/useHospitalizations";
 import { getPatientDisplayAge } from "../../utils/dateUtils";
+import { PetAvatar } from "../common/PetAvatar";
 
 interface PatientCardProps {
   patient: Patient & { lastVisit?: string };
@@ -15,29 +16,6 @@ export const PatientCard = ({ patient, onOpenProfile }: PatientCardProps) => {
   const { isHospitalized } = useHospitalizations();
   const owner = getOwner(patient.ownerId);
   const hospitalized = isHospitalized(patient.id);
-
-  // Determinar si es hembra para el color del ícono
-  const isFemale = patient.gender === "hembra";
-
-  // Color dinámico según género
-  const iconColorClass = isFemale ? "text-pink-400" : "text-blue-400";
-  const badgeBgClass = isFemale
-    ? "bg-pink-500/10 border-pink-500/20"
-    : "bg-blue-500/10 border-blue-500/20";
-
-  // Ícono según especie (comparación estricta con el tipo)
-  const renderSpeciesIcon = () => {
-    switch (patient.species) {
-      case "gato":
-        return <Cat className={`w-7 h-7 ${iconColorClass}`} />;
-      case "perro":
-        return <Dog className={`w-7 h-7 ${iconColorClass}`} />;
-      case "exoticos":
-        return <Star className={`w-7 h-7 ${iconColorClass}`} />;
-      default:
-        return <Dog className={`w-7 h-7 ${iconColorClass}`} />;
-    }
-  };
 
   // Calcular edad desde birthDate (en lugar de usar age como string)
   const edadFormateada = getPatientDisplayAge(patient);
@@ -69,11 +47,11 @@ export const PatientCard = ({ patient, onOpenProfile }: PatientCardProps) => {
           </div>
 
           <div className="absolute top-0 right-0">
-            <div
-              className={`inline-flex items-center justify-center p-3 rounded-2xl border shadow-inner ${badgeBgClass}`}
-            >
-              {renderSpeciesIcon()}
-            </div>
+            <PetAvatar
+              species={patient.species}
+              gender={patient.gender}
+              size="md"
+            />
           </div>
         </div>
 

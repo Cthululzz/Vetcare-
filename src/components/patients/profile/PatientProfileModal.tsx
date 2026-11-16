@@ -1,4 +1,4 @@
-import { X, AlertTriangle } from "lucide-react";
+import { X, AlertTriangle, Pencil, History } from "lucide-react";
 import type { Patient, Owner } from "../../../types/patient";
 import { usePatients } from "../../../hooks/usePatients";
 import PatientProfileHeader from "./PatientProfileHeader";
@@ -11,8 +11,10 @@ interface PatientProfileModalProps {
   onClose: () => void;
   patient: Patient | null;
   owner: Owner | null;
-  onDeleteMedicalRecord: (patientId: string, recordId: string) => void;
+  onDeleteMedicalRecord?: (patientId: string, recordId: string) => void;
   onDeletePatient?: (patientId: string) => void;
+  onEditPatient?: (patient: Patient) => void;
+  onOpenClinicalHistory?: (patient: Patient) => void;
 }
 
 export const PatientProfileModal = ({
@@ -22,6 +24,8 @@ export const PatientProfileModal = ({
   owner,
   onDeleteMedicalRecord,
   onDeletePatient,
+  onEditPatient,
+  onOpenClinicalHistory,
 }: PatientProfileModalProps) => {
   const { updateConditions } = usePatients();
 
@@ -71,22 +75,57 @@ export const PatientProfileModal = ({
         {/* 4. Historial Clínico */}
         <PatientClinicalHistory
           history={patient.history}
-          onDeleteMedicalRecord={(recordId) =>
-            onDeleteMedicalRecord(patient.id, recordId)
+          onDeleteMedicalRecord={
+            onDeleteMedicalRecord
+              ? (recordId) => onDeleteMedicalRecord(patient.id, recordId)
+              : undefined
+          }
+          onOpenFullHistory={
+            onOpenClinicalHistory
+              ? () => onOpenClinicalHistory(patient)
+              : undefined
           }
         />
 
         {/* PIE DEL MODAL */}
-        <div className="pt-4 border-t border-slate-800 flex items-center justify-between">
-          <button
-            type="button"
-            onClick={handleFullPatientDelete}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-bold transition-colors cursor-pointer"
-            title="Eliminar paciente y su expediente completo"
-          >
-            <AlertTriangle className="w-4 h-4" />
-            <span>Eliminar ficha completa</span>
-          </button>
+        <div className="pt-4 border-t border-slate-800 flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap">
+            {onOpenClinicalHistory && (
+              <button
+                type="button"
+                onClick={() => onOpenClinicalHistory(patient)}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#ece883]/10 hover:bg-[#ece883]/20 border border-[#ece883]/30 text-[#ece883] text-xs font-bold transition-colors cursor-pointer"
+                title="Ver el historial clínico completo"
+              >
+                <History className="w-4 h-4" />
+                <span>Historial clínico</span>
+              </button>
+            )}
+
+            {onDeletePatient && (
+              <button
+                type="button"
+                onClick={handleFullPatientDelete}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-bold transition-colors cursor-pointer"
+                title="Eliminar paciente y su expediente completo"
+              >
+                <AlertTriangle className="w-4 h-4" />
+                <span>Eliminar ficha completa</span>
+              </button>
+            )}
+
+            {onEditPatient && (
+              <button
+                type="button"
+                onClick={() => onEditPatient(patient)}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold transition-colors cursor-pointer"
+                title="Editar datos del paciente y su propietario"
+              >
+                <Pencil className="w-4 h-4" />
+                <span>Editar ficha</span>
+              </button>
+            )}
+          </div>
 
           <button
             type="button"

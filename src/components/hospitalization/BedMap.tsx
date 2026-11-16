@@ -1,8 +1,12 @@
 import { BedDouble, CheckCircle2, Plus, Trash2 } from "lucide-react";
+import type { EspecieMascota, Genero } from "../../constants/appConstants";
+import { PetAvatar } from "../common/PetAvatar";
 
 export interface BedMapItem {
   bed: string;
   patientName?: string;
+  species?: EspecieMascota | string;
+  gender?: Genero | string;
   hospitalizationId?: string;
 }
 
@@ -81,14 +85,20 @@ export const BedMap = ({
                     >
                       {item.bed}
                     </span>
-                    {isOccupied ? (
+                    {isOccupied && item.species ? (
+                      <PetAvatar
+                        species={item.species}
+                        gender={item.gender}
+                        size="xs"
+                      />
+                    ) : isOccupied ? (
                       <BedDouble className="w-3.5 h-3.5 text-amber-400" />
                     ) : (
                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                     )}
                   </div>
                   <p
-                    className={`text-xs font-semibold mt-1.5 truncate ${
+                    className={`mt-1.5 text-xs font-semibold leading-snug break-words ${
                       isOccupied ? "text-white" : "text-slate-500"
                     }`}
                   >

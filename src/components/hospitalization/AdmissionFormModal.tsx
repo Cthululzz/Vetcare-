@@ -4,7 +4,6 @@ import {
   BedDouble,
   CalendarClock,
   Search,
-  User,
   X,
 } from "lucide-react";
 import type { Owner, Patient } from "../../types/patient";
@@ -13,6 +12,7 @@ import {
   DEFAULT_MONITORING_FREQUENCY,
   FRECUENCIAS_MONITOREO,
 } from "../../constants/hospitalization";
+import { PetAvatar } from "../common/PetAvatar";
 
 export interface AdmissionData {
   patientId: string;
@@ -210,20 +210,22 @@ export const AdmissionFormModal = ({
                       }`}
                     >
                       <span className="flex items-center gap-3 min-w-0">
-                        <span
-                          className={`p-2 rounded-lg border ${
+                        <PetAvatar
+                          species={patient.species}
+                          gender={patient.gender}
+                          size="sm"
+                          breed={patient.breed}
+                          className={
                             isSelected
-                              ? "bg-[#ece883]/15 border-[#ece883]/30 text-[#ece883]"
-                              : "bg-slate-900 border-slate-800 text-slate-400"
-                          }`}
-                        >
-                          <User className="w-4 h-4" />
-                        </span>
+                              ? "rounded-2xl ring-2 ring-[#ece883]/50"
+                              : ""
+                          }
+                        />
                         <span className="min-w-0">
-                          <span className="block text-sm font-semibold text-white truncate">
+                          <span className="block text-sm font-semibold text-white break-words">
                             {patient.name}
                           </span>
-                          <span className="block text-xs text-slate-400 truncate">
+                          <span className="block text-xs text-slate-400 break-words">
                             {owner?.name || "Sin propietario"}
                             {owner?.phone ? ` • ${owner.phone}` : ""}
                           </span>

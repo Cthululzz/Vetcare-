@@ -5,6 +5,7 @@ import type {
   Hospitalization,
   HospitalizationEvolution,
   MedicationAdministration,
+  MedicationPlan,
 } from "../types/hospitalization";
 import { usePatients } from "./usePatients";
 import type { Patient } from "../types/patient";
@@ -84,6 +85,26 @@ export interface DischargeDetails {
   dischargedBy?: string;
 }
 
+/**
+ * Datos para crear o editar un plan de remedios.
+ * `startedAt` es el horario de la primera dosis.
+ */
+export interface MedicationPlanInput {
+  productId: string;
+  productName: string;
+  dose: number;
+  unit?: string;
+  frequencyHours: number;
+  startedAt: string;
+  durationDays?: number;
+  notes?: string;
+}
+
+export interface AdministerPlanDoseInput {
+  notes?: string;
+  createdBy?: string;
+}
+
 export function useHospitalizations() {
   const [hospitalizations, setHospitalizations] = useLocalStorage<
     Hospitalization[]
@@ -157,6 +178,36 @@ export function useHospitalizations() {
       );
     },
     [setHospitalizations],
+  );
+
+  /**
+   * Mueve una internación activa a otra cama libre.
+   * Devuelve `false` si la cama no existe, está ocupada o la internación
+   * ya no está activa.
+   */
+  const changeBed = useCallback(
+    (hospitalizationId: string, newBed: string): boolean => {
+      const target = hospitalizations.find(
+        (h) => h.id === hospitalizationId,
+      );
+      if (!target || target.status !== "activa") return false;
+
+      const bed = newBed.trim();
+      if (!bed || !beds.includes(bed)) return false;
+      if (target.bed === bed) return true;
+
+      const occupiedBeds = getOccupiedBeds(hospitalizations);
+      if (occupiedBeds.has(bed)) return false;
+
+      setHospitalizations((prev) =>
+        prev.map((h) =>
+          h.id === hospitalizationId ? { ...h, bed } : h,
+        ),
+      );
+
+      return true;
+    },
+    [hospitalizations, beds, setHospitalizations],
   );
 
   /**
@@ -289,6 +340,184 @@ export function useHospitalizations() {
     [setHospitalizations],
   );
 
+  /**
+   * Crea un plan de remedios. La primera dosis queda programada en `startedAt`
+   * y desde ahí avanza según `frequencyHours`.
+   */
+  const addMedicationPlan = useCallback(
+    (
+      hospitalizationId: string,
+      data: MedicationPlanInput,
+      createdBy?: string,
+    ): MedicationPlan | null => {
+      const target = hospitalizations.find(
+        (h) => h.id === hospitalizationId,
+      );
+      if (!target || target.status !== "activa") return null;
+
+      const plan: MedicationPlan = {
+        ...data,
+        id: generateId(),
+        nextDoseAt: data.startedAt,
+        isActive: true,
+        createdAt: isoNow(),
+        createdBy,
+      };
+
+      setHospitalizations((prev) =>
+        prev.map((h) =>
+          h.id === hospitalizationId
+            ? {
+                ...h,
+                medicationPlans: [...(h.medicationPlans ?? []), plan],
+              }
+            : h,
+        ),
+      );
+
+      return plan;
+    },
+    [hospitalizations, setHospitalizations],
+  );
+
+  /**
+   * Edita un plan. Si cambia el horario de inicio, se reinicia la próxima dosis.
+   */
+  const updateMedicationPlan = useCallback(
+    (
+      hospitalizationId: string,
+      planId: string,
+      updates: Partial<MedicationPlanInput>,
+    ) => {
+      setHospitalizations((prev) =>
+        prev.map((h) => {
+          if (h.id !== hospitalizationId) return h;
+          return {
+            ...h,
+            medicationPlans: (h.medicationPlans ?? []).map((plan) =>
+              plan.id === planId
+                ? {
+                    ...plan,
+                    ...updates,
+                    nextDoseAt: updates.startedAt ?? plan.nextDoseAt,
+                  }
+                : plan,
+            ),
+          };
+        }),
+      );
+    },
+    [setHospitalizations],
+  );
+
+  /**
+   * Activa o detiene un plan sin borrar su historial de administraciones.
+   */
+  const setMedicationPlanActive = useCallback(
+    (
+      hospitalizationId: string,
+      planId: string,
+      isActive: boolean,
+    ) => {
+      setHospitalizations((prev) =>
+        prev.map((h) =>
+          h.id === hospitalizationId
+            ? {
+                ...h,
+                medicationPlans: (h.medicationPlans ?? []).map((plan) =>
+                  plan.id === planId ? { ...plan, isActive } : plan,
+                ),
+              }
+            : h,
+        ),
+      );
+    },
+    [setHospitalizations],
+  );
+
+  const removeMedicationPlan = useCallback(
+    (hospitalizationId: string, planId: string) => {
+      setHospitalizations((prev) =>
+        prev.map((h) =>
+          h.id === hospitalizationId
+            ? {
+                ...h,
+                medicationPlans: (h.medicationPlans ?? []).filter(
+                  (plan) => plan.id !== planId,
+                ),
+              }
+            : h,
+        ),
+      );
+    },
+    [setHospitalizations],
+  );
+
+  /**
+   * Administra la dosis programada de un plan y avanza el horario.
+   * El descuento de stock lo realiza quien invoca (useInventoryMovements).
+   */
+  const administerPlanDose = useCallback(
+    (
+      hospitalizationId: string,
+      planId: string,
+      input?: AdministerPlanDoseInput,
+    ): MedicationAdministration | null => {
+      const target = hospitalizations.find(
+        (h) => h.id === hospitalizationId,
+      );
+      if (!target || target.status !== "activa") return null;
+
+      const plan = (target.medicationPlans ?? []).find(
+        (item) => item.id === planId && item.isActive,
+      );
+      if (!plan) return null;
+
+      const scheduledAt = plan.nextDoseAt;
+      const administration: MedicationAdministration = {
+        id: generateId(),
+        date: isoNow(),
+        productId: plan.productId,
+        productName: plan.productName,
+        quantity: plan.dose,
+        unit: plan.unit,
+        notes: input?.notes,
+        createdBy: input?.createdBy,
+        planId: plan.id,
+        scheduledAt,
+      };
+
+      const nextDoseAt = new Date(
+        new Date(scheduledAt).getTime() + plan.frequencyHours * 60 * 60 * 1000,
+      ).toISOString();
+
+      const endAt = plan.durationDays
+        ? new Date(plan.startedAt).getTime() +
+          plan.durationDays * 24 * 60 * 60 * 1000
+        : null;
+      const isActive = endAt === null || new Date(nextDoseAt).getTime() < endAt;
+
+      setHospitalizations((prev) =>
+        prev.map((h) =>
+          h.id === hospitalizationId
+            ? {
+                ...h,
+                medications: [...(h.medications ?? []), administration],
+                medicationPlans: (h.medicationPlans ?? []).map((item) =>
+                  item.id === planId
+                    ? { ...item, nextDoseAt, isActive }
+                    : item,
+                ),
+              }
+            : h,
+        ),
+      );
+
+      return administration;
+    },
+    [hospitalizations, setHospitalizations],
+  );
+
   const dischargePatient = useCallback(
     (hospitalizationId: string, details?: DischargeDetails) => {
       const dischargedAt = isoNow();
@@ -392,10 +621,16 @@ export function useHospitalizations() {
     hospitalizations,
     admitPatient,
     updateHospitalization,
+    changeBed,
     addEvolution,
     addMedicationAdministration,
     updateMedicationAdministration,
     removeMedicationAdministration,
+    addMedicationPlan,
+    updateMedicationPlan,
+    setMedicationPlanActive,
+    removeMedicationPlan,
+    administerPlanDose,
     dischargePatient,
     getActiveHospitalizations,
     getDischargedHospitalizations,

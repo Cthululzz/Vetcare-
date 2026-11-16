@@ -1,28 +1,70 @@
 // src/components/Sidebar.tsx
 import { Link, useLocation } from "react-router-dom";
 import {
-  LayoutDashboard,
+  Bell,
   Calendar,
-  Users,
+  LayoutDashboard,
   Package,
   Settings,
+  Users,
 } from "lucide-react";
+import { usePermissions } from "../../hooks/usePermissions";
+import { PERMISSIONS, type Permission } from "../../utils/permissions";
 
-const navItems = [
+interface NavItem {
+  to: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+  exact: boolean;
+  permission?: Permission;
+}
+
+const navItems: NavItem[] = [
   { to: "/", label: "Inicio", icon: LayoutDashboard, exact: true },
-  { to: "/agenda", label: "Agenda", icon: Calendar, exact: true },
-  { to: "/pacientes", label: "Pacientes", icon: Users, exact: false }, // usa startsWith
+  {
+    to: "/agenda",
+    label: "Agenda",
+    icon: Calendar,
+    exact: true,
+    permission: PERMISSIONS.APPOINTMENTS_VIEW,
+  },
+  {
+    to: "/pacientes",
+    label: "Pacientes",
+    icon: Users,
+    exact: false, // usa startsWith
+    permission: PERMISSIONS.PATIENTS_VIEW,
+  },
+  {
+    to: "/tareas",
+    label: "Tareas y Alertas",
+    icon: Bell,
+    exact: true,
+    permission: PERMISSIONS.CLINICAL_HISTORY_VIEW,
+  },
   {
     to: "/inventario",
     label: "Inventario y Farmacia",
     icon: Package,
     exact: true,
+    permission: PERMISSIONS.INVENTORY_VIEW,
   },
-  { to: "/configuracion", label: "Configuración", icon: Settings, exact: true },
+  {
+    to: "/configuracion",
+    label: "Configuración",
+    icon: Settings,
+    exact: true,
+    permission: PERMISSIONS.SYSTEM_ADMIN,
+  },
 ];
 
 export const Sidebar = () => {
   const location = useLocation();
+  const { can } = usePermissions();
+
+  const visibleItems = navItems.filter(
+    (item) => !item.permission || can(item.permission),
+  );
 
   return (
     <aside className="w-64 bg-slate-900 border-r border-slate-800 flex flex-col h-screen p-4 select-none">
@@ -36,7 +78,7 @@ export const Sidebar = () => {
       </div>
 
       <nav className="space-y-1.5 flex-1 overflow-y-auto pr-1">
-        {navItems.map(({ to, label, icon: Icon, exact }) => {
+        {visibleItems.map(({ to, label, icon: Icon, exact }) => {
           const isActive = exact
             ? location.pathname === to
             : location.pathname.startsWith(to);
