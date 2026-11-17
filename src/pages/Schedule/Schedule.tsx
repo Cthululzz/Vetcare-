@@ -7,6 +7,7 @@ import {
   ChevronLeft,
   MessageCircle,
 } from "lucide-react";
+import { Footer } from "../../components/common/Footer";
 import { AppointmentForm } from "../../components/schedule/AppointmentForm/AppointmentForm";
 import { AppointmentCard } from "../../components/schedule/AppointmentCard";
 import { MonthCalendarView } from "../../components/schedule/MonthCalendarView";
@@ -90,7 +91,7 @@ const Schedule = () => {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="flex min-h-[calc(100vh-3rem)] lg:min-h-[calc(100vh-4rem)] w-full flex-col gap-6">
       {/* Header */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 relative overflow-hidden shadow-sm">
         <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-[#ece883]/5 rounded-full blur-2xl pointer-events-none" />
@@ -338,6 +339,8 @@ const Schedule = () => {
           onHospitalize={handleHospitalize}
         />
       )}
+
+      <Footer />
     </div>
   );
 };

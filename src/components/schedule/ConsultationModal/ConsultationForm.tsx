@@ -106,7 +106,7 @@ export const ConsultationForm = ({
               value={formData.peso}
               onChange={onChange}
               placeholder={formData.weightUnit === "kg" ? "Ej. 12.5" : "Ej. 850"}
-              className={`${compactInputClass} flex-1 min-w-0`}
+              className={`${compactInputClass} flex-1 min-w-0 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none`}
             />
             <div
               className="flex rounded-lg border border-slate-800 overflow-hidden shrink-0"
@@ -204,17 +204,17 @@ export const ConsultationForm = ({
         </div>
       </div>
 
-      {/* Diagnóstico: se traspasa a la ficha de hospitalización */}
+      {/* Notas de consulta */}
       <div>
         <label className="block text-xs font-semibold text-slate-300 mb-1">
-          Diagnóstico
+          Notas de consulta
         </label>
         <textarea
-          name="diagnostico"
+          name="notas"
           rows={3}
-          value={formData.diagnostico}
+          value={formData.notas}
           onChange={onChange}
-          placeholder="Escribe el diagnóstico de la consulta..."
+          placeholder="Escribe las observaciones de la consulta..."
           className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 resize-none"
         />
       </div>
@@ -234,17 +234,17 @@ export const ConsultationForm = ({
         />
       </div>
 
-      {/* Notas de consulta */}
+      {/* Diagnóstico al final: se traspasa a la ficha de hospitalización */}
       <div>
         <label className="block text-xs font-semibold text-slate-300 mb-1">
-          Notas de consulta
+          Diagnóstico
         </label>
         <textarea
-          name="notas"
+          name="diagnostico"
           rows={3}
-          value={formData.notas}
+          value={formData.diagnostico}
           onChange={onChange}
-          placeholder="Escribe las observaciones de la consulta..."
+          placeholder="Escribe el diagnóstico de la consulta..."
           className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 resize-none"
         />
       </div>
