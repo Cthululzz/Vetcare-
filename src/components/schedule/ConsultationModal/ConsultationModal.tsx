@@ -229,6 +229,11 @@ export const ConsultationModal = ({
   const handleConfirmHospitalization = (
     hospitalizationData: HospitalizationFormData,
   ) => {
+    // Igual que "Finalizar consulta": las alergias/condiciones críticas deben
+    // quedar guardadas en el paciente antes de internarlo, para que aparezcan
+    // en el plan de remedios como recordatorio.
+    saveConditionsIfChanged();
+    savePatientDemographics();
     setIsHospitalizing(false);
     setShowConfirmModal(false);
     onHospitalize?.(buildConsultationData(false, hospitalizationData));
