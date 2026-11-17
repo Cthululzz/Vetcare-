@@ -20,6 +20,7 @@ import { useNow } from "../hooks/useNow";
 import { usePatients } from "../hooks/usePatients";
 import {
   buildHospitalizationTaskGroups,
+  isTaskDueSoon,
   type HospitalizationTask,
 } from "../utils/hospitalizationTasks";
 import {
@@ -145,20 +146,21 @@ const Tasks = () => {
     markAsSent(reminder.appointment.id, reminder.kind);
   };
 
-  const renderTask = (task: HospitalizationTask, overdueStyle: boolean) => (
-    <div
-      key={task.id}
-      onClick={() => markTaskAsSeen(taskKey(task.id))}
-      className={`rounded-xl border p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-        isNewTask(taskKey(task.id))
-          ? "vetcare-task-move ring-1 ring-[#ece883]/40 cursor-pointer"
-          : ""
-      } ${
-        overdueStyle
-          ? "bg-red-500/5 border-red-500/20"
-          : "bg-slate-950/60 border-slate-800"
-      }`}
-    >
+  const renderTask = (task: HospitalizationTask, overdueStyle: boolean) => {
+    const glows = isTaskDueSoon(task, now);
+
+    return (
+      <div
+        key={task.id}
+        onClick={() => markTaskAsSeen(taskKey(task.id))}
+        className={`rounded-xl border p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+          glows ? "vetcare-task-urgent cursor-pointer" : ""
+        } ${
+          overdueStyle
+            ? "bg-red-500/5 border-red-500/20"
+            : "bg-slate-950/60 border-slate-800"
+        }`}
+      >
       <div className="flex items-start gap-3 min-w-0">
         <div
           className={`p-2 rounded-lg border shrink-0 ${
@@ -199,8 +201,9 @@ const Tasks = () => {
           <BedDouble className="w-3.5 h-3.5" /> Ir
         </Link>
       </div>
-    </div>
-  );
+      </div>
+    );
+  };
 
   const renderReminder = (reminder: DueAppointmentReminder) => (
     <div

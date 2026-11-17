@@ -96,15 +96,23 @@ export const buildHospitalizationTasks = (
   return tasks.sort((a, b) => a.dueAt.localeCompare(b.dueAt));
 };
 
+/** Anticipación con la que se ilumina una tarea clínica antes de su hora. */
+export const TASK_GLOW_LEAD_MINUTES = 5;
+
 /**
- * Indica si alguna tarea tiene la hora ya llegada (o vencida).
- * Las tareas programadas para más adelante no requieren acción todavía.
+ * Una tarea clínica requiere atención cuando faltan menos de 5 minutos para
+ * su hora (o ya venció). Las tareas más lejanas no brillan ni se mueven.
  */
-export const hasTasksDueNow = (
-  tasks: HospitalizationTask[],
+export const isTaskDueSoon = (
+  task: HospitalizationTask,
   now: number = Date.now(),
 ): boolean =>
-  tasks.some((task) => new Date(task.dueAt).getTime() <= now);
+  new Date(task.dueAt).getTime() - TASK_GLOW_LEAD_MINUTES * MINUTE_MS <= now;
+
+export const hasTasksDueSoon = (
+  tasks: HospitalizationTask[],
+  now: number = Date.now(),
+): boolean => tasks.some((task) => isTaskDueSoon(task, now));
 
 /**
  * Separa las tareas en pendientes (próximas 24 h) y alertas (vencidas).

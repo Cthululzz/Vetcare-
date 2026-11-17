@@ -13,7 +13,7 @@ import { StockAlertCard } from "../components/inventory/StockAlertCardImproved";
 import { QuickAccessBar } from "../components/dashboard/QuickAccessBar";
 import {
   buildHospitalizationTasks,
-  hasTasksDueNow,
+  hasTasksDueSoon,
   splitHospitalizationTasks,
 } from "../utils/hospitalizationTasks";
 import {
@@ -50,10 +50,10 @@ const Dashboard = () => {
       return {
         totalTareasPendientes: pending.length + reminders.length,
         totalAlertasActivas: overdue.length,
-        // Solo hay que actuar ya si la hora de la tarea llegó. Excepción:
-        // los recordatorios de cita (24 h / 1 h) se atienden antes de la hora.
+        // Las tareas clínicas brillan 5 min antes de su hora. Excepción:
+        // los recordatorios de cita (24 h / 1 h) avisan desde mucho antes.
         tareasParaAhora:
-          hasDueAppointmentReminders(reminders) || hasTasksDueNow(tasks, now),
+          hasDueAppointmentReminders(reminders) || hasTasksDueSoon(tasks, now),
       };
     }, [
       hospitalizations,
