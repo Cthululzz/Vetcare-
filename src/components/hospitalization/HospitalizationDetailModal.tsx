@@ -5,17 +5,12 @@ import {
   ClipboardList,
   HeartPulse,
   Mail,
-  Pencil,
   Phone,
   Pill,
-  Trash2,
   X,
 } from "lucide-react";
 import type { Owner, Patient } from "../../types/patient";
-import type {
-  Hospitalization,
-  MedicationAdministration,
-} from "../../types/hospitalization";
+import type { Hospitalization } from "../../types/hospitalization";
 import { getSucursalName } from "../../constants/appConstants";
 import { formatFractionWithUnit } from "../../utils/inventoryUnits";
 import { formatDateShort, formatDateTimeShort } from "../../utils/dateUtils";
@@ -29,8 +24,6 @@ interface HospitalizationDetailModalProps {
   owner?: Owner;
   hospitalization: Hospitalization | null;
   onClose: () => void;
-  onEditMedication?: (medication: MedicationAdministration) => void;
-  onDeleteMedication?: (medication: MedicationAdministration) => void;
 }
 
 const formatDateTime = (value?: string): string => {
@@ -62,27 +55,16 @@ const DataField = ({
   </div>
 );
 
-const formatDose = (medication: MedicationAdministration): string => {
-  const amount = medication.dose ?? medication.quantity;
-  const unit = medication.doseUnit ?? medication.unit;
-  return unit ? formatFractionWithUnit(amount, unit) : `${amount}`;
-};
-
 export const HospitalizationDetailModal = ({
   isOpen,
   patient,
   owner,
   hospitalization,
   onClose,
-  onEditMedication,
-  onDeleteMedication,
 }: HospitalizationDetailModalProps) => {
   if (!isOpen || !patient || !hospitalization) return null;
 
   const evolutions = [...(hospitalization.evolutions ?? [])].sort((a, b) =>
-    b.date.localeCompare(a.date),
-  );
-  const medications = [...(hospitalization.medications ?? [])].sort((a, b) =>
     b.date.localeCompare(a.date),
   );
   const summary = hospitalization.dischargeSummary;
@@ -410,73 +392,6 @@ export const HospitalizationDetailModal = ({
             </div>
           )}
 
-          {/* Medicación y consumos */}
-          <div className="space-y-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-[#ece883] flex items-center gap-2">
-              <Pill className="w-4 h-4" />
-              Medicación y consumos ({medications.length})
-            </h3>
-
-            {medications.length === 0 ? (
-              <p className="text-xs text-slate-500 italic bg-slate-950/40 border border-slate-800/60 rounded-xl p-4">
-                No se ha registrado medicación ni consumos desde inventario.
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {medications.map((medication) => (
-                  <div
-                    key={medication.id}
-                    className="bg-slate-950/60 border border-slate-800 rounded-xl px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2"
-                  >
-                    <div>
-                      <p className="text-sm font-semibold text-white">
-                        {medication.productName}
-                      </p>
-                      <p className="text-[11px] text-slate-500">
-                        {formatDateTime(medication.date)}
-                        {medication.createdBy
-                          ? ` • por ${medication.createdBy}`
-                          : ""}
-                      </p>
-                      {medication.notes && (
-                        <p className="text-xs text-slate-400 mt-1">
-                          {medication.notes}
-                        </p>
-                      )}
-                    </div>
-                    <span className="text-xs font-bold text-[#ece883] shrink-0">
-                      {formatDose(medication)}
-                    </span>
-                    {hospitalization.status === "activa" &&
-                      (onEditMedication || onDeleteMedication) && (
-                        <div className="flex items-center gap-1 shrink-0">
-                          {onEditMedication && (
-                            <button
-                              type="button"
-                              onClick={() => onEditMedication(medication)}
-                              title="Editar cantidad"
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-[#ece883] hover:bg-slate-800 transition-colors cursor-pointer"
-                            >
-                              <Pencil className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                          {onDeleteMedication && (
-                            <button
-                              type="button"
-                              onClick={() => onDeleteMedication(medication)}
-                              title="Eliminar registro"
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                        </div>
-                      )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
         </div>
 
         {/* Footer */}

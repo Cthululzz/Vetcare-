@@ -33,7 +33,7 @@ import { getDoctorName, getSucursalName } from "../constants/appConstants";
 type TabType = "tareas" | "recordatorios" | "alertas";
 
 const TABS: Array<{ id: TabType; label: string }> = [
-  { id: "tareas", label: "Tareas pendientes" },
+  { id: "tareas", label: "Próximas tareas" },
   { id: "recordatorios", label: "Recordatorios de citas" },
   { id: "alertas", label: "Alertas activas" },
 ];
@@ -247,7 +247,7 @@ const Tasks = () => {
             </div>
             <div>
               <p className="text-xs text-slate-400 font-medium">
-                Tareas pendientes
+                Próximas tareas
               </p>
               <h3 className="text-xl font-bold text-white">{counts.tareas}</h3>
             </div>
