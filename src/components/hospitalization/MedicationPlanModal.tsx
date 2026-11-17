@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+  AlertTriangle,
   Clock,
   Pause,
   Pencil,
@@ -328,6 +329,9 @@ export const MedicationPlanModal = ({
   const medications = [...(hospitalization.medications ?? [])].sort((a, b) =>
     b.date.localeCompare(a.date),
   );
+  // Las alergias de la consulta se guardan en patient.conditions; van en el
+  // plan de remedios para no administrar un fármaco al que el paciente es alérgico.
+  const allergies = patient.conditions?.trim() ?? "";
 
   const closeForm = () => {
     setShowForm(false);
@@ -339,7 +343,9 @@ export const MedicationPlanModal = ({
       `¿Registrar la administración de ${plan.productName} (${formatFractionWithUnit(
         plan.dose,
         plan.unit ?? "",
-      )}) y descontarla del inventario?`,
+      )}) y descontarla del inventario?${
+        allergies ? `\n\n⚠️ Alergias del paciente: ${allergies}` : ""
+      }`,
     );
     if (!confirmed) return;
 
@@ -376,6 +382,20 @@ export const MedicationPlanModal = ({
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-5">
+          {allergies && (
+            <div className="flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
+              <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5 text-amber-300" />
+              <div>
+                <p className="text-sm font-bold text-amber-200">
+                  Alergias / condiciones críticas
+                </p>
+                <p className="text-sm text-amber-100 mt-1 whitespace-pre-wrap break-words">
+                  {allergies}
+                </p>
+              </div>
+            </div>
+          )}
+
           {!showForm && (
             <button
               type="button"

@@ -58,7 +58,7 @@ export const OperationalSummary = ({
         <div
           onClick={() => onNavigate("/tareas")}
           className={`relative overflow-hidden bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl p-5.5 transition-all cursor-pointer group shadow-sm flex flex-col justify-between ${
-            tareasParaAhora ? "vetcare-dashboard-task-move" : ""
+            tareasParaAhora ? "vetcare-dashboard-task-urgent" : ""
           }`}
         >
           <div className="pointer-events-none absolute w-[260px] h-[260px] bg-emerald-500/10 blur-[90px] rounded-full -top-14 -right-14 group-hover:bg-emerald-500/20 transition-all" />

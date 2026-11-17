@@ -32,8 +32,11 @@
   }
 }
 
-.vetcare-dashboard-task-move {
-  animation: vetcare-dashboard-task-move 2.2s ease-in-out infinite;
+/* Tarea que debe atenderse ya: movimiento + parpadeo hasta registrarla. */
+.vetcare-dashboard-task-urgent {
+  animation:
+    vetcare-dashboard-task-move 2.2s ease-in-out infinite,
+    vetcare-dashboard-yellow-blink 0.9s ease-in-out infinite;
 }
 
 /* Alerta activa: movimiento rápido y parpadeo para reflejar urgencia. */
@@ -53,7 +56,7 @@
   }
 }
 
-@keyframes vetcare-dashboard-alert-blink {
+@keyframes vetcare-dashboard-yellow-blink {
   0%,
   100% {
     background-color: rgba(236, 232, 131, 0.08);
@@ -72,7 +75,7 @@
 .vetcare-dashboard-alert-urgent {
   animation:
     vetcare-dashboard-alert-move 1.1s ease-in-out infinite,
-    vetcare-dashboard-alert-blink 0.9s ease-in-out infinite;
+    vetcare-dashboard-yellow-blink 0.9s ease-in-out infinite;
 }
 
 /* La pestaña de recordatorios parpadea hasta enviar/marcar el aviso. */
@@ -96,7 +99,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .vetcare-task-move,
-  .vetcare-dashboard-task-move,
+  .vetcare-dashboard-task-urgent,
   .vetcare-dashboard-alert-urgent,
   .vetcare-tab-blink {
     animation: none;
