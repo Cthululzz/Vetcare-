@@ -16,6 +16,7 @@ import { useAppointments } from "../hooks/useAppointments";
 import { useAppointmentReminders } from "../hooks/useAppointmentReminders";
 import { useHospitalizations } from "../hooks/useHospitalizations";
 import { useLocalStorage } from "../hooks/useLocalStorage";
+import { useNow } from "../hooks/useNow";
 import { usePatients } from "../hooks/usePatients";
 import {
   buildHospitalizationTaskGroups,
@@ -65,10 +66,11 @@ const Tasks = () => {
   );
   const [reminderToConfirm, setReminderToConfirm] =
     useState<DueAppointmentReminder | null>(null);
+  const now = useNow();
 
   const { pending, overdue } = useMemo(
-    () => buildHospitalizationTaskGroups(hospitalizations, getPatient),
-    [hospitalizations, getPatient],
+    () => buildHospitalizationTaskGroups(hospitalizations, getPatient, now),
+    [hospitalizations, getPatient, now],
   );
 
   const activeHospitalizations = getActiveHospitalizations();
@@ -80,8 +82,9 @@ const Tasks = () => {
         sentReminders,
         getPatient,
         getOwner,
+        now,
       ),
-    [appointments, sentReminders, getPatient, getOwner],
+    [appointments, sentReminders, getPatient, getOwner, now],
   );
 
   const counts: Record<TabType, number> = {

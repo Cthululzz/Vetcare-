@@ -5,6 +5,7 @@ import { Footer } from "../components/common/Footer";
 import { useAppointments } from "../hooks/useAppointments";
 import { useAppointmentReminders } from "../hooks/useAppointmentReminders";
 import { useHospitalizations } from "../hooks/useHospitalizations";
+import { useNow } from "../hooks/useNow";
 import { usePatients } from "../hooks/usePatients";
 import { OperationalSummary } from "../components/dashboard/OperationalSummary";
 import { NextPatientCard } from "../components/dashboard/NextPatientCard";
@@ -26,18 +27,24 @@ const Dashboard = () => {
   const { hospitalizations } = useHospitalizations();
   const { getPatient, getOwner } = usePatients();
   const { sentReminders } = useAppointmentReminders();
+  const now = useNow();
 
   // Tareas = dosis/revisiones de las próximas 24 h + recordatorios de citas por enviar.
   // Alertas = dosis o revisiones ya vencidas.
   const { totalTareasPendientes, totalAlertasActivas, tareasParaAhora } =
     useMemo(() => {
-      const tasks = buildHospitalizationTasks(hospitalizations, getPatient);
-      const { pending, overdue } = splitHospitalizationTasks(tasks);
+      const tasks = buildHospitalizationTasks(
+        hospitalizations,
+        getPatient,
+        now,
+      );
+      const { pending, overdue } = splitHospitalizationTasks(tasks, now);
       const reminders = buildDueAppointmentReminders(
         appointments,
         sentReminders,
         getPatient,
         getOwner,
+        now,
       );
 
       return {
@@ -46,9 +53,16 @@ const Dashboard = () => {
         // Solo hay que actuar ya si la hora de la tarea llegó. Excepción:
         // los recordatorios de cita (24 h / 1 h) se atienden antes de la hora.
         tareasParaAhora:
-          hasDueAppointmentReminders(reminders) || hasTasksDueNow(tasks),
+          hasDueAppointmentReminders(reminders) || hasTasksDueNow(tasks, now),
       };
-    }, [hospitalizations, appointments, sentReminders, getPatient, getOwner]);
+    }, [
+      hospitalizations,
+      appointments,
+      sentReminders,
+      getPatient,
+      getOwner,
+      now,
+    ]);
 
   return (
     <div className="flex flex-col min-h-[calc(100vh-2rem)] justify-between w-full px-4 sm:px-6 lg:px-8 mx-auto">

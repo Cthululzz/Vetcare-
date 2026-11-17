@@ -155,11 +155,11 @@ export const isMedicationPlanOverdue = (
 export const buildHospitalizationTaskGroups = (
   hospitalizations: Hospitalization[],
   getPatient: (patientId: string) => Patient | undefined,
+  now: number = Date.now(),
 ): {
   pending: HospitalizationTask[];
   overdue: HospitalizationTask[];
 } => {
-  const now = Date.now();
   const tasks = buildHospitalizationTasks(hospitalizations, getPatient, now);
   return splitHospitalizationTasks(tasks, now);
 };
