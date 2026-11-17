@@ -19,21 +19,60 @@
 @keyframes vetcare-dashboard-task-move {
   0%,
   100% {
-    transform: translate(0, 0);
+    transform: translate(0, 0) rotate(0deg);
   }
   25% {
-    transform: translate(3px, -3px);
+    transform: translate(7px, -8px) rotate(0.4deg);
   }
   50% {
-    transform: translate(0, -5px);
+    transform: translate(0, -12px) rotate(0deg);
   }
   75% {
-    transform: translate(-3px, -3px);
+    transform: translate(-7px, -8px) rotate(-0.4deg);
   }
 }
 
 .vetcare-dashboard-task-move {
-  animation: vetcare-dashboard-task-move 3s ease-in-out infinite;
+  animation: vetcare-dashboard-task-move 2.2s ease-in-out infinite;
+}
+
+/* Alerta activa: movimiento rápido y parpadeo para reflejar urgencia. */
+@keyframes vetcare-dashboard-alert-move {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  25% {
+    transform: translate(9px, -8px) scale(1.015);
+  }
+  50% {
+    transform: translate(0, -14px) scale(1.025);
+  }
+  75% {
+    transform: translate(-9px, -8px) scale(1.015);
+  }
+}
+
+@keyframes vetcare-dashboard-alert-blink {
+  0%,
+  100% {
+    background-color: rgba(236, 232, 131, 0.08);
+    border-color: rgba(236, 232, 131, 0.3);
+    box-shadow: 0 0 0 0 rgba(236, 232, 131, 0.5);
+  }
+  50% {
+    background-color: rgba(236, 232, 131, 0.28);
+    border-color: rgba(236, 232, 131, 0.95);
+    box-shadow:
+      0 0 0 8px rgba(236, 232, 131, 0),
+      0 0 30px rgba(236, 232, 131, 0.4);
+  }
+}
+
+.vetcare-dashboard-alert-urgent {
+  animation:
+    vetcare-dashboard-alert-move 1.1s ease-in-out infinite,
+    vetcare-dashboard-alert-blink 0.9s ease-in-out infinite;
 }
 
 /* La pestaña de recordatorios parpadea hasta enviar/marcar el aviso. */
@@ -58,6 +97,7 @@
 @media (prefers-reduced-motion: reduce) {
   .vetcare-task-move,
   .vetcare-dashboard-task-move,
+  .vetcare-dashboard-alert-urgent,
   .vetcare-tab-blink {
     animation: none;
   }

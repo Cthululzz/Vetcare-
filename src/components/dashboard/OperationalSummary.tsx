@@ -83,7 +83,9 @@ export const OperationalSummary = ({
         {/* Alertas (Amarillo / #ece883) */}
         <div
           onClick={() => onNavigate("/tareas?tab=alertas")}
-          className="relative overflow-hidden bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl p-5.5 transition-all cursor-pointer group shadow-sm flex flex-col justify-between"
+          className={`relative overflow-hidden bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl p-5.5 transition-all cursor-pointer group shadow-sm flex flex-col justify-between ${
+            alertas > 0 ? "vetcare-dashboard-alert-urgent" : ""
+          }`}
         >
           <div className="pointer-events-none absolute w-[260px] h-[260px] bg-[#ece883]/10 blur-[90px] rounded-full -top-14 -right-14 group-hover:bg-[#ece883]/20 transition-all" />
 
