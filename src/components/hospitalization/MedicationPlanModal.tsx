@@ -25,6 +25,7 @@ import {
   getStockDisplay,
 } from "../../utils/inventoryUnits";
 import { isMedicationPlanOverdue } from "../../utils/hospitalizationTasks";
+import { ActionConfirmModal } from "../schedule/ConsultationModal/ConsultationModals";
 
 // ============================================
 // UTILIDADES DE FECHA
@@ -318,6 +319,12 @@ export const MedicationPlanModal = ({
   const [showForm, setShowForm] = useState(false);
   const [editingPlan, setEditingPlan] = useState<MedicationPlan | null>(null);
   const [actionError, setActionError] = useState("");
+  const [pendingAdminPlan, setPendingAdminPlan] = useState<MedicationPlan | null>(
+    null,
+  );
+  const [pendingDeletePlanId, setPendingDeletePlanId] = useState<string | null>(
+    null,
+  );
 
   if (!isOpen || !patient || !hospitalization) return null;
 
@@ -339,18 +346,23 @@ export const MedicationPlanModal = ({
   };
 
   const handleAdminister = (plan: MedicationPlan) => {
-    const confirmed = window.confirm(
-      `¿Registrar la administración de ${plan.productName} (${formatFractionWithUnit(
-        plan.dose,
-        plan.unit ?? "",
-      )}) y descontarla del inventario?${
-        allergies ? `\n\n⚠️ Alergias del paciente: ${allergies}` : ""
-      }`,
-    );
-    if (!confirmed) return;
+    setActionError("");
+    setPendingAdminPlan(plan);
+  };
 
-    const message = onAdminister(plan);
+  const confirmAdminister = () => {
+    if (!pendingAdminPlan) return;
+    const message = onAdminister(pendingAdminPlan);
     setActionError(message ?? "");
+    setPendingAdminPlan(null);
+  };
+
+  const pendingDeletePlan = plans.find((p) => p.id === pendingDeletePlanId);
+
+  const confirmDelete = () => {
+    if (!pendingDeletePlanId) return;
+    onDelete(pendingDeletePlanId);
+    setPendingDeletePlanId(null);
   };
 
   return (
@@ -524,15 +536,7 @@ export const MedicationPlanModal = ({
                         </button>
                         <button
                           type="button"
-                          onClick={() => {
-                            if (
-                              window.confirm(
-                                `¿Eliminar el plan de ${plan.productName}? El historial de dosis administradas se conserva.`,
-                              )
-                            ) {
-                              onDelete(plan.id);
-                            }
-                          }}
+                          onClick={() => setPendingDeletePlanId(plan.id)}
                           title="Eliminar plan"
                           className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
                         >
@@ -609,6 +613,43 @@ export const MedicationPlanModal = ({
           </button>
         </div>
       </div>
+
+      <ActionConfirmModal
+        show={Boolean(pendingAdminPlan)}
+        title="Confirmar administración"
+        description={
+          pendingAdminPlan
+            ? `¿Registrar la administración de ${pendingAdminPlan.productName} (${formatFractionWithUnit(
+                pendingAdminPlan.dose,
+                pendingAdminPlan.unit ?? "",
+              )}) y descontarla del inventario?${
+                allergies
+                  ? ` ⚠️ Alergias del paciente: ${allergies}`
+                  : ""
+              }`
+            : ""
+        }
+        confirmText="Sí, administrar"
+        cancelText="No, volver"
+        borderColor="border-emerald-500/40"
+        iconBgColor="bg-emerald-500/20 border-emerald-500/40 text-emerald-300"
+        onConfirm={confirmAdminister}
+        onCancel={() => setPendingAdminPlan(null)}
+      />
+
+      <ActionConfirmModal
+        show={Boolean(pendingDeletePlanId)}
+        title="Eliminar plan de remedios"
+        description={`¿Eliminar el plan de ${
+          pendingDeletePlan?.productName ?? "este remedio"
+        }? El historial de dosis administradas se conserva.`}
+        confirmText="Sí, eliminar"
+        cancelText="No, volver"
+        borderColor="border-red-500/40"
+        iconBgColor="bg-red-500/20 border-red-500/40 text-red-300"
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDeletePlanId(null)}
+      />
     </div>
   );
 };

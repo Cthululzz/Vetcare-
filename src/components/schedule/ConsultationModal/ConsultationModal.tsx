@@ -135,11 +135,24 @@ export const ConsultationModal = ({
     hospitalization,
   });
 
+  /**
+   * Punto único de confirmación: alergias/condiciones, demografía y cita se
+   * guardan juntos solo cuando se resuelve el flujo de receta (Sí/No/cerrar).
+   * Evita dejar la alergia guardada con la cita todavía "programada" si el
+   * usuario interrumpe la confirmación.
+   */
+  const commitConsultation = (data: ConsultationData) => {
+    saveConditionsIfChanged();
+    savePatientDemographics();
+    onSaveConsultation(data);
+    setHasUnsavedChanges(false);
+  };
+
   // ============================================
   // HOOK DE RECETA (lógica extraída)
   // ============================================
   const prescriptionFlow = usePrescriptionFlow({
-    onSaveConsultation,
+    onSaveConsultation: commitConsultation,
     buildConsultationData,
     setHasUnsavedChanges,
   });
@@ -216,8 +229,6 @@ export const ConsultationModal = ({
   };
 
   const handleFinish = () => {
-    saveConditionsIfChanged();
-    savePatientDemographics();
     prescriptionFlow.startFinishFlow();
   };
 

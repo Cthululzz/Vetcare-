@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { useLocalStorage } from "./useLocalStorage";
 import type {
   DischargeSummary,
@@ -61,6 +61,46 @@ export function getOccupiedBeds(
   }
 
   return occupied;
+}
+
+/**
+ * Integridad de datos: resuelve camas duplicadas en registros ya existentes
+ * (importaciones, seeds o escrituras concurrentes). Gana la internación activa
+ * más reciente; las demás quedan "sin cama" para que el mapa nunca muestre dos
+ * pacientes en la misma. Si no hay duplicados devuelve la misma referencia.
+ */
+export function resolveDuplicateBeds(
+  hospitalizations: Hospitalization[],
+  getPatient: (patientId: string) => Patient | undefined,
+): Hospitalization[] {
+  const winners = new Set<string>();
+  const seenBeds = new Set<string>();
+  const byAdmission = [...hospitalizations].sort((a, b) => {
+    const aTime = new Date(a.admittedAt).getTime();
+    const bTime = new Date(b.admittedAt).getTime();
+    return (
+      (Number.isFinite(bTime) ? bTime : 0) - (Number.isFinite(aTime) ? aTime : 0)
+    );
+  });
+
+  for (const hospitalization of byAdmission) {
+    if (!hospitalization.bed) continue;
+    if (!isActiveHospitalization(hospitalization, getPatient)) continue;
+    if (seenBeds.has(hospitalization.bed)) continue;
+    seenBeds.add(hospitalization.bed);
+    winners.add(hospitalization.id);
+  }
+
+  const isDuplicate = (h: Hospitalization): boolean =>
+    Boolean(h.bed) &&
+    isActiveHospitalization(h, getPatient) &&
+    !winners.has(h.id);
+
+  if (!hospitalizations.some(isDuplicate)) return hospitalizations;
+
+  return hospitalizations.map((h) =>
+    isDuplicate(h) ? { ...h, bed: undefined } : h,
+  );
 }
 
 /**
@@ -129,11 +169,30 @@ export interface AdministerPlanDoseInput {
 }
 
 export function useHospitalizations() {
-  const [hospitalizations, setHospitalizations] = useLocalStorage<
+  const [storedHospitalizations, setStoredHospitalizations] = useLocalStorage<
     Hospitalization[]
   >(HOSPITALIZATIONS_KEY, []);
 
   const { getPatient } = usePatients();
+
+  // Camas sin duplicados incluso si los datos vienen de una importación o de
+  // otra pestaña. Toda lectura y toda escritura pasan por el mismo filtro.
+  const hospitalizations = useMemo(
+    () => resolveDuplicateBeds(storedHospitalizations, getPatient),
+    [storedHospitalizations, getPatient],
+  );
+
+  const setHospitalizations: typeof setStoredHospitalizations = useCallback(
+    (next) => {
+      setStoredHospitalizations((prev) => {
+        const normalizedPrev = resolveDuplicateBeds(prev, getPatient);
+        const value = next instanceof Function ? next(normalizedPrev) : next;
+        return resolveDuplicateBeds(value, getPatient);
+      });
+    },
+    [setStoredHospitalizations, getPatient],
+  );
+
   const { beds } = useHospitalBeds();
 
   // ---------- ACCIONES ----------
@@ -209,13 +268,28 @@ export function useHospitalizations() {
 
   const updateHospitalization = useCallback(
     (hospitalizationId: string, updates: Partial<Hospitalization>) => {
+      const target = hospitalizations.find((h) => h.id === hospitalizationId);
+      if (target) {
+        const bed =
+          updates.bed !== undefined
+            ? updates.bed?.trim() || undefined
+            : target.bed;
+        const status = updates.status ?? target.status;
+        const occupant = bed
+          ? getOccupiedBeds(hospitalizations, getPatient).get(bed)
+          : undefined;
+        if (status === "activa" && occupant && occupant.id !== hospitalizationId) {
+          return;
+        }
+      }
+
       setHospitalizations((prev) =>
         prev.map((h) =>
           h.id === hospitalizationId ? { ...h, ...updates } : h,
         ),
       );
     },
-    [setHospitalizations],
+    [hospitalizations, getPatient, setHospitalizations],
   );
 
   /**

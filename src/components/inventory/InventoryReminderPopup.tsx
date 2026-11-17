@@ -1,11 +1,16 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Bell, X, CheckCircle } from "lucide-react";
 import { useInventoryReminders } from "../../hooks/useInventoryReminders";
 import { useInventoryMovements } from "../../hooks/useInventoryMovements";
 import { useInventory } from "../../hooks/useInventory";
 import { formatDateTimeShort } from "../../utils/dateUtils";
 
+/** El aviso global es un recordatorio, no un listado: se limita para no tapar la app. */
+const MAX_VISIBLE_MOVEMENTS = 5;
+
 export const InventoryReminderPopup = () => {
+  const navigate = useNavigate();
   const { getRemindersToNotify, markAsNotified } = useInventoryReminders();
   const { getPendingMovements, completeMovement } = useInventoryMovements();
   const { getProduct } = useInventory();
@@ -23,6 +28,7 @@ export const InventoryReminderPopup = () => {
 
   const pendingReminders = getRemindersToNotify();
   const pendingMovements = getPendingMovements();
+  const visibleMovements = pendingMovements.slice(0, MAX_VISIBLE_MOVEMENTS);
 
   // Verificar cada minuto si hay recordatorios que mostrar
   useEffect(() => {
@@ -81,6 +87,11 @@ export const InventoryReminderPopup = () => {
     setIsVisible(false);
   };
 
+  const handleViewAll = () => {
+    handleDismiss();
+    navigate("/inventario");
+  };
+
   const formatDate = (dateStr: string) => formatDateTimeShort(dateStr);
 
   if (!isVisible || pendingMovements.length === 0) return null;
@@ -121,7 +132,7 @@ export const InventoryReminderPopup = () => {
               <p className="text-sm text-slate-400 mb-4">
                 Seleccione un retiro para completar la información:
               </p>
-              {pendingMovements.map((movement) => {
+              {visibleMovements.map((movement) => {
                 const product = getProduct(movement.productId);
                 return (
                   <button
@@ -155,6 +166,12 @@ export const InventoryReminderPopup = () => {
                   </button>
                 );
               })}
+              {pendingMovements.length > MAX_VISIBLE_MOVEMENTS && (
+                <p className="text-xs text-slate-500 pt-1">
+                  Mostrando {visibleMovements.length} de{" "}
+                  {pendingMovements.length} retiros pendientes.
+                </p>
+              )}
             </div>
           ) : (
             // Formulario para completar información
@@ -259,12 +276,22 @@ export const InventoryReminderPopup = () => {
               </button>
             </>
           ) : (
-            <button
-              onClick={handleDismiss}
-              className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold transition-colors"
-            >
-              Recuérdame más tarde
-            </button>
+            <>
+              {pendingMovements.length > MAX_VISIBLE_MOVEMENTS && (
+                <button
+                  onClick={handleViewAll}
+                  className="px-5 py-2.5 rounded-xl bg-[#ece883]/10 hover:bg-[#ece883]/20 text-[#ece883] border border-[#ece883]/20 text-sm font-semibold transition-colors"
+                >
+                  Ver todos en Inventario
+                </button>
+              )}
+              <button
+                onClick={handleDismiss}
+                className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold transition-colors"
+              >
+                Recuérdame más tarde
+              </button>
+            </>
           )}
         </div>
       </div>
