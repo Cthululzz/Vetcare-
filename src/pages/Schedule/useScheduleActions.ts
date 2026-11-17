@@ -217,6 +217,10 @@ export function useScheduleActions() {
       patient,
       appointment,
       notes,
+      diagnosis,
+      temperature,
+      heartRate,
+      respiratoryRate,
       weight,
       weightUnit,
       recommendations,
@@ -226,6 +230,10 @@ export function useScheduleActions() {
     // 1. Persistir borrador en la cita (siempre)
     updateAppointment(appointment.id, {
       notas: notes,
+      diagnostico: diagnosis,
+      temperature,
+      heartRate,
+      respiratoryRate,
       recomendaciones: recommendations,
       pesoActual: weight,
       pesoActualUnit: weightUnit,
@@ -236,6 +244,10 @@ export function useScheduleActions() {
       addMedicalRecord(patient.id, {
         date: new Date().toISOString(),
         notes,
+        diagnosis,
+        temperature,
+        heartRate,
+        respiratoryRate,
         weight,
         weightUnit,
         recommendations,
@@ -256,22 +268,42 @@ export function useScheduleActions() {
    * Persiste el borrador, registra el ingreso y mantiene la consulta abierta.
    */
   const handleHospitalize = (data: ConsultationData) => {
-    const { patient, appointment, notes, weight, weightUnit, recommendations } =
-      data;
+    const {
+      patient,
+      appointment,
+      notes,
+      diagnosis,
+      temperature,
+      heartRate,
+      respiratoryRate,
+      weight,
+      weightUnit,
+      recommendations,
+      hospitalization,
+    } = data;
 
     // 1. Persistir borrador en la cita
     updateAppointment(appointment.id, {
       notas: notes,
+      diagnostico: diagnosis,
+      temperature,
+      heartRate,
+      respiratoryRate,
       recomendaciones: recommendations,
       pesoActual: weight,
       pesoActualUnit: weightUnit,
     });
 
-    // 2. Registrar ingreso a hospitalización (hereda la sucursal de la cita)
-    admitPatient(patient.id, notes || undefined, {
+    // 2. Registrar ingreso a hospitalización (hereda la sucursal de la cita).
+    // El diagnóstico, la frecuencia y los planes vienen del popup de confirmación.
+    admitPatient(patient.id, hospitalization?.reason, {
       sucursalId: appointment.sucursalId,
       weight,
       weightUnit,
+      diagnosis,
+      monitoringFrequency: hospitalization?.monitoringFrequency,
+      medicationPlans: hospitalization?.medicationPlans,
+      createdBy: getDoctorName(appointment.doctorId),
     });
 
     // 3. La consulta queda en curso (el paciente sigue en atención)

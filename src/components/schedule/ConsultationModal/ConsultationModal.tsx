@@ -9,6 +9,7 @@ import { useAppointments } from "../../../hooks/useAppointments";
 import { usePatients } from "../../../hooks/usePatients";
 import { ConsultationHeader } from "./ConsultationHeader";
 import { ActionConfirmModal } from "./ConsultationModals";
+import { HospitalizationConfirmModal } from "./HospitalizationConfirmModal";
 import { PrescriptionConfirmModal } from "./PrescriptionConfirmModal";
 import { PrescriptionFormModal } from "./PrescriptionFormModal";
 import { ConsultationForm } from "./ConsultationForm";
@@ -21,20 +22,15 @@ import {
   DEFAULT_WEIGHT_UNIT,
   type WeightUnit,
 } from "../../../utils/weight";
+import { normalizeVitalSign } from "../../../utils/vitalSigns";
+import type {
+  ConsultationData,
+  HospitalizationFormData,
+} from "../../../types/consultation";
 
 // ============================================
 // TIPOS EXPORTADOS
 // ============================================
-export interface ConsultationData {
-  patient: Patient;
-  owner: Owner;
-  appointment: Appointment;
-  notes: string;
-  weight?: number;
-  weightUnit?: WeightUnit;
-  recommendations?: string;
-  shouldFinish: boolean;
-}
 
 interface ConsultationModalProps {
   isOpen: boolean;
@@ -70,7 +66,11 @@ export const ConsultationModal = ({
     weightUnit: DEFAULT_WEIGHT_UNIT,
     condicionesPrevias: "",
     recomendaciones: "",
+    diagnostico: "",
     notas: "",
+    temperature: "",
+    heartRate: "",
+    respiratoryRate: "",
   });
   const [initialAge, setInitialAge] = useState("");
   const [isHospitalizing, setIsHospitalizing] = useState(false);
@@ -116,15 +116,23 @@ export const ConsultationModal = ({
     if (Object.keys(updates).length > 0) updatePatient(patient.id, updates);
   };
 
-  const buildConsultationData = (shouldFinish: boolean): ConsultationData => ({
+  const buildConsultationData = (
+    shouldFinish: boolean,
+    hospitalization?: HospitalizationFormData,
+  ): ConsultationData => ({
     patient,
     owner,
     appointment,
     notes: formData.notas,
+    diagnosis: formData.diagnostico.trim() || undefined,
+    temperature: normalizeVitalSign(formData.temperature),
+    heartRate: normalizeVitalSign(formData.heartRate),
+    respiratoryRate: normalizeVitalSign(formData.respiratoryRate),
     weight: formData.peso ? parseFloat(formData.peso) : undefined,
     weightUnit: formData.weightUnit,
     recommendations: formData.recomendaciones,
     shouldFinish,
+    hospitalization,
   });
 
   // ============================================
@@ -155,7 +163,13 @@ export const ConsultationModal = ({
           appointment.alergiasNotas ||
           "",
         recomendaciones: appointment.recomendaciones || "",
-        notas: appointment.notas || "",
+        // En consultas anteriores el cuadro único era "Notas / Diagnóstico":
+        // ese texto pasa a ser el diagnóstico para no perder la información.
+        diagnostico: appointment.diagnostico || appointment.notas || "",
+        notas: appointment.diagnostico ? appointment.notas || "" : "",
+        temperature: appointment.temperature || "",
+        heartRate: appointment.heartRate || "",
+        respiratoryRate: appointment.respiratoryRate || "",
       });
       setInitialAge(edadInicial);
       setIsHospitalizing(false);
@@ -212,9 +226,12 @@ export const ConsultationModal = ({
     setShowConfirmModal(true);
   };
 
-  const handleConfirmHospitalization = () => {
+  const handleConfirmHospitalization = (
+    hospitalizationData: HospitalizationFormData,
+  ) => {
+    setIsHospitalizing(false);
     setShowConfirmModal(false);
-    onHospitalize?.(buildConsultationData(false));
+    onHospitalize?.(buildConsultationData(false, hospitalizationData));
   };
 
   const handleSaveAndExit = () => {
@@ -296,19 +313,6 @@ export const ConsultationModal = ({
 
           {/* Modales de confirmación */}
           <ActionConfirmModal
-            show={showConfirmModal}
-            title="Hospitalización seleccionada"
-            description={`¿Deseas enviar a ${patient.name} al área de internación y monitoreo?`}
-            confirmText="Aceptar"
-            cancelText="Cancelar"
-            onCancel={() => {
-              setIsHospitalizing(false);
-              setShowConfirmModal(false);
-            }}
-            onConfirm={handleConfirmHospitalization}
-          />
-
-          <ActionConfirmModal
             show={showExitConfirmModal}
             title="Cambios sin guardar"
             description="Tienes modificaciones pendientes que no han sido guardadas. ¿Qué deseas hacer?"
@@ -324,6 +328,18 @@ export const ConsultationModal = ({
           />
         </div>
       </div>
+
+      {/* Confirmación de hospitalización (se monta al abrir para empezar limpio) */}
+      {showConfirmModal && (
+        <HospitalizationConfirmModal
+          patientName={patient.name}
+          onConfirm={handleConfirmHospitalization}
+          onCancel={() => {
+            setIsHospitalizing(false);
+            setShowConfirmModal(false);
+          }}
+        />
+      )}
 
       {/* Modales de receta */}
       <PrescriptionConfirmModal

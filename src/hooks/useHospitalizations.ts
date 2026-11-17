@@ -77,6 +77,8 @@ export interface AdmitPatientOptions {
   notes?: string;
   sucursalId?: string;
   createdBy?: string;
+  /** Planes de remedios que se crean junto con el ingreso. */
+  medicationPlans?: MedicationPlanInput[];
 }
 
 export interface DischargeDetails {
@@ -147,6 +149,19 @@ export function useHospitalizations() {
         options?.nextReviewAt ??
         calcularProximaRevision(monitoringFrequency);
 
+      // Los planes se crean en el mismo ingreso para evitar usar un snapshot
+      // de `hospitalizations` que todavía no incluye el registro recién creado.
+      const medicationPlans: MedicationPlan[] = (
+        options?.medicationPlans ?? []
+      ).map((plan) => ({
+        ...plan,
+        id: generateId(),
+        nextDoseAt: plan.startedAt,
+        isActive: true,
+        createdAt: isoNow(),
+        createdBy: options?.createdBy,
+      }));
+
       const record: Hospitalization = {
         id: generateId(),
         patientId,
@@ -164,6 +179,7 @@ export function useHospitalizations() {
         createdBy: options?.createdBy,
         evolutions: [],
         medications: [],
+        medicationPlans,
       };
 
       setHospitalizations((prev) => [...prev, record]);

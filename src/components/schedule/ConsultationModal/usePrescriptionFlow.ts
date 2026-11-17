@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { usePrescriptions } from "../../../hooks/usePrescriptions";
-import type { ConsultationData } from "./ConsultationModal";
+import type { ConsultationData } from "../../../types/consultation";
 import type { PrescriptionMedication } from "../../../types/prescription";
 
 interface UsePrescriptionFlowOptions {

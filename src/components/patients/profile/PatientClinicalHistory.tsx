@@ -51,6 +51,27 @@ export const PatientClinicalHistory = ({
     return `${day}/${month}/${year}`;
   };
 
+  const renderVitalSigns = (record: MedicalRecord) => {
+    const signs = [
+      record.temperature && `🌡️ Temp: ${record.temperature}`,
+      record.heartRate && `❤️ FC: ${record.heartRate}`,
+      record.respiratoryRate && `🫁 FR: ${record.respiratoryRate}`,
+    ].filter(Boolean);
+
+    if (signs.length === 0) return null;
+
+    return (
+      <p className="text-xs text-slate-400 flex flex-wrap gap-x-4 gap-y-1">
+        <span className="font-bold uppercase tracking-wider text-slate-500">
+          Signos vitales:
+        </span>
+        {signs.map((sign) => (
+          <span key={sign as string}>{sign}</span>
+        ))}
+      </p>
+    );
+  };
+
   const renderTypeBadge = (record: MedicalRecord) => {
     const meta = RECORD_TYPE_META[getRecordType(record)];
     const Icon = meta.icon;
@@ -149,10 +170,21 @@ export const PatientClinicalHistory = ({
                   )}
                 </div>
 
+                {latestConsultation.diagnosis && (
+                  <div className="space-y-1 bg-slate-900/50 p-3.5 rounded-xl border border-slate-800/60">
+                    <span className="font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                      Diagnóstico:
+                    </span>
+                    <p className="text-slate-200 leading-relaxed whitespace-pre-wrap">
+                      {latestConsultation.diagnosis}
+                    </p>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                   <div className="space-y-1 bg-slate-900/50 p-3.5 rounded-xl border border-slate-800/60">
                     <span className="font-bold text-slate-400 uppercase tracking-wider block mb-1">
-                      Notas Clínicas / Diagnóstico:
+                      Notas de consulta:
                     </span>
                     <p className="text-slate-200 leading-relaxed whitespace-pre-wrap">
                       {latestConsultation.notes || "Sin notas registradas."}
@@ -169,6 +201,8 @@ export const PatientClinicalHistory = ({
                     </p>
                   </div>
                 </div>
+
+                {renderVitalSigns(latestConsultation)}
               </div>
             )}
           </div>
@@ -231,6 +265,17 @@ export const PatientClinicalHistory = ({
                         </div>
                       </div>
 
+                      {entry.diagnosis && (
+                        <div className="space-y-1 bg-slate-900/30 p-3 rounded-xl border border-slate-800/40">
+                          <span className="font-bold text-slate-500 uppercase tracking-wider block mb-1">
+                            Diagnóstico:
+                          </span>
+                          <p className="text-slate-300 leading-relaxed whitespace-pre-wrap">
+                            {entry.diagnosis}
+                          </p>
+                        </div>
+                      )}
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                         <div className="space-y-1 bg-slate-900/30 p-3 rounded-xl border border-slate-800/40">
                           <span className="font-bold text-slate-500 uppercase tracking-wider block mb-1">
@@ -251,6 +296,8 @@ export const PatientClinicalHistory = ({
                           </p>
                         </div>
                       </div>
+
+                      {renderVitalSigns(entry)}
                     </div>
                   ))}
                 </div>

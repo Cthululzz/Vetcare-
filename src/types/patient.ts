@@ -34,6 +34,10 @@ export interface MedicalRecord {
   type?: MedicalRecordType;
   /** Diagnóstico o resultado del examen. */
   diagnosis?: string;
+  /** Signos vitales de la consulta; "normal" si se dejaron vacíos. */
+  temperature?: string;
+  heartRate?: string;
+  respiratoryRate?: string;
   /** Profesional que registró la atención. */
   veterinarian?: string;
   /** Próximo control o visita recomendada (ISO "aaaa-mm-dd" o fecha-hora). */

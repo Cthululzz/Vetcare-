@@ -1,4 +1,5 @@
 import {
+  Activity,
   Calendar,
   CalendarClock,
   Pencil,
@@ -124,6 +125,25 @@ export const ClinicalRecordCard = ({
             </p>
           </div>
         </div>
+
+        {(record.temperature || record.heartRate || record.respiratoryRate) && (
+          <div className="rounded-xl bg-slate-900/40 border border-slate-800/60 px-3.5 py-2.5">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 flex items-center gap-1.5">
+              <Activity className="w-3.5 h-3.5" /> Signos vitales
+            </p>
+            <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-slate-300">
+              {record.temperature && (
+                <span>🌡️ Temperatura: {record.temperature}</span>
+              )}
+              {record.heartRate && (
+                <span>❤️ Frec. cardíaca: {record.heartRate}</span>
+              )}
+              {record.respiratoryRate && (
+                <span>🫁 Frec. respiratoria: {record.respiratoryRate}</span>
+              )}
+            </div>
+          </div>
+        )}
 
         {(record.veterinarian || nextVisit) && (
           <footer className="flex flex-wrap items-center gap-x-4 gap-y-1.5 pt-1 text-xs text-slate-400">

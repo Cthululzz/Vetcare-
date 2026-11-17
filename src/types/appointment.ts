@@ -27,6 +27,8 @@ export interface Appointment {
   condicionesPrevias?: string;
   recomendaciones?: string;
   notas?: string;
+  /** Diagnóstico de la consulta; se traspasa a la ficha de hospitalización. */
+  diagnostico?: string;
 
   // --- Datos clínicos del momento (snapshot, no duplicados) ---
   // Estos SÍ tienen sentido guardarlos porque el paciente puede cambiar
@@ -34,6 +36,10 @@ export interface Appointment {
   /** Unidad del peso registrado en la consulta. Si falta, se interpreta como kg. */
   pesoActualUnit?: WeightUnit;
   edadAlMomento?: string; // string descriptivo opcional: "8 años 3 meses"
+  /** Signos vitales registrados en la consulta; "normal" si se dejaron vacíos. */
+  temperature?: string;
+  heartRate?: string;
+  respiratoryRate?: string;
 
   // --- Metadata ---
   createdAt: string; // ISO

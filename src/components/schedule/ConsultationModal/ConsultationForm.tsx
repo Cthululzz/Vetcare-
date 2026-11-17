@@ -15,7 +15,11 @@ interface ConsultationFormProps {
     weightUnit: WeightUnit;
     condicionesPrevias: string;
     recomendaciones: string;
+    diagnostico: string;
     notas: string;
+    temperature: string;
+    heartRate: string;
+    respiratoryRate: string;
   };
   showCondicionesPrevias: boolean;
   previewBirthDate: string | null;
@@ -36,6 +40,8 @@ export const ConsultationForm = ({
   onWeightUnitChange,
 }: ConsultationFormProps) => {
   const sucursalName = getSucursalName(appointment.sucursalId);
+  const compactInputClass =
+    "w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-blue-500";
 
   return (
     <div className="p-6 space-y-4 overflow-y-auto flex-1">
@@ -66,8 +72,8 @@ export const ConsultationForm = ({
         )}
       </div>
 
-      {/* Edad | Peso */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {/* Edad | Peso (campos compactos) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label className="block text-xs font-semibold text-slate-300 mb-1">
             Edad del Paciente
@@ -77,8 +83,8 @@ export const ConsultationForm = ({
             name="edad"
             value={formData.edad}
             onChange={onChange}
-            placeholder="Ej. 3 años y 2 meses"
-            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-blue-500"
+            placeholder="Ej. 3 años 2 meses"
+            className={compactInputClass}
           />
           {previewBirthDate && (
             <p className="text-[10px] text-slate-500 mt-1 pl-1">
@@ -91,7 +97,7 @@ export const ConsultationForm = ({
           <label className="block text-xs font-semibold text-slate-300 mb-1">
             Peso actual
           </label>
-          <div className="flex gap-2">
+          <div className="flex gap-1.5">
             <input
               type="number"
               step={formData.weightUnit === "kg" ? "0.1" : "any"}
@@ -99,27 +105,33 @@ export const ConsultationForm = ({
               name="peso"
               value={formData.peso}
               onChange={onChange}
-              placeholder={
-                formData.weightUnit === "kg" ? "Ej. 12.5" : "Ej. 850"
-              }
-              className="flex-1 min-w-0 bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-blue-500"
+              placeholder={formData.weightUnit === "kg" ? "Ej. 12.5" : "Ej. 850"}
+              className={`${compactInputClass} flex-1 min-w-0`}
             />
-            <select
-              value={formData.weightUnit}
-              onChange={(event) =>
-                onWeightUnitChange(
-                  event.target.value === "g" ? "g" : "kg",
-                )
-              }
-              className="bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-2.5 text-sm font-semibold text-white focus:outline-none focus:border-blue-500 cursor-pointer"
+            <div
+              className="flex rounded-lg border border-slate-800 overflow-hidden shrink-0"
+              role="group"
               aria-label="Unidad del peso"
             >
-              <option value="kg">kg</option>
-              <option value="g">g</option>
-            </select>
+              {(["kg", "g"] as const).map((unit) => (
+                <button
+                  key={unit}
+                  type="button"
+                  onClick={() => onWeightUnitChange(unit)}
+                  aria-pressed={formData.weightUnit === unit}
+                  className={`px-2.5 py-1.5 text-[11px] font-bold transition-colors cursor-pointer ${
+                    formData.weightUnit === unit
+                      ? "bg-[#ece883] text-slate-950"
+                      : "bg-slate-950 text-slate-400 hover:text-white hover:bg-slate-800"
+                  }`}
+                >
+                  {unit === "kg" ? "Kg" : "Gr"}
+                </button>
+              ))}
+            </div>
           </div>
           <p className="text-[10px] text-slate-500 mt-1 pl-1">
-            Elige si el peso está en kilogramos o gramos.
+            Selecciona Kg o Gr según la unidad del peso.
           </p>
         </div>
       </div>
@@ -141,17 +153,68 @@ export const ConsultationForm = ({
         </div>
       )}
 
-      {/* Notas clínicas */}
+      {/* Signos vitales: si se dejan vacíos se registran como "normal" */}
+      <div>
+        <p className="text-xs font-semibold text-slate-300 mb-1">
+          Signos vitales{" "}
+          <span className="font-normal text-slate-500">
+            (si se dejan vacíos se registran como normal)
+          </span>
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label className="block text-[11px] text-slate-400 mb-1">
+              Temperatura (°C)
+            </label>
+            <input
+              type="text"
+              name="temperature"
+              value={formData.temperature}
+              onChange={onChange}
+              placeholder="Normal"
+              className={compactInputClass}
+            />
+          </div>
+          <div>
+            <label className="block text-[11px] text-slate-400 mb-1">
+              Frecuencia cardíaca (lpm)
+            </label>
+            <input
+              type="text"
+              name="heartRate"
+              value={formData.heartRate}
+              onChange={onChange}
+              placeholder="Normal"
+              className={compactInputClass}
+            />
+          </div>
+          <div>
+            <label className="block text-[11px] text-slate-400 mb-1">
+              Frecuencia respiratoria (rpm)
+            </label>
+            <input
+              type="text"
+              name="respiratoryRate"
+              value={formData.respiratoryRate}
+              onChange={onChange}
+              placeholder="Normal"
+              className={compactInputClass}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Diagnóstico: se traspasa a la ficha de hospitalización */}
       <div>
         <label className="block text-xs font-semibold text-slate-300 mb-1">
-          Notas de la Consulta / Diagnóstico
+          Diagnóstico
         </label>
         <textarea
-          name="notas"
+          name="diagnostico"
           rows={3}
-          value={formData.notas}
+          value={formData.diagnostico}
           onChange={onChange}
-          placeholder="Escribe las observaciones..."
+          placeholder="Escribe el diagnóstico de la consulta..."
           className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 resize-none"
         />
       </div>
@@ -167,6 +230,21 @@ export const ConsultationForm = ({
           value={formData.recomendaciones}
           onChange={onChange}
           placeholder="Ej. Reposo absoluto..."
+          className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 resize-none"
+        />
+      </div>
+
+      {/* Notas de consulta */}
+      <div>
+        <label className="block text-xs font-semibold text-slate-300 mb-1">
+          Notas de consulta
+        </label>
+        <textarea
+          name="notas"
+          rows={3}
+          value={formData.notas}
+          onChange={onChange}
+          placeholder="Escribe las observaciones de la consulta..."
           className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-blue-500 resize-none"
         />
       </div>
