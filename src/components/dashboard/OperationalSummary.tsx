@@ -54,14 +54,14 @@ export const OperationalSummary = ({
         {/* Tareas (Verde) */}
         <div
           onClick={() => onNavigate("/tareas")}
-          className="relative overflow-hidden bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl p-5.5 transition-all cursor-pointer group shadow-sm flex flex-col justify-between"
+          className="vetcare-dashboard-task-move relative overflow-hidden bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl p-5.5 transition-all cursor-pointer group shadow-sm flex flex-col justify-between"
         >
           <div className="pointer-events-none absolute w-[260px] h-[260px] bg-emerald-500/10 blur-[90px] rounded-full -top-14 -right-14 group-hover:bg-emerald-500/20 transition-all" />
 
           <div className="relative z-10">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm font-medium text-slate-300">
-                Tareas Pendientes
+                Próximas tareas
               </span>
               <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 group-hover:scale-105 transition-transform">
                 <CheckSquare className="w-5 h-5" />
