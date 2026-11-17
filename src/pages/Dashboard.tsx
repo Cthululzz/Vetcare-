@@ -15,7 +15,10 @@ import {
   hasTasksDueNow,
   splitHospitalizationTasks,
 } from "../utils/hospitalizationTasks";
-import { buildDueAppointmentReminders } from "../utils/appointmentReminders";
+import {
+  buildDueAppointmentReminders,
+  hasDueAppointmentReminders,
+} from "../utils/appointmentReminders";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -40,9 +43,10 @@ const Dashboard = () => {
       return {
         totalTareasPendientes: pending.length + reminders.length,
         totalAlertasActivas: overdue.length,
-        // Solo hay que actuar ya si la hora de la tarea llegó o si hay un
-        // recordatorio de cita pendiente de envío. Una revisión en 2 h no cuenta.
-        tareasParaAhora: reminders.length > 0 || hasTasksDueNow(tasks),
+        // Solo hay que actuar ya si la hora de la tarea llegó. Excepción:
+        // los recordatorios de cita (24 h / 1 h) se atienden antes de la hora.
+        tareasParaAhora:
+          hasDueAppointmentReminders(reminders) || hasTasksDueNow(tasks),
       };
     }, [hospitalizations, appointments, sentReminders, getPatient, getOwner]);
 

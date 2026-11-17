@@ -61,6 +61,18 @@ const getDueKind = (
 };
 
 /**
+ * Excepción a la regla de "solo atender cuando llegue la hora": los avisos
+ * de cita se envían antes (24 h o 1 h), así que activan el aviso de la
+ * tarjeta aunque la cita todavía esté lejos. Solo aplica a recordatorios.
+ */
+export const hasDueAppointmentReminders = (
+  reminders: DueAppointmentReminder[],
+): boolean =>
+  reminders.some(
+    (reminder) => reminder.kind === "24h" || reminder.kind === "1h",
+  );
+
+/**
  * Recordatorios por enviar. Un mismo aviso no se repite si ya fue marcado.
  */
 export const buildDueAppointmentReminders = (
