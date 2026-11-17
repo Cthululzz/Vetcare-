@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAppointments } from "../../hooks/useAppointments";
 import { usePatients } from "../../hooks/usePatients";
 import { useHospitalizations } from "../../hooks/useHospitalizations";
@@ -9,6 +10,8 @@ import { getLocalTodayStr } from "../../utils/dateUtils";
 import type { EditingState, ConsultationData, DayDetail } from "./types";
 
 export function useScheduleActions() {
+  const navigate = useNavigate();
+
   const {
     appointments,
     createAppointment,
@@ -265,7 +268,8 @@ export function useScheduleActions() {
 
   /**
    * Envía al paciente a hospitalización desde la consulta.
-   * Persiste el borrador, registra el ingreso y mantiene la consulta abierta.
+   * Persiste el borrador, registra el ingreso y lleva al usuario al área de
+   * hospitalización para que vea al paciente ya internado.
    */
   const handleHospitalize = (data: ConsultationData) => {
     const {
@@ -311,6 +315,11 @@ export function useScheduleActions() {
 
     setIsConsultationModalOpen(false);
     setSelectedAppointmentForConsultation(null);
+
+    // 4. Llevar al usuario al área de hospitalización para ver el ingreso.
+    // El alta se persiste de forma síncrona en localStorage, así que el
+    // paciente ya aparece en el listado al llegar a la pantalla.
+    navigate("/pacientes/hospitalizados");
   };
 
   const handleCloseConsultation = () => {
