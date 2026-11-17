@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   AlertTriangle,
@@ -10,10 +10,12 @@ import {
   Pill,
   Stethoscope,
 } from "lucide-react";
+import { ConfirmMarkSentModal } from "../components/common/ConfirmMarkSentModal";
 import { Footer } from "../components/common/Footer";
 import { useAppointments } from "../hooks/useAppointments";
 import { useAppointmentReminders } from "../hooks/useAppointmentReminders";
 import { useHospitalizations } from "../hooks/useHospitalizations";
+import { useLocalStorage } from "../hooks/useLocalStorage";
 import { usePatients } from "../hooks/usePatients";
 import {
   buildHospitalizationTaskGroups,
@@ -31,6 +33,13 @@ import { formatDateShort, formatDateTimeShort } from "../utils/dateUtils";
 import { getDoctorName, getSucursalName } from "../constants/appConstants";
 
 type TabType = "tareas" | "recordatorios" | "alertas";
+
+const SEEN_TASKS_KEY = "vet_seen_tasks";
+const REMINDERS_SUMMARY_KEY = "resumen:recordatorios";
+
+const taskKey = (taskId: string): string => `tarea:${taskId}`;
+const reminderKey = (reminder: DueAppointmentReminder): string =>
+  `recordatorio:${reminder.appointment.id}:${reminder.kind}`;
 
 const TABS: Array<{ id: TabType; label: string }> = [
   { id: "tareas", label: "Próximas tareas" },
@@ -50,6 +59,12 @@ const Tasks = () => {
   const { patients, getPatient, getOwner } = usePatients();
   const { appointments } = useAppointments();
   const { sentReminders, markAsSent } = useAppointmentReminders();
+  const [seenTaskKeys, setSeenTaskKeys] = useLocalStorage<string[]>(
+    SEEN_TASKS_KEY,
+    [],
+  );
+  const [reminderToConfirm, setReminderToConfirm] =
+    useState<DueAppointmentReminder | null>(null);
 
   const { pending, overdue } = useMemo(
     () => buildHospitalizationTaskGroups(hospitalizations, getPatient),
@@ -79,6 +94,32 @@ const Tasks = () => {
     setSearchParams(tab === "tareas" ? {} : { tab });
   };
 
+  const isNewTask = (key: string): boolean => !seenTaskKeys.includes(key);
+
+  const markTaskAsSeen = (key: string) => {
+    setSeenTaskKeys((prev) =>
+      prev.includes(key) ? prev : [...prev, key],
+    );
+  };
+
+  // La pestaña parpadea mientras quede un recordatorio ya visto por el usuario
+  // que todavía no se envió ni se marcó como enviado.
+  const blinkRemindersTab =
+    reminders.length > 0 &&
+    (seenTaskKeys.includes(REMINDERS_SUMMARY_KEY) ||
+      reminders.some((reminder) => seenTaskKeys.includes(reminderKey(reminder))));
+
+  const openReminders = () => {
+    markTaskAsSeen(REMINDERS_SUMMARY_KEY);
+    changeTab("recordatorios");
+  };
+
+  const confirmMarkAsSent = () => {
+    if (!reminderToConfirm) return;
+    markAsSent(reminderToConfirm.appointment.id, reminderToConfirm.kind);
+    setReminderToConfirm(null);
+  };
+
   const sendReminder = (reminder: DueAppointmentReminder) => {
     if (!reminder.ownerPhone) return;
 
@@ -97,13 +138,19 @@ const Tasks = () => {
       "_blank",
       "noopener,noreferrer",
     );
+    markTaskAsSeen(reminderKey(reminder));
     markAsSent(reminder.appointment.id, reminder.kind);
   };
 
   const renderTask = (task: HospitalizationTask, overdueStyle: boolean) => (
     <div
       key={task.id}
+      onClick={() => markTaskAsSeen(taskKey(task.id))}
       className={`rounded-xl border p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+        isNewTask(taskKey(task.id))
+          ? "vetcare-task-move ring-1 ring-[#ece883]/40 cursor-pointer"
+          : ""
+      } ${
         overdueStyle
           ? "bg-red-500/5 border-red-500/20"
           : "bg-slate-950/60 border-slate-800"
@@ -155,7 +202,12 @@ const Tasks = () => {
   const renderReminder = (reminder: DueAppointmentReminder) => (
     <div
       key={`${reminder.appointment.id}-${reminder.kind}`}
-      className="bg-slate-950/60 border border-slate-800 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+      onClick={() => markTaskAsSeen(reminderKey(reminder))}
+      className={`bg-slate-950/60 border border-slate-800 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+        isNewTask(reminderKey(reminder))
+          ? "vetcare-task-move ring-1 ring-[#ece883]/40 cursor-pointer"
+          : ""
+      }`}
     >
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
@@ -196,9 +248,7 @@ const Tasks = () => {
         </button>
         <button
           type="button"
-          onClick={() =>
-            markAsSent(reminder.appointment.id, reminder.kind)
-          }
+          onClick={() => setReminderToConfirm(reminder)}
           className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors cursor-pointer"
         >
           <CheckCircle2 className="w-3.5 h-3.5" /> Marcar enviado
@@ -255,8 +305,12 @@ const Tasks = () => {
 
           <button
             type="button"
-            onClick={() => changeTab("recordatorios")}
+            onClick={openReminders}
             className={`text-left bg-slate-900 border rounded-2xl p-5 flex items-center gap-4 transition-colors cursor-pointer ${
+              reminders.length > 0 && isNewTask(REMINDERS_SUMMARY_KEY)
+                ? "vetcare-task-move ring-1 ring-[#ece883]/40"
+                : ""
+            } ${
               activeTab === "recordatorios"
                 ? "border-blue-500/40"
                 : "border-slate-800 hover:border-slate-700"
@@ -307,6 +361,10 @@ const Tasks = () => {
                   activeTab === tab.id
                     ? "bg-[#ece883] text-slate-950"
                     : "text-slate-400 hover:text-white hover:bg-slate-800/60"
+                } ${
+                  tab.id === "recordatorios" && blinkRemindersTab
+                    ? "vetcare-tab-blink"
+                    : ""
                 }`}
               >
                 {tab.label}
@@ -368,6 +426,12 @@ const Tasks = () => {
       </div>
 
       <Footer />
+
+      <ConfirmMarkSentModal
+        reminder={reminderToConfirm}
+        onConfirm={confirmMarkAsSent}
+        onCancel={() => setReminderToConfirm(null)}
+      />
     </div>
   );
 };
