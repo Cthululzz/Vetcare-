@@ -220,7 +220,7 @@ const Schedule = () => {
                       : "text-slate-400 hover:text-white hover:bg-slate-800/60"
                   }`}
                 >
-                  {tab === "mes" ? "Mes (Calendario)" : tab}
+                  {tab}
                 </button>
               ))}
             </div>

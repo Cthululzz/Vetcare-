@@ -27,16 +27,35 @@ function isoNow(): string {
 }
 
 /**
- * Camas ocupadas por internaciones activas.
+ * Una internación solo cuenta como activa si su paciente todavía existe y
+ * está activo. Esto evita que un registro huérfano (paciente eliminado o dado
+ * de baja) deje una cama marcada como ocupada sin paciente visible.
+ */
+export function isActiveHospitalization(
+  hospitalization: Hospitalization,
+  getPatient: (patientId: string) => Patient | undefined,
+): boolean {
+  return (
+    hospitalization.status === "activa" &&
+    Boolean(getPatient(hospitalization.patientId)?.isActive)
+  );
+}
+
+/**
+ * Camas ocupadas por internaciones activas con paciente visible.
  * Se deriva de los datos: no se guarda un estado de ocupación aparte.
  */
 export function getOccupiedBeds(
   hospitalizations: Hospitalization[],
+  getPatient: (patientId: string) => Patient | undefined,
 ): Map<string, Hospitalization> {
   const occupied = new Map<string, Hospitalization>();
 
   for (const hospitalization of hospitalizations) {
-    if (hospitalization.status === "activa" && hospitalization.bed) {
+    if (
+      hospitalization.bed &&
+      isActiveHospitalization(hospitalization, getPatient)
+    ) {
       occupied.set(hospitalization.bed, hospitalization);
     }
   }
@@ -134,7 +153,7 @@ export function useHospitalizations() {
       );
       if (alreadyAdmitted) return null;
 
-      const occupiedBeds = getOccupiedBeds(hospitalizations);
+      const occupiedBeds = getOccupiedBeds(hospitalizations, getPatient);
       let bed = options?.bed?.trim() || undefined;
 
       if (bed && occupiedBeds.has(bed)) return null;
@@ -185,7 +204,7 @@ export function useHospitalizations() {
       setHospitalizations((prev) => [...prev, record]);
       return record;
     },
-    [hospitalizations, beds, setHospitalizations],
+    [hospitalizations, beds, getPatient, setHospitalizations],
   );
 
   const updateHospitalization = useCallback(
@@ -215,7 +234,7 @@ export function useHospitalizations() {
       if (!bed || !beds.includes(bed)) return false;
       if (target.bed === bed) return true;
 
-      const occupiedBeds = getOccupiedBeds(hospitalizations);
+      const occupiedBeds = getOccupiedBeds(hospitalizations, getPatient);
       if (occupiedBeds.has(bed)) return false;
 
       setHospitalizations((prev) =>
@@ -226,7 +245,7 @@ export function useHospitalizations() {
 
       return true;
     },
-    [hospitalizations, beds, setHospitalizations],
+    [hospitalizations, beds, getPatient, setHospitalizations],
   );
 
   /**
@@ -569,14 +588,12 @@ export function useHospitalizations() {
    */
   const getActiveHospitalizations = useCallback((): ActiveHospitalization[] => {
     return hospitalizations
-      .filter((h) => h.status === "activa")
+      .filter((h) => isActiveHospitalization(h, getPatient))
       .map((h) => ({
         hospitalization: h,
         patient: getPatient(h.patientId),
       }))
-      .filter((x): x is ActiveHospitalization =>
-        Boolean(x.patient && x.patient.isActive),
-      );
+      .filter((x): x is ActiveHospitalization => Boolean(x.patient));
   }, [hospitalizations, getPatient]);
 
   /**
@@ -618,9 +635,9 @@ export function useHospitalizations() {
    * Camas libres según las internaciones activas.
    */
   const getAvailableBeds = useCallback((): string[] => {
-    const occupied = getOccupiedBeds(hospitalizations);
+    const occupied = getOccupiedBeds(hospitalizations, getPatient);
     return beds.filter((bed) => !occupied.has(bed));
-  }, [hospitalizations, beds]);
+  }, [hospitalizations, beds, getPatient]);
 
   /**
    * Indica si una cama está ocupada por otra internación activa.
@@ -629,11 +646,11 @@ export function useHospitalizations() {
     (bed: string, exceptHospitalizationId?: string): boolean =>
       hospitalizations.some(
         (h) =>
-          h.status === "activa" &&
           h.bed === bed &&
-          h.id !== exceptHospitalizationId,
+          h.id !== exceptHospitalizationId &&
+          isActiveHospitalization(h, getPatient),
       ),
-    [hospitalizations],
+    [hospitalizations, getPatient],
   );
 
   return {

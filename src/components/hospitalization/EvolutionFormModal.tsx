@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { X, Save, Activity, CalendarClock, Clock } from "lucide-react";
-import { DateInput } from "../common/DateInput";
+import { MiniDatePicker } from "../common/MiniDatePicker";
+import {
+  normalizeVitalSign,
+  VALOR_SIGNO_VITAL_NORMAL,
+} from "../../utils/vitalSigns";
 import type { Patient } from "../../types/patient";
 
 interface EvolutionFormModalProps {
@@ -23,9 +27,9 @@ export interface EvolutionData {
 
 const EMPTY_FORM: EvolutionData = {
   notes: "",
-  temperature: "",
-  heartRate: "",
-  respiratoryRate: "",
+  temperature: VALOR_SIGNO_VITAL_NORMAL,
+  heartRate: VALOR_SIGNO_VITAL_NORMAL,
+  respiratoryRate: VALOR_SIGNO_VITAL_NORMAL,
   treatmentChanges: "",
   nursingObservations: "",
   nextReviewAt: "",
@@ -75,7 +79,13 @@ export const EvolutionFormModal = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(patient.id, formData);
+    onSave(patient.id, {
+      ...formData,
+      // Si el usuario dejó el campo vacío, se registra como "normal".
+      temperature: normalizeVitalSign(formData.temperature),
+      heartRate: normalizeVitalSign(formData.heartRate),
+      respiratoryRate: normalizeVitalSign(formData.respiratoryRate),
+    });
     setFormData(EMPTY_FORM);
   };
 
@@ -177,11 +187,10 @@ export const EvolutionFormModal = ({
               Próxima revisión
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <DateInput
+              <MiniDatePicker
                 value={nextReviewDate}
                 onChange={handleNextReviewDate}
                 icon={<CalendarClock className="w-4 h-4" />}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#ece883] transition-colors"
               />
               <div className="relative">
                 <Clock className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
