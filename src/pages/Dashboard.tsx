@@ -12,6 +12,7 @@ import { StockAlertCard } from "../components/inventory/StockAlertCardImproved";
 import { QuickAccessBar } from "../components/dashboard/QuickAccessBar";
 import {
   buildHospitalizationTasks,
+  hasTasksDueNow,
   splitHospitalizationTasks,
 } from "../utils/hospitalizationTasks";
 import { buildDueAppointmentReminders } from "../utils/appointmentReminders";
@@ -25,21 +26,25 @@ const Dashboard = () => {
 
   // Tareas = dosis/revisiones de las próximas 24 h + recordatorios de citas por enviar.
   // Alertas = dosis o revisiones ya vencidas.
-  const { totalTareasPendientes, totalAlertasActivas } = useMemo(() => {
-    const tasks = buildHospitalizationTasks(hospitalizations, getPatient);
-    const { pending, overdue } = splitHospitalizationTasks(tasks);
-    const reminders = buildDueAppointmentReminders(
-      appointments,
-      sentReminders,
-      getPatient,
-      getOwner,
-    );
+  const { totalTareasPendientes, totalAlertasActivas, tareasParaAhora } =
+    useMemo(() => {
+      const tasks = buildHospitalizationTasks(hospitalizations, getPatient);
+      const { pending, overdue } = splitHospitalizationTasks(tasks);
+      const reminders = buildDueAppointmentReminders(
+        appointments,
+        sentReminders,
+        getPatient,
+        getOwner,
+      );
 
-    return {
-      totalTareasPendientes: pending.length + reminders.length,
-      totalAlertasActivas: overdue.length,
-    };
-  }, [hospitalizations, appointments, sentReminders, getPatient, getOwner]);
+      return {
+        totalTareasPendientes: pending.length + reminders.length,
+        totalAlertasActivas: overdue.length,
+        // Solo hay que actuar ya si la hora de la tarea llegó o si hay un
+        // recordatorio de cita pendiente de envío. Una revisión en 2 h no cuenta.
+        tareasParaAhora: reminders.length > 0 || hasTasksDueNow(tasks),
+      };
+    }, [hospitalizations, appointments, sentReminders, getPatient, getOwner]);
 
   return (
     <div className="flex flex-col min-h-[calc(100vh-2rem)] justify-between w-full px-4 sm:px-6 lg:px-8 mx-auto">
@@ -51,6 +56,7 @@ const Dashboard = () => {
         <OperationalSummary
           tareas={totalTareasPendientes}
           alertas={totalAlertasActivas}
+          tareasParaAhora={tareasParaAhora}
           onNavigate={navigate}
         />
 

@@ -97,6 +97,16 @@ export const buildHospitalizationTasks = (
 };
 
 /**
+ * Indica si alguna tarea tiene la hora ya llegada (o vencida).
+ * Las tareas programadas para más adelante no requieren acción todavía.
+ */
+export const hasTasksDueNow = (
+  tasks: HospitalizationTask[],
+  now: number = Date.now(),
+): boolean =>
+  tasks.some((task) => new Date(task.dueAt).getTime() <= now);
+
+/**
  * Separa las tareas en pendientes (próximas 24 h) y alertas (vencidas).
  */
 export const splitHospitalizationTasks = (
