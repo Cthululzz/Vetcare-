@@ -290,7 +290,7 @@ export const ConsultationModal = ({
                     : "bg-amber-600/20 hover:bg-amber-600/30 text-amber-400 border border-amber-500/30"
                 }`}
               >
-                <BedDouble className="w-4 h-4" /> Hospitalizar
+                <BedDouble className="w-4 h-4" /> Finalizar consulta y hospitalizar
               </button>
 
               <div className="flex flex-wrap items-center gap-3">

@@ -267,9 +267,10 @@ export function useScheduleActions() {
   };
 
   /**
-   * Envía al paciente a hospitalización desde la consulta.
-   * Persiste el borrador, registra el ingreso y lleva al usuario al área de
-   * hospitalización para que vea al paciente ya internado.
+   * Finaliza la consulta y envía al paciente a hospitalización en un solo paso.
+   * Escribe el registro médico, marca la cita como finalizada, registra el
+   * ingreso y lleva al usuario al área de hospitalización para que vea al
+   * paciente ya internado.
    */
   const handleHospitalize = (data: ConsultationData) => {
     const {
@@ -310,8 +311,22 @@ export function useScheduleActions() {
       createdBy: getDoctorName(appointment.doctorId),
     });
 
-    // 3. La consulta queda en curso (el paciente sigue en atención)
-    updateStatus(appointment.id, "en_consulta");
+    // 3. Finalizar la consulta: registro en el historial y cita finalizada.
+    // Así no hay que hacerlo manualmente después de hospitalizar.
+    addMedicalRecord(patient.id, {
+      date: new Date().toISOString(),
+      notes,
+      diagnosis,
+      temperature,
+      heartRate,
+      respiratoryRate,
+      weight,
+      weightUnit,
+      recommendations,
+      type: "consulta",
+      veterinarian: getDoctorName(appointment.doctorId),
+    });
+    updateStatus(appointment.id, "finalizada");
 
     setIsConsultationModalOpen(false);
     setSelectedAppointmentForConsultation(null);
