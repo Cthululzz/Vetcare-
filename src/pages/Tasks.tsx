@@ -11,7 +11,8 @@ import {
   Stethoscope,
 } from "lucide-react";
 import { ConfirmMarkSentModal } from "../components/common/ConfirmMarkSentModal";
-import { Footer } from "../components/common/Footer";
+import { PageBanner } from "../components/common/PageBanner";
+import { PageShell } from "../components/common/PageShell";
 import { useAppointments } from "../hooks/useAppointments";
 import { useAppointmentReminders } from "../hooks/useAppointmentReminders";
 import { useHospitalizations } from "../hooks/useHospitalizations";
@@ -275,21 +276,12 @@ const Tasks = () => {
   );
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-2rem)] justify-between w-full px-4 sm:px-6 lg:px-8 mx-auto">
-      <div className="space-y-6 pb-6 max-w-7xl w-full mx-auto">
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 relative overflow-hidden shadow-sm">
-          <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-[#ece883]/5 rounded-full blur-2xl pointer-events-none" />
-          <div className="relative z-10 space-y-1">
-            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-3">
-              <Bell className="w-8 h-8 text-[#ece883]" />
-              Tareas y Alertas
-            </h1>
-            <p className="text-sm text-slate-400 max-w-2xl">
-              Dosis programadas, revisiones de pacientes hospitalizados y
-              recordatorios de citas por enviar.
-            </p>
-          </div>
-        </div>
+    <PageShell>
+      <PageBanner
+        icon={Bell}
+        title="Tareas y Alertas"
+        description="Dosis programadas, revisiones de pacientes hospitalizados y recordatorios de citas por enviar."
+      />
 
         {/* Resumen */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -433,16 +425,13 @@ const Tasks = () => {
             Aún no hay pacientes registrados en el sistema.
           </p>
         )}
-      </div>
-
-      <Footer />
 
       <ConfirmMarkSentModal
         reminder={reminderToConfirm}
         onConfirm={confirmMarkAsSent}
         onCancel={() => setReminderToConfirm(null)}
       />
-    </div>
+    </PageShell>
   );
 };
 

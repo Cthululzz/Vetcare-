@@ -18,7 +18,8 @@ import {
   Stethoscope,
   User,
 } from "lucide-react";
-import { Footer } from "../components/common/Footer";
+import { PageBanner } from "../components/common/PageBanner";
+import { PageShell } from "../components/common/PageShell";
 import { PetAvatar } from "../components/common/PetAvatar";
 import { usePatients } from "../hooks/usePatients";
 import {
@@ -735,39 +736,30 @@ const HospitalizationView = () => {
   // RENDER
   // ============================================
   return (
-    <div className="flex flex-col min-h-[calc(100vh-2rem)] justify-between w-full px-4 sm:px-6 lg:px-8 mx-auto">
-      <div className="space-y-6 pb-6 max-w-7xl w-full mx-auto">
-        {/* Header */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 relative overflow-hidden shadow-sm">
-          <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-[#ece883]/5 rounded-full blur-2xl pointer-events-none" />
-          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="space-y-1">
-              <button
-                onClick={() => navigate("/pacientes")}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-[#ece883] mb-2 transition-colors cursor-pointer"
-              >
-                <ArrowLeft className="w-3.5 h-3.5" /> Volver al Hub de Pacientes
-              </button>
-              <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-3">
-                <BedDouble className="w-8 h-8 text-[#ece883]" />
-                Área de Hospitalización y Monitoreo
-              </h1>
-              <p className="text-sm text-slate-400 max-w-xl">
-                Control activo de pacientes internados, tratamientos, camas y
-                signos vitales.
-              </p>
-            </div>
-
+    <PageShell>
+      <PageBanner
+        icon={BedDouble}
+        title="Área de Hospitalización y Monitoreo"
+        description="Control activo de pacientes internados, tratamientos, camas y signos vitales."
+        actions={
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={() => navigate("/pacientes")}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-[#ece883] transition-colors cursor-pointer"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" /> Volver al Hub de Pacientes
+            </button>
             {canAccessClinicalFlow && (
               <button
                 onClick={handleOpenAdmission}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#ece883] hover:bg-[#e4df68] text-slate-950 text-sm font-bold transition-colors shadow-md shadow-[#ece883]/10 cursor-pointer self-start sm:self-auto"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#ece883] hover:bg-[#e4df68] text-slate-950 text-sm font-bold transition-colors shadow-md shadow-[#ece883]/10 cursor-pointer"
               >
                 <Plus className="w-4 h-4" /> Ingresar Paciente
               </button>
             )}
           </div>
-        </div>
+        }
+      />
 
         {/* Mensaje de retroalimentación */}
         {feedback && (
@@ -1222,9 +1214,6 @@ const HospitalizationView = () => {
             )}
           </div>
         )}
-      </div>
-
-      <Footer />
 
       {/* Modal de Admisión */}
       <AdmissionFormModal
@@ -1308,7 +1297,7 @@ const HospitalizationView = () => {
           setSelectedPatient(null);
         }}
       />
-    </div>
+    </PageShell>
   );
 };
 

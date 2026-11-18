@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { PawPrint } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
+import { PageBanner } from "./PageBanner";
 
 const frasesManana = [
   "Todo está listo para comenzar una nueva jornada.",
@@ -61,21 +62,13 @@ export const GreetingBanner = () => {
   const nombreUsuario = user?.name || "Usuario";
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 relative overflow-hidden shadow-sm">
-      <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-[#ece883]/5 rounded-full blur-2xl pointer-events-none" />
-      <div className="relative z-10 space-y-1">
-        <p className="text-xs font-bold uppercase tracking-wider text-[#ece883]">
-          Inicio
-        </p>
-        <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-3">
-          <PawPrint className="w-8 h-8 text-[#ece883] shrink-0" />
-          {saludo}, {nombreUsuario}.
-        </h1>
-        <p className="text-slate-400 text-sm sm:text-base">
-          {fraseDelDia || "Todo está listo para comenzar una nueva jornada."}
-        </p>
-      </div>
-    </div>
+    <PageBanner
+      icon={PawPrint}
+      title={`${saludo}, ${nombreUsuario}.`}
+      description={
+        fraseDelDia || "Todo está listo para comenzar una nueva jornada."
+      }
+    />
   );
 };
 

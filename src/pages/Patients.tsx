@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Users, BedDouble, Activity, Bell, ChevronRight } from "lucide-react";
-import { Footer } from "../components/common/Footer";
+import { PageBanner } from "../components/common/PageBanner";
+import { PageShell } from "../components/common/PageShell";
 import { usePatients } from "../hooks/usePatients";
 import {
   isReviewPending,
@@ -26,21 +27,12 @@ const Patients = () => {
   ).length;
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-2rem)] justify-between w-full px-4 sm:px-6 lg:px-8 mx-auto">
-      <div className="space-y-6 pb-6 max-w-7xl w-full mx-auto">
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 relative overflow-hidden shadow-sm">
-          <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-[#ece883]/5 rounded-full blur-2xl pointer-events-none" />
-          <div className="relative z-10 space-y-1">
-            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-3">
-              <Users className="w-8 h-8 text-[#ece883]" />
-              Gestión de Pacientes
-            </h1>
-            <p className="text-sm text-slate-400 max-w-xl">
-              Selecciona un módulo para administrar fichas, contactos o pacientes
-              en área de internación.
-            </p>
-          </div>
-        </div>
+    <PageShell>
+      <PageBanner
+        icon={Users}
+        title="Gestión de Pacientes"
+        description="Selecciona un módulo para administrar fichas, contactos o pacientes en área de internación."
+      />
 
         {/* Grid de las 2 Tarjetas Grandes */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
@@ -127,10 +119,7 @@ const Patients = () => {
             </div>
           </div>
         </div>
-      </div>
-
-      <Footer />
-    </div>
+    </PageShell>
   );
 };
 

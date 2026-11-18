@@ -13,7 +13,8 @@ import {
   Search,
   Weight,
 } from "lucide-react";
-import { Footer } from "../components/common/Footer";
+import { PageBanner } from "../components/common/PageBanner";
+import { PageShell } from "../components/common/PageShell";
 import { ClinicalRecordCard } from "../components/patients/history/ClinicalRecordCard";
 import { ClinicalRecordFormModal } from "../components/patients/history/ClinicalRecordFormModal";
 import { RECORD_TYPE_META } from "../components/patients/history/recordTypeMeta";
@@ -95,7 +96,7 @@ const ClinicalHistory = () => {
 
   if (!patient) {
     return (
-      <div className="flex flex-col min-h-[calc(100vh-2rem)] justify-between w-full px-4 sm:px-6 lg:px-8 mx-auto max-w-7xl">
+      <PageShell>
         <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-6">
           <FileText className="w-14 h-14 text-slate-600 mb-4 stroke-1" />
           <h1 className="text-2xl font-black text-white mb-2">
@@ -113,8 +114,7 @@ const ClinicalHistory = () => {
             Volver a las fichas
           </Link>
         </div>
-        <Footer />
-      </div>
+      </PageShell>
     );
   }
 
@@ -193,80 +193,75 @@ const ClinicalHistory = () => {
   ];
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-2rem)] justify-between w-full px-4 sm:px-6 lg:px-8 mx-auto">
-      <div className="space-y-6 pb-6 max-w-7xl w-full mx-auto">
-        {/* Encabezado */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 relative overflow-hidden shadow-sm">
-          <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-[#ece883]/5 rounded-full blur-2xl pointer-events-none" />
-          <div className="relative z-10 space-y-4">
-            <button
-              type="button"
-              onClick={() => navigate("/pacientes/fichas")}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-[#ece883] transition-colors cursor-pointer"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              Volver a las fichas de pacientes
-            </button>
-
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-              <div className="space-y-2 min-w-0">
-                <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-3">
-                  <History className="w-8 h-8 text-[#ece883]" />
-                  Historial clínico
-                </h1>
-                <p className="text-sm text-slate-300">
-                  <span className="font-bold text-white">{patient.name}</span>
-                  {" · "}
-                  {formatSpeciesLabel(patient.species)}
-                  {patient.breed ? ` · ${patient.breed}` : ""}
-                  {" · "}
-                  {getPatientDisplayAge(patient)}
-                </p>
-                <p className="text-xs text-slate-400">
-                  Propietario:{" "}
-                  <span className="text-slate-200">
-                    {owner?.name || "Sin propietario"}
-                  </span>
-                  {owner?.phone ? ` · ${owner.phone}` : ""}
-                  {patient.microchip ? ` · Microchip ${patient.microchip}` : ""}
-                </p>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2 shrink-0">
-                {canAccessClinicalFlow && (
-                  <button
-                    type="button"
-                    onClick={handleOpenNewRecord}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#ece883] hover:bg-[#e4df68] text-slate-950 text-sm font-bold transition-colors shadow-md shadow-[#ece883]/10 cursor-pointer"
-                  >
-                    <ClipboardPlus className="w-4 h-4" />
-                    Nuevo registro
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {patient.conditions && (
-              <div className="flex items-start gap-2 rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-2.5 text-xs text-amber-200">
-                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-                <span>
-                  <span className="font-bold uppercase tracking-wider">
-                    Antecedentes:{" "}
-                  </span>
-                  {patient.conditions}
+    <PageShell>
+      <PageBanner
+          icon={History}
+          title="Historial clínico"
+          description={
+            <>
+              <span className="block text-sm text-slate-300">
+                <span className="font-bold text-white">{patient.name}</span>
+                {" · "}
+                {formatSpeciesLabel(patient.species)}
+                {patient.breed ? ` · ${patient.breed}` : ""}
+                {" · "}
+                {getPatientDisplayAge(patient)}
+              </span>
+              <span className="block text-xs text-slate-400">
+                Propietario:{" "}
+                <span className="text-slate-200">
+                  {owner?.name || "Sin propietario"}
                 </span>
-              </div>
-            )}
+                {owner?.phone ? ` · ${owner.phone}` : ""}
+                {patient.microchip
+                  ? ` · Microchip ${patient.microchip}`
+                  : ""}
+              </span>
+            </>
+          }
+          actions={
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={() => navigate("/pacientes/fichas")}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-[#ece883] transition-colors cursor-pointer"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                Volver a las fichas de pacientes
+              </button>
+              {canAccessClinicalFlow && (
+                <button
+                  type="button"
+                  onClick={handleOpenNewRecord}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#ece883] hover:bg-[#e4df68] text-slate-950 text-sm font-bold transition-colors shadow-md shadow-[#ece883]/10 cursor-pointer"
+                >
+                  <ClipboardPlus className="w-4 h-4" />
+                  Nuevo registro
+                </button>
+              )}
+            </div>
+          }
+        />
 
-            {!patient.isActive && (
-              <div className="flex items-start gap-2 rounded-xl border border-slate-600/40 bg-slate-800/40 px-4 py-2.5 text-xs text-slate-300">
-                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-                Esta ficha está marcada como inactiva. El historial se conserva
-                solo para consulta.
-              </div>
-            )}
-          </div>
+      {patient.conditions && (
+        <div className="flex items-start gap-2 rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-2.5 text-xs text-amber-200">
+          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+          <span>
+            <span className="font-bold uppercase tracking-wider">
+              Antecedentes:{" "}
+            </span>
+            {patient.conditions}
+          </span>
         </div>
+      )}
+
+      {!patient.isActive && (
+        <div className="flex items-start gap-2 rounded-xl border border-slate-600/40 bg-slate-800/40 px-4 py-2.5 text-xs text-slate-300">
+          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+          Esta ficha está marcada como inactiva. El historial se conserva solo
+          para consulta.
+        </div>
+      )}
 
         {/* Retroalimentación */}
         {feedback && (
@@ -457,9 +452,6 @@ const ClinicalHistory = () => {
             </div>
           )}
         </div>
-      </div>
-
-      <Footer />
 
       {showForm && (
         <ClinicalRecordFormModal
@@ -478,7 +470,7 @@ const ClinicalHistory = () => {
           }
         />
       )}
-    </div>
+    </PageShell>
   );
 };
 

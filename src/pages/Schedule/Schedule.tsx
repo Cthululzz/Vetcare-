@@ -7,7 +7,8 @@ import {
   ChevronLeft,
   MessageCircle,
 } from "lucide-react";
-import { Footer } from "../../components/common/Footer";
+import { PageBanner } from "../../components/common/PageBanner";
+import { PageShell } from "../../components/common/PageShell";
 import { AppointmentForm } from "../../components/schedule/AppointmentForm/AppointmentForm";
 import { AppointmentCard } from "../../components/schedule/AppointmentCard";
 import { MonthCalendarView } from "../../components/schedule/MonthCalendarView";
@@ -91,21 +92,12 @@ const Schedule = () => {
   );
 
   return (
-    <div className="flex min-h-[calc(100vh-3rem)] lg:min-h-[calc(100vh-4rem)] w-full flex-col gap-6">
-      {/* Header */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 relative overflow-hidden shadow-sm">
-        <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-[#ece883]/5 rounded-full blur-2xl pointer-events-none" />
-        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="space-y-1">
-            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-3">
-              <CalendarIcon className="w-8 h-8 text-[#ece883]" />
-              Citas Agendadas
-            </h1>
-            <p className="text-sm text-slate-400 max-w-xl">
-              Gestión y control de todas las citas registradas en el sistema.
-            </p>
-          </div>
-
+    <PageShell>
+      <PageBanner
+        icon={CalendarIcon}
+        title="Citas Agendadas"
+        description="Gestión y control de todas las citas registradas en el sistema."
+        actions={
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             <button
               type="button"
@@ -142,8 +134,8 @@ const Schedule = () => {
               </div>
             </label>
           </div>
-        </div>
-      </div>
+        }
+      />
 
       {/* Vista de detalle de día seleccionado */}
       {selectedDayDetail ? (
@@ -340,9 +332,7 @@ const Schedule = () => {
           onHospitalize={handleHospitalize}
         />
       )}
-
-      <Footer />
-    </div>
+    </PageShell>
   );
 };
 

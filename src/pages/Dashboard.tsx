@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import GreetingBanner from "../components/common/GreetingBanner";
-import { Footer } from "../components/common/Footer";
+import { PageShell } from "../components/common/PageShell";
 import { useAppointments } from "../hooks/useAppointments";
 import { useAppointmentReminders } from "../hooks/useAppointmentReminders";
 import { useHospitalizations } from "../hooks/useHospitalizations";
@@ -65,38 +65,32 @@ const Dashboard = () => {
     ]);
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-2rem)] justify-between w-full px-4 sm:px-6 lg:px-8 mx-auto">
-      <div className="space-y-6 pb-6">
-        <div className="[&>div]:py-3.5">
-          <GreetingBanner />
-        </div>
+    <PageShell>
+      <GreetingBanner />
 
-        <OperationalSummary
-          tareas={totalTareasPendientes}
-          alertas={totalAlertasActivas}
-          tareasParaAhora={tareasParaAhora}
-          onNavigate={navigate}
-        />
+      <OperationalSummary
+        tareas={totalTareasPendientes}
+        alertas={totalAlertasActivas}
+        tareasParaAhora={tareasParaAhora}
+        onNavigate={navigate}
+      />
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {proximoPaciente ? (
-            <NextPatientCard
-              appointment={proximoPaciente}
-              onNavigate={navigate}
-            />
-          ) : (
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-7 flex items-center justify-center text-slate-400 text-sm min-h-[240px]">
-              No hay próximos pacientes programados para hoy.
-            </div>
-          )}
-          <StockAlertCard onNavigate={navigate} />
-        </div>
-
-        <QuickAccessBar onNavigate={navigate} />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {proximoPaciente ? (
+          <NextPatientCard
+            appointment={proximoPaciente}
+            onNavigate={navigate}
+          />
+        ) : (
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-7 flex items-center justify-center text-slate-400 text-sm min-h-[240px]">
+            No hay próximos pacientes programados para hoy.
+          </div>
+        )}
+        <StockAlertCard onNavigate={navigate} />
       </div>
 
-      <Footer />
-    </div>
+      <QuickAccessBar onNavigate={navigate} />
+    </PageShell>
   );
 };
 

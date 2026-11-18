@@ -13,7 +13,7 @@ export default function AppLayout() {
   return (
     <div className="flex h-screen bg-slate-950 text-white overflow-hidden">
       <Sidebar />
-      <main className="flex-1 overflow-y-auto p-6 lg:p-8 bg-slate-950">
+      <main className="flex flex-1 flex-col overflow-y-auto bg-slate-950 p-6 [scrollbar-gutter:stable] lg:p-8">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-800 bg-slate-900/60 px-4 py-3">
           <div className="flex items-center gap-2 text-sm text-slate-300">
             <MapPin className="h-4 w-4 text-[#ece883] shrink-0" />
@@ -42,7 +42,9 @@ export default function AppLayout() {
             </select>
           )}
         </div>
-        <Outlet />
+        <div className="flex min-h-0 flex-1 flex-col">
+          <Outlet />
+        </div>
       </main>
       <GlobalInventoryReminder />
     </div>

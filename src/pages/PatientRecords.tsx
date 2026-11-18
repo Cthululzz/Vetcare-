@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { PatientHeader } from "../components/patients/PatientHeader";
 import { PatientSearchCard } from "../components/patients/PatientSearchCard";
 import { PatientQuickAccess } from "../components/patients/PatientQuickAccess";
-import { Footer } from "../components/common/Footer";
+import { PageShell } from "../components/common/PageShell";
 import { PatientCard } from "../components/patients/PatientCard";
 import PatientProfileModal from "../components/patients/profile/PatientProfileModal";
 import { PatientFormModal } from "../components/patients/PatientFormModal";
@@ -253,9 +253,8 @@ const PatientRecords = () => {
   // RENDER
   // ============================================
   return (
-    <div className="flex flex-col min-h-[calc(100vh-2rem)] justify-between w-full px-4 sm:px-6 lg:px-8 mx-auto max-w-7xl">
-      <div className="space-y-6 pb-6">
-        <PatientHeader
+    <PageShell>
+      <PatientHeader
           onNewRecord={handleNewRecord}
           canCreate={canManagePatients}
         />
@@ -491,9 +490,6 @@ const PatientRecords = () => {
             </div>
           </div>
         </div>
-      </div>
-
-      <Footer />
 
       {selectedPatient && (
         <PatientProfileModal
@@ -523,7 +519,7 @@ const PatientRecords = () => {
           onSaved={handleSavedPatient}
         />
       )}
-    </div>
+    </PageShell>
   );
 };
 

@@ -9,7 +9,8 @@ import {
   Pencil,
   CheckCircle,
 } from "lucide-react";
-import { Footer } from "../components/common/Footer";
+import { PageBanner } from "../components/common/PageBanner";
+import { PageShell } from "../components/common/PageShell";
 import { useInventory } from "../hooks/useInventory";
 import { useInventoryTags } from "../hooks/useInventoryTags";
 import { usePermissions } from "../hooks/usePermissions";
@@ -68,50 +69,41 @@ const Inventory = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-2rem)] justify-between w-full px-4 sm:px-6 lg:px-8 mx-auto">
-      <div className="space-y-6 pb-6 max-w-7xl w-full mx-auto">
-        {/* Header */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 relative overflow-hidden shadow-sm">
-          <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-[#ece883]/5 rounded-full blur-2xl pointer-events-none" />
-          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="space-y-1">
-              <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-3">
-                <Package className="w-8 h-8 text-[#ece883]" />
-                Inventario y Farmacia
-              </h1>
-              <p className="text-sm text-slate-400 max-w-xl">
-                Gestión completa de medicamentos, insumos y control de stock
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-3">
+    <PageShell>
+      <PageBanner
+        icon={Package}
+        title="Inventario y Farmacia"
+        description="Gestión completa de medicamentos, insumos y control de stock"
+        actions={
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={() => setShowHistory(true)}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-semibold transition-colors cursor-pointer"
+            >
+              <Filter className="w-4 h-4" />
+              Historial
+            </button>
+            {canManageInventory && (
               <button
-                onClick={() => setShowHistory(true)}
+                onClick={() => setShowMovementForm(true)}
                 className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-semibold transition-colors cursor-pointer"
               >
-                <Filter className="w-4 h-4" />
-                Historial
+                <Plus className="w-4 h-4" />
+                Registrar Movimiento
               </button>
-              {canManageInventory && (
-                <button
-                  onClick={() => setShowMovementForm(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-semibold transition-colors cursor-pointer"
-                >
-                  <Plus className="w-4 h-4" />
-                  Registrar Movimiento
-                </button>
-              )}
-              {canManageInventory && (
-                <button
-                  onClick={() => setShowProductForm(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#ece883] hover:bg-[#e4df68] text-slate-950 text-sm font-bold transition-colors shadow-md shadow-[#ece883]/10 cursor-pointer"
-                >
-                  <PackagePlus className="w-4 h-4" />
-                  Nuevo Producto
-                </button>
-              )}
-            </div>
+            )}
+            {canManageInventory && (
+              <button
+                onClick={() => setShowProductForm(true)}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#ece883] hover:bg-[#e4df68] text-slate-950 text-sm font-bold transition-colors shadow-md shadow-[#ece883]/10 cursor-pointer"
+              >
+                <PackagePlus className="w-4 h-4" />
+                Nuevo Producto
+              </button>
+            )}
           </div>
-        </div>
+        }
+      />
 
         {/* Mensaje de retroalimentación */}
         {feedback && (
@@ -374,9 +366,6 @@ const Inventory = () => {
             </div>
           )}
         </div>
-      </div>
-
-      <Footer />
 
       {/* Modals */}
       <InventoryProductForm
@@ -409,7 +398,7 @@ const Inventory = () => {
         isOpen={showHistory}
         onClose={() => setShowHistory(false)}
       />
-    </div>
+    </PageShell>
   );
 };
 
