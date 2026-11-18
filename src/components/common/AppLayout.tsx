@@ -2,6 +2,7 @@ import { Outlet } from "react-router-dom";
 import { MapPin } from "lucide-react";
 import { Sidebar } from "./Sidebar";
 import { GlobalInventoryReminder } from "./GlobalInventoryReminder";
+import { LicenseStatusBanner } from "../license/LicenseStatusBanner";
 import { useBranchScope } from "../../context/branchScope";
 import { SUCURSALES, getSucursalName } from "../../constants/appConstants";
 
@@ -14,6 +15,7 @@ export default function AppLayout() {
     <div className="flex h-screen bg-slate-950 text-white overflow-hidden">
       <Sidebar />
       <main className="flex flex-1 flex-col overflow-y-auto bg-slate-950 p-6 [scrollbar-gutter:stable] lg:p-8">
+        <LicenseStatusBanner />
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-800 bg-slate-900/60 px-4 py-3">
           <div className="flex items-center gap-2 text-sm text-slate-300">
             <MapPin className="h-4 w-4 text-[#ece883] shrink-0" />

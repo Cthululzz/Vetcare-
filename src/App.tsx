@@ -11,7 +11,10 @@ import Configuration from "./pages/Configuration";
 import Login from "./pages/Login";
 import AppLayout from "./components/common/AppLayout";
 import { DevAuthBypass } from "./components/common/DevAuthBypass";
+import { ActivationScreen } from "./components/license/ActivationScreen";
+import { LicenseProvider } from "./components/license/LicenseProvider";
 import { useAuth } from "./hooks/useAuth";
+import { useLicense } from "./hooks/useLicense";
 import { usePermissions } from "./hooks/usePermissions";
 import { PERMISSIONS, type Permission } from "./utils/permissions";
 import type { ReactNode } from "react";
@@ -78,107 +81,118 @@ function RequirePermission({
 function App() {
   const { isAuthenticated } = useAuth();
   const bypassAuth = import.meta.env.VITE_BYPASS_AUTH === "true";
+  const { isActivated } = useLicense();
+
+  if (!bypassAuth && !isActivated) {
+    return (
+      <>
+        <DevAuthBypass />
+        <ActivationScreen />
+      </>
+    );
+  }
 
   return (
     <>
       <DevAuthBypass />
+      <LicenseProvider>
+        <Routes>
+          <Route
+            path="/login"
+            element={
+              isAuthenticated || bypassAuth ? (
+                <Navigate to="/" replace />
+              ) : (
+                <Login />
+              )
+            }
+          />
 
-      <Routes>
-        <Route
-          path="/login"
-          element={
-            isAuthenticated || bypassAuth ? (
-              <Navigate to="/" replace />
-            ) : (
-              <Login />
-            )
-          }
-        />
-
-        <Route
-          element={
-            <ProtectedRoute>
-              <AppLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route path="/" element={<Dashboard />} />
           <Route
-            path="/pacientes"
             element={
-              <RequirePermission permission={PERMISSIONS.PATIENTS_VIEW}>
-                <Patients />
-              </RequirePermission>
+              <ProtectedRoute>
+                <AppLayout />
+              </ProtectedRoute>
             }
-          />
-          <Route
-            path="/pacientes/fichas"
-            element={
-              <RequirePermission permission={PERMISSIONS.PATIENTS_VIEW}>
-                <PatientRecords />
-              </RequirePermission>
-            }
-          />
-          <Route
-            path="/pacientes/:patientId/historial"
-            element={
-              <RequirePermission permission={PERMISSIONS.CLINICAL_HISTORY_VIEW}>
-                <ClinicalHistory />
-              </RequirePermission>
-            }
-          />
-          <Route
-            path="/pacientes/hospitalizados"
-            element={
-              <RequirePermission permission={PERMISSIONS.CLINICAL_HISTORY_VIEW}>
-                <HospitalizationView />
-              </RequirePermission>
-            }
-          />
-          <Route
-            path="/agenda"
-            element={
-              <RequirePermission permission={PERMISSIONS.APPOINTMENTS_VIEW}>
-                <Schedule />
-              </RequirePermission>
-            }
-          />
-          <Route
-            path="/tareas"
-            element={
-              <RequirePermission permission={PERMISSIONS.CLINICAL_HISTORY_VIEW}>
-                <Tasks />
-              </RequirePermission>
-            }
-          />
-          <Route
-            path="/inventario"
-            element={
-              <RequirePermission permission={PERMISSIONS.INVENTORY_VIEW}>
-                <Inventory />
-              </RequirePermission>
-            }
-          />
-          <Route
-            path="/configuracion"
-            element={
-              <RequirePermission permission={PERMISSIONS.SYSTEM_ADMIN}>
-                <Configuration />
-              </RequirePermission>
-            }
-          />
-        </Route>
-
-        <Route
-          path="*"
-          element={
-            <Navigate
-              to={isAuthenticated || bypassAuth ? "/" : "/login"}
-              replace
+          >
+            <Route path="/" element={<Dashboard />} />
+            <Route
+              path="/pacientes"
+              element={
+                <RequirePermission permission={PERMISSIONS.PATIENTS_VIEW}>
+                  <Patients />
+                </RequirePermission>
+              }
             />
-          }
-        />
-      </Routes>
+            <Route
+              path="/pacientes/fichas"
+              element={
+                <RequirePermission permission={PERMISSIONS.PATIENTS_VIEW}>
+                  <PatientRecords />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="/pacientes/:patientId/historial"
+              element={
+                <RequirePermission permission={PERMISSIONS.CLINICAL_HISTORY_VIEW}>
+                  <ClinicalHistory />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="/pacientes/hospitalizados"
+              element={
+                <RequirePermission permission={PERMISSIONS.CLINICAL_HISTORY_VIEW}>
+                  <HospitalizationView />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="/agenda"
+              element={
+                <RequirePermission permission={PERMISSIONS.APPOINTMENTS_VIEW}>
+                  <Schedule />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="/tareas"
+              element={
+                <RequirePermission permission={PERMISSIONS.CLINICAL_HISTORY_VIEW}>
+                  <Tasks />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="/inventario"
+              element={
+                <RequirePermission permission={PERMISSIONS.INVENTORY_VIEW}>
+                  <Inventory />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="/configuracion"
+              element={
+                <RequirePermission permission={PERMISSIONS.SYSTEM_ADMIN}>
+                  <Configuration />
+                </RequirePermission>
+              }
+            />
+          </Route>
+
+          <Route
+            path="*"
+            element={
+              <Navigate
+                to={isAuthenticated || bypassAuth ? "/" : "/login"}
+                replace
+              />
+            }
+          />
+        </Routes>
+      </LicenseProvider>
     </>
   );
 }
