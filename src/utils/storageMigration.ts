@@ -19,6 +19,7 @@ export const SCHEMA_VERSION_KEY = "vet_schema_version";
 
 /** Keys cuyos elementos son entidades con alcance de sucursal. */
 const BRANCH_SCOPED_KEYS = new Set([
+  "vet_users",
   "vet_owners",
   "vet_patients",
   "vet_appointments",

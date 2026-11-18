@@ -4,6 +4,7 @@ import { LICENSE_KEY } from "../constants/license";
 // en modo lectura; el resto de claves vet_* quedan congeladas.
 const ALLOWED_KEYS = new Set([
   LICENSE_KEY,
+  "vet_auth_state",
   "vet_active_branch",
   "vet_seen_tasks",
   "vet_schema_version",

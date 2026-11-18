@@ -6,10 +6,10 @@ import {
   CreditCard,
   KeyRound,
   Settings,
-  Stethoscope,
 } from "lucide-react";
 import { PageBanner } from "../components/common/PageBanner";
 import { PageShell } from "../components/common/PageShell";
+import { UserManagement } from "../components/users/UserManagement";
 import { useLicense } from "../hooks/useLicense";
 import { formatDateShort, getLocalTodayStr } from "../utils/dateUtils";
 
@@ -33,11 +33,6 @@ const PENDING_SECTIONS: PendingSection[] = [
     description:
       "Configuración de sucursales, horarios de atención y sucursal activa.",
     icon: CalendarCog,
-  },
-  {
-    title: "Equipo veterinario",
-    description: "Profesionales, especialidades y disponibilidad para agenda.",
-    icon: Stethoscope,
   },
   {
     title: "Servicios y precios",
@@ -178,6 +173,8 @@ const Configuration = () => {
           <p className="text-xs text-emerald-300">{feedback}</p>
         )}
       </div>
+
+      <UserManagement />
 
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
         <div className="border-b border-slate-800 pb-3">

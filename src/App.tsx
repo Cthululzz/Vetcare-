@@ -13,8 +13,10 @@ import AppLayout from "./components/common/AppLayout";
 import { DevAuthBypass } from "./components/common/DevAuthBypass";
 import { ActivationScreen } from "./components/license/ActivationScreen";
 import { LicenseProvider } from "./components/license/LicenseProvider";
+import { SetupScreen } from "./components/setup/SetupScreen";
 import { useAuth } from "./hooks/useAuth";
 import { useLicense } from "./hooks/useLicense";
+import { useUsers } from "./hooks/useUsers";
 import { usePermissions } from "./hooks/usePermissions";
 import { PERMISSIONS, type Permission } from "./utils/permissions";
 import type { ReactNode } from "react";
@@ -82,12 +84,22 @@ function App() {
   const { isAuthenticated } = useAuth();
   const bypassAuth = import.meta.env.VITE_BYPASS_AUTH === "true";
   const { isActivated } = useLicense();
+  const { hasUsers } = useUsers();
 
   if (!bypassAuth && !isActivated) {
     return (
       <>
         <DevAuthBypass />
         <ActivationScreen />
+      </>
+    );
+  }
+
+  if (!bypassAuth && isActivated && !hasUsers) {
+    return (
+      <>
+        <DevAuthBypass />
+        <SetupScreen />
       </>
     );
   }

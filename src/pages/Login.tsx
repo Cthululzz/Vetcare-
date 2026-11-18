@@ -7,6 +7,7 @@ import { useAuth } from "../hooks/useAuth";
 const Login = () => {
   const navigate = useNavigate();
   const { login, isAuthenticated } = useAuth();
+  const bypassAuth = import.meta.env.VITE_BYPASS_AUTH === "true";
 
   // ============================================
   // ESTADOS
@@ -106,26 +107,28 @@ const Login = () => {
               </div>
             </div>
 
-            {/* Credenciales de prueba */}
-            <div className="mt-8 p-4 rounded-xl bg-slate-800/50 border border-slate-700/50">
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                Credenciales de prueba
-              </p>
-              <div className="space-y-1.5 text-xs text-slate-300 font-mono">
-                <p>
-                  <span className="text-slate-500">Admin:</span>{" "}
-                  admin@vetcare.com / admin123
+            {/* Credenciales de prueba: solo en desarrollo */}
+            {bypassAuth && (
+              <div className="mt-8 p-4 rounded-xl bg-slate-800/50 border border-slate-700/50">
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                  Credenciales de prueba
                 </p>
-                <p>
-                  <span className="text-slate-500">Veterinario:</span>{" "}
-                  vet@vetcare.com / vet123
-                </p>
-                <p>
-                  <span className="text-slate-500">Recepción:</span>{" "}
-                  recepcion@vetcare.com / recep123
-                </p>
+                <div className="space-y-1.5 text-xs text-slate-300 font-mono">
+                  <p>
+                    <span className="text-slate-500">Admin:</span>{" "}
+                    admin@vetcare.com / admin123
+                  </p>
+                  <p>
+                    <span className="text-slate-500">Veterinario:</span>{" "}
+                    vet@vetcare.com / vet123
+                  </p>
+                  <p>
+                    <span className="text-slate-500">Recepción:</span>{" "}
+                    recepcion@vetcare.com / recep123
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Versión del sistema */}
             <div className="mt-4 inline-flex items-center px-2.5 py-1 rounded-md bg-slate-800/80 border border-slate-700/60 text-xs text-slate-400 font-mono tracking-wider">

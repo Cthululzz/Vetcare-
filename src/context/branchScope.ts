@@ -58,11 +58,17 @@ export function useBranchScope(): BranchContextValue {
 export function useActiveBranchState(user: {
   role?: string;
   sucursalId?: unknown;
+  organizationId?: unknown;
 }): BranchContextValue {
   const [storedBranch, setStoredBranch] = useLocalStorage<ActiveBranch>(
     BRANCH_KEY,
     ADMIN_DEFAULT_BRANCH,
   );
+
+  const organizationId =
+    typeof user.organizationId === "string" && user.organizationId.trim()
+      ? user.organizationId
+      : DEFAULT_ORGANIZATION_ID;
 
   const userSucursalId: SucursalId = isValidSucursalId(user.sucursalId)
     ? user.sucursalId
@@ -89,8 +95,10 @@ export function useActiveBranchState(user: {
 
   const matchesScope = useCallback(
     (item: BranchScoped): boolean =>
-      activeBranch === "all" || item.sucursalId === activeBranch,
-    [activeBranch],
+      activeBranch === "all" ||
+      (item.organizationId === organizationId &&
+        item.sucursalId === activeBranch),
+    [activeBranch, organizationId],
   );
 
   const filterByScope = useCallback(
@@ -113,11 +121,11 @@ export function useActiveBranchState(user: {
           : destinoPorDefecto;
 
       return {
-        organizationId: DEFAULT_ORGANIZATION_ID,
+        organizationId,
         sucursalId: destino,
       };
     },
-    [activeBranch, canViewAll, userSucursalId],
+    [activeBranch, canViewAll, organizationId, userSucursalId],
   );
 
   return {

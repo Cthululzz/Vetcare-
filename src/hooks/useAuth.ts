@@ -1,21 +1,14 @@
 import { useCallback } from "react";
-import { useLocalStorage } from "./useLocalStorage";
 import { useNavigate } from "react-router-dom";
-import type { SucursalId, UserRole } from "../constants/appConstants";
-import { DEFAULT_SUCURSAL_ID } from "../constants/appConstants";
+import { useLocalStorage } from "./useLocalStorage";
+import { toPublicUser, useUsers } from "./useUsers";
+import type { User } from "../types/user";
+
+export type { User } from "../types/user";
 
 // ============================================
 // TIPOS
 // ============================================
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-  role: UserRole;
-  /** Sede asignada al usuario; limita su alcance si no es ADMIN. */
-  sucursalId: SucursalId;
-  avatar?: string;
-}
 
 interface AuthState {
   user: User | null;
@@ -23,39 +16,9 @@ interface AuthState {
 }
 
 // ============================================
-// USUARIOS DE PRUEBA (mock para localStorage)
-// En producción, estos vendrían de un backend
-// ============================================
-const MOCK_USERS: Array<User & { password: string }> = [
-  {
-    id: "user-001",
-    email: "admin@vetcare.com",
-    password: "admin123",
-    name: "Dr. Silva",
-    role: "ADMIN",
-    sucursalId: DEFAULT_SUCURSAL_ID,
-  },
-  {
-    id: "user-002",
-    email: "vet@vetcare.com",
-    password: "vet123",
-    name: "Dra. Gómez",
-    role: "VET",
-    sucursalId: "norte",
-  },
-  {
-    id: "user-003",
-    email: "recepcion@vetcare.com",
-    password: "recep123",
-    name: "María Pérez",
-    role: "RECEPTIONIST",
-    sucursalId: "sur",
-  },
-];
-
-// ============================================
 // HOOK PRINCIPAL
 // ============================================
+
 const AUTH_KEY = "vet_auth_state";
 
 export function useAuth() {
@@ -63,7 +26,7 @@ export function useAuth() {
     user: null,
     isAuthenticated: false,
   });
-
+  const { storedUsers, findByCredentials } = useUsers();
   const navigate = useNavigate();
 
   /**
@@ -72,12 +35,7 @@ export function useAuth() {
    */
   const login = useCallback(
     (email: string, password: string): { success: boolean; error?: string } => {
-      const normalizedEmail = email.trim().toLowerCase();
-
-      const foundUser = MOCK_USERS.find(
-        (u) =>
-          u.email.toLowerCase() === normalizedEmail && u.password === password,
-      );
+      const foundUser = findByCredentials(email, password);
 
       if (!foundUser) {
         return {
@@ -86,22 +44,28 @@ export function useAuth() {
         };
       }
 
-      // Separar datos del usuario de la contraseña
-      const { password: _, ...userWithoutPassword } = foundUser;
-
       setAuthState({
-        user: userWithoutPassword,
+        user: foundUser,
         isAuthenticated: true,
       });
 
       return { success: true };
     },
-    [setAuthState],
+    [findByCredentials, setAuthState],
   );
 
   /**
-   * Cierra la sesión y redirige al login
+   * Ingreso directo usado por el asistente de instalación tras crear el
+   * primer administrador. No vuelve a pedir la contraseña recién creada.
    */
+  const signIn = useCallback(
+    (user: User): void => {
+      setAuthState({ user, isAuthenticated: true });
+    },
+    [setAuthState],
+  );
+
+  /** Cierra la sesión y redirige al login */
   const logout = useCallback(() => {
     setAuthState({
       user: null,
@@ -110,21 +74,17 @@ export function useAuth() {
     navigate("/login", { replace: true });
   }, [setAuthState, navigate]);
 
-  /**
-   * Verifica si el usuario tiene un rol específico
-   */
+  /** Verifica si el usuario tiene un rol específico */
   const hasRole = useCallback(
-    (role: UserRole): boolean => {
+    (role: User["role"]): boolean => {
       return authState.user?.role === role;
     },
     [authState.user],
   );
 
-  /**
-   * Verifica si el usuario tiene alguno de los roles especificados
-   */
+  /** Verifica si el usuario tiene alguno de los roles especificados */
   const hasAnyRole = useCallback(
-    (roles: UserRole[]): boolean => {
+    (roles: User["role"][]): boolean => {
       return !!authState.user && roles.includes(authState.user.role);
     },
     [authState.user],
@@ -132,9 +92,9 @@ export function useAuth() {
 
   /**
    * Auto-login para desarrollo. Solo funciona si VITE_BYPASS_AUTH está activo.
-   * Loguea automáticamente con las credenciales de VITE_DEFAULT_USER_EMAIL
+   * Loguea automáticamente con las credenciales de VITE_DEFAULT_USER_EMAIL.
    */
-  const devAutoLogin = useCallback(() => {
+  const devAutoLogin = useCallback((): boolean => {
     const bypassAuth = import.meta.env.VITE_BYPASS_AUTH === "true";
     const defaultEmail =
       import.meta.env.VITE_DEFAULT_USER_EMAIL || "admin@vetcare.com";
@@ -142,22 +102,22 @@ export function useAuth() {
     if (!bypassAuth) return false;
     if (authState.isAuthenticated) return true;
 
-    // Buscar usuario en los mocks (usamos la contraseña del primero que coincida)
-    const defaultUser = MOCK_USERS.find(
-      (u) => u.email.toLowerCase() === defaultEmail.toLowerCase(),
+    const defaultUser = storedUsers.find(
+      (user) =>
+        user.email.toLowerCase() === defaultEmail.toLowerCase() &&
+        user.isActive !== false,
     );
 
     if (defaultUser) {
-      const { password: _, ...userWithoutPassword } = defaultUser;
       setAuthState({
-        user: userWithoutPassword,
+        user: toPublicUser(defaultUser),
         isAuthenticated: true,
       });
       return true;
     }
 
     return false;
-  }, [authState.isAuthenticated, setAuthState]);
+  }, [authState.isAuthenticated, storedUsers, setAuthState]);
 
   return {
     // Estado
@@ -166,6 +126,7 @@ export function useAuth() {
 
     // Acciones
     login,
+    signIn,
     logout,
 
     // Consultas
