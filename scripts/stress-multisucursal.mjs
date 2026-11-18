@@ -213,8 +213,14 @@ const seedExpression = `(() => {
   hospitals[20].bed = 'Cama COLISION-01';  // norte, pat-60 (activo) -> misma cama
 
   const beds = [];
-  for (const b of sucursales) for (let j = 1; j <= 20; j++) beds.push('Cama ' + prefijo[b] + '-' + String(j).padStart(2,'0'));
-  beds.push('Cama COLISION-01');
+  for (const b of sucursales) {
+    for (let j = 1; j <= 20; j++) {
+      beds.push({ name: 'Cama ' + prefijo[b] + '-' + String(j).padStart(2,'0'), organizationId: 'vet-demo', sucursalId: b });
+    }
+  }
+  // Mismo nombre físico en dos sedes: es válido y no debe disputar la ocupación.
+  beds.push({ name: 'Cama COLISION-01', organizationId: 'vet-demo', sucursalId: 'centro' });
+  beds.push({ name: 'Cama COLISION-01', organizationId: 'vet-demo', sucursalId: 'norte' });
 
   const inventory = [];
   for (let b = 0; b < 3; b++) {
@@ -337,13 +343,18 @@ results.integridad = await evaluate(`(() => {
   const by = Object.fromEntries(ps.map(p=>[p.id,p]));
   const sucursales = ['centro','norte','sur'];
   const activas = hs.filter(h=>h.status==='activa' && by[h.patientId]?.isActive);
-  const beds = activas.map(h=>h.bed);
+  const clave = h => [h.organizationId,h.sucursalId,h.bed].join('|');
+  const claves = activas.filter(h=>h.bed).map(clave);
+  const camas = JSON.parse(localStorage.getItem('vet_hospital_beds') || '[]');
+  const clavesCamas = camas.map(c=>[c.organizationId,c.sucursalId,c.name].join('|'));
   return {
     internacionesPorSucursal: Object.fromEntries(sucursales.map(s=>[s, hs.filter(h=>h.sucursalId===s).length])),
     activasPorSucursal: Object.fromEntries(sucursales.map(s=>[s, activas.filter(h=>h.sucursalId===s).length])),
-    camasDuplicadasGlobales: beds.filter((b,i)=>beds.indexOf(b)!==i).length,
+    camasDuplicadasPorSucursal: claves.filter((c,i)=>claves.indexOf(c)!==i).length,
+    camasDuplicadasGlobalesPorNombre: activas.map(h=>h.bed).filter((b,i)=>activas.map(x=>x.bed).indexOf(b)!==i).length,
+    entidadesCamaDuplicadasPorSucursal: clavesCamas.filter((c,i)=>clavesCamas.indexOf(c)!==i).length,
     colisionCentroNorte: activas.filter(h=>h.bed==='Cama COLISION-01').map(h=>({ id:h.id, sucursal:h.sucursalId, paciente:h.patientId })),
-    alcanceEnModelo: 'Owner, Patient, Appointment y Hospitalization declaran organizationId y sucursalId; la migración completa los datos sembrados',
+    alcanceEnModelo: 'Owner, Patient, Appointment, Hospitalization y HospitalBed declaran organizationId y sucursalId; la migración completa los datos sembrados',
   };
 })()`);
 
@@ -365,7 +376,7 @@ for (const path of routes) {
 
 // Migración: todo dato sembrado sin alcance debe quedar con organización y sucursal
 results.migracion = await evaluate(`(() => {
-  const keys = ['vet_owners','vet_patients','vet_appointments','vet_hospitalizations','vet_inventory','vet_inventory_movements','vet_inventory_tags','vet_inventory_reminders','vet_appointment_reminders','vet_prescriptions'];
+  const keys = ['vet_owners','vet_patients','vet_appointments','vet_hospitalizations','vet_hospital_beds','vet_inventory','vet_inventory_movements','vet_inventory_tags','vet_inventory_reminders','vet_appointment_reminders','vet_prescriptions'];
   const res = {};
   for (const k of keys) {
     const arr = JSON.parse(localStorage.getItem(k) || '[]');
@@ -376,6 +387,13 @@ results.migracion = await evaluate(`(() => {
   }
   const patients = JSON.parse(localStorage.getItem('vet_patients') || '[]');
   res.historialSinAlcance = patients.reduce((a,p)=>a+(p.history||[]).filter(r=>!r.organizationId||!r.sucursalId).length,0);
+  const camas = JSON.parse(localStorage.getItem('vet_hospital_beds') || '[]');
+  res.camas = {
+    total: camas.length,
+    conNombre: camas.filter(c=>typeof c.name === 'string' && c.name.trim()).length,
+    porSucursal: Object.fromEntries(['centro','norte','sur'].map(s=>[s, camas.filter(c=>c.sucursalId===s).length])),
+    colision: camas.filter(c=>c.name==='Cama COLISION-01').map(c=>c.sucursalId),
+  };
   res.versionEsquema = localStorage.getItem('vet_schema_version');
   return res;
 })()`);
@@ -490,9 +508,12 @@ results.colisionCamas.enMemoria = await evaluate(`(() => {
   return { camaColisionVisible: spans.length, sinCamaVisible: sinCama.length };
 })()`);
 
-// Disparar una escritura real: dar de alta a un paciente NO involucrado en la colisión
+// Escritura real en CENTRO: dar de alta al ocupante de la cama colisionada.
+// Si la ocupación aún se comparara solo por nombre, esto también liberaría la
+// cama de NORTE. La aserción `aislamiento` lo verifica más abajo.
 results.colisionCamas.escritura = await evaluate(`(() => {
   const botones = [...document.querySelectorAll('button')].filter(x=>(x.textContent||'').trim()==='Alta');
+  const nombreCentro = JSON.parse(localStorage.getItem('vet_patients')).find(p=>p.id==='pat-1').name;
   const rowOf = (b) => {
     let el = b;
     while (el && el.parentElement) {
@@ -503,9 +524,9 @@ results.colisionCamas.escritura = await evaluate(`(() => {
   };
   const target = botones.find(b => {
     const row = rowOf(b);
-    return row && !row.textContent.includes('Cama COLISION-01');
+    return row && row.textContent.includes('Cama COLISION-01') && row.textContent.includes(nombreCentro);
   });
-  if (!target) return { ok:false, motivo:'sin botón Alta fuera de la colisión', botones: botones.length };
+  if (!target) return { ok:false, motivo:'sin botón Alta para la colisión de centro', botones: botones.length };
   const row = rowOf(target);
   target.click();
   return { ok:true, paciente: (row.querySelector('h3')?.textContent||'').trim(), cama: (row.textContent.match(/Cama [^\\s]+/)||[])[0] || null };
@@ -547,6 +568,19 @@ results.colisionCamas.despues = await evaluate(`(() => {
     hosp20: { bed: h20?.bed ?? null, status: h20?.status },
   };
 })()`);
+results.colisionCamas.aislamiento = await evaluate(`(() => {
+  const hs = JSON.parse(localStorage.getItem('vet_hospitalizations'));
+  const ps = JSON.parse(localStorage.getItem('vet_patients'));
+  const by = Object.fromEntries(ps.map(p=>[p.id,p]));
+  const h1 = hs.find(h=>h.id==='hosp-1');
+  const h20 = hs.find(h=>h.id==='hosp-20');
+  const activosCol = hs.filter(h=>h.bed==='Cama COLISION-01' && h.status==='activa' && by[h.patientId]?.isActive);
+  return {
+    centroDadoDeAlta: h1?.status === 'alta',
+    norteSigueOcupada: h20?.status === 'activa' && h20?.bed === 'Cama COLISION-01',
+    ocupantesActivosPorSucursal: Object.fromEntries(['centro','norte','sur'].map(s=>[s, activosCol.filter(h=>h.sucursalId===s).length])),
+  };
+})()`);
 
 // Formulario de ingreso: selector de 3 sucursales (recarga limpia, sin modal abierto)
 await go('/pacientes/hospitalizados');
@@ -560,7 +594,8 @@ results.formularioIngreso = await evaluate(`(() => {
 await sleep(700);
 results.formularioIngreso.opciones = await evaluate(`(() => {
   const sels = [...document.querySelectorAll('select')];
-  const sel = sels.find(s=>[...s.options].some(o=>o.value==='centro'));
+  // El selector global incluye "all"; el del formulario solo tiene las 3 sedes.
+  const sel = sels.find(s=>[...s.options].some(o=>o.value==='centro') && ![...s.options].some(o=>o.value==='all'));
   return sel ? { opciones: [...sel.options].map(o=>({ value:o.value, texto:o.textContent.trim() })), seleccionPorDefecto: sel.value } : { opciones:[], seleccionPorDefecto:null };
 })()`);
 

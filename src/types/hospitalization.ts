@@ -4,6 +4,14 @@ import type { BranchScoped } from "./organization";
 
 export type HospitalizationStatus = "activa" | "alta";
 
+/**
+ * Cama física de una sucursal. El nombre se repite entre sedes: la identidad
+ * real de una cama es su alcance (organización + sucursal) más el nombre.
+ */
+export interface HospitalBed extends BranchScoped {
+  name: string;
+}
+
 export interface HospitalizationEvolution {
   id: string;
   date: string; // ISO

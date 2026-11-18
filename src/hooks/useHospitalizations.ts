@@ -3,6 +3,7 @@ import { useLocalStorage } from "./useLocalStorage";
 import { useBranchScope } from "../context/branchScope";
 import type {
   DischargeSummary,
+  HospitalBed,
   Hospitalization,
   HospitalizationEvolution,
   MedicationAdministration,
@@ -18,6 +19,7 @@ import { useHospitalBeds } from "./useHospitalBeds";
 import type { WeightUnit } from "../utils/weight";
 import type { SucursalId } from "../constants/appConstants";
 import { isValidSucursalId } from "../constants/appConstants";
+import { bedKey } from "../utils/bedScope";
 
 const HOSPITALIZATIONS_KEY = "vet_hospitalizations";
 
@@ -46,7 +48,8 @@ export function isActiveHospitalization(
 
 /**
  * Camas ocupadas por internaciones activas con paciente visible.
- * Se deriva de los datos: no se guarda un estado de ocupación aparte.
+ * La clave incluye organización y sucursal: dos sedes pueden usar el mismo
+ * nombre de cama sin disputarse la ocupación.
  */
 export function getOccupiedBeds(
   hospitalizations: Hospitalization[],
@@ -59,7 +62,7 @@ export function getOccupiedBeds(
       hospitalization.bed &&
       isActiveHospitalization(hospitalization, getPatient)
     ) {
-      occupied.set(hospitalization.bed, hospitalization);
+      occupied.set(bedKey(hospitalization, hospitalization.bed), hospitalization);
     }
   }
 
@@ -89,8 +92,9 @@ export function resolveDuplicateBeds(
   for (const hospitalization of byAdmission) {
     if (!hospitalization.bed) continue;
     if (!isActiveHospitalization(hospitalization, getPatient)) continue;
-    if (seenBeds.has(hospitalization.bed)) continue;
-    seenBeds.add(hospitalization.bed);
+    const key = bedKey(hospitalization, hospitalization.bed);
+    if (seenBeds.has(key)) continue;
+    seenBeds.add(key);
     winners.add(hospitalization.id);
   }
 
@@ -179,15 +183,16 @@ export function useHospitalizations() {
 
   const { getPatient } = usePatients();
 
-  // Camas sin duplicados incluso si los datos vienen de una importación o de
-  // otra pestaña. Toda lectura y toda escritura pasan por el mismo filtro.
-  const scopedHospitalizations = useMemo(
-    () => filterByScope(storedHospitalizations),
-    [filterByScope, storedHospitalizations],
+  // La ocupación se calcula sobre TODAS las internaciones para que una
+  // escritura en una sucursal no libere una cama con el mismo nombre en otra.
+  // La vista sigue filtrándose por la sucursal activa.
+  const allHospitalizations = useMemo(
+    () => resolveDuplicateBeds(storedHospitalizations, getPatient),
+    [storedHospitalizations, getPatient],
   );
   const hospitalizations = useMemo(
-    () => resolveDuplicateBeds(scopedHospitalizations, getPatient),
-    [scopedHospitalizations, getPatient],
+    () => filterByScope(allHospitalizations),
+    [filterByScope, allHospitalizations],
   );
 
   const setHospitalizations: typeof setStoredHospitalizations = useCallback(
@@ -201,7 +206,7 @@ export function useHospitalizations() {
     [setStoredHospitalizations, getPatient],
   );
 
-  const { beds } = useHospitalBeds();
+  const { bedEntities, allBeds } = useHospitalBeds();
 
   // ---------- ACCIONES ----------
 
@@ -215,7 +220,7 @@ export function useHospitalizations() {
       reason?: string,
       options?: AdmitPatientOptions,
     ): Hospitalization | null => {
-      const alreadyAdmitted = hospitalizations.some(
+      const alreadyAdmitted = allHospitalizations.some(
         (h) => h.patientId === patientId && h.status === "activa",
       );
       if (alreadyAdmitted) return null;
@@ -230,13 +235,26 @@ export function useHospitalizations() {
           : (patient?.sucursalId ?? fallbackScope.sucursalId),
       };
 
-      const occupiedBeds = getOccupiedBeds(hospitalizations, getPatient);
+      const occupiedBeds = getOccupiedBeds(allHospitalizations, getPatient);
       let bed = options?.bed?.trim() || undefined;
+      const bedIdentity = bed ? bedKey(scope, bed) : undefined;
 
-      if (bed && occupiedBeds.has(bed)) return null;
+      if (bedIdentity && occupiedBeds.has(bedIdentity)) return null;
+
+      if (bedIdentity) {
+        const existsInScope = allBeds.some(
+          (item) => bedKey(item, item.name) === bedIdentity,
+        );
+        if (!existsInScope) return null;
+      }
 
       if (!bed) {
-        bed = beds.find((b) => !occupiedBeds.has(b));
+        bed = allBeds.find(
+          (item) =>
+            item.organizationId === scope.organizationId &&
+            item.sucursalId === scope.sucursalId &&
+            !occupiedBeds.has(bedKey(item, item.name)),
+        )?.name;
       }
 
       const monitoringFrequency =
@@ -282,20 +300,28 @@ export function useHospitalizations() {
       setHospitalizations((prev) => [...prev, record]);
       return record;
     },
-    [hospitalizations, beds, getPatient, setHospitalizations, writeScope],
+    [allHospitalizations, allBeds, getPatient, setHospitalizations, writeScope],
   );
 
   const updateHospitalization = useCallback(
     (hospitalizationId: string, updates: Partial<Hospitalization>) => {
-      const target = hospitalizations.find((h) => h.id === hospitalizationId);
+      const target = allHospitalizations.find(
+        (h) => h.id === hospitalizationId,
+      );
       if (target) {
         const bed =
           updates.bed !== undefined
             ? updates.bed?.trim() || undefined
             : target.bed;
         const status = updates.status ?? target.status;
+        const scope = {
+          organizationId: target.organizationId,
+          sucursalId: updates.sucursalId ?? target.sucursalId,
+        };
         const occupant = bed
-          ? getOccupiedBeds(hospitalizations, getPatient).get(bed)
+          ? getOccupiedBeds(allHospitalizations, getPatient).get(
+              bedKey(scope, bed),
+            )
           : undefined;
         if (status === "activa" && occupant && occupant.id !== hospitalizationId) {
           return;
@@ -308,7 +334,7 @@ export function useHospitalizations() {
         ),
       );
     },
-    [hospitalizations, getPatient, setHospitalizations],
+    [allHospitalizations, getPatient, setHospitalizations],
   );
 
   /**
@@ -318,17 +344,21 @@ export function useHospitalizations() {
    */
   const changeBed = useCallback(
     (hospitalizationId: string, newBed: string): boolean => {
-      const target = hospitalizations.find(
+      const target = allHospitalizations.find(
         (h) => h.id === hospitalizationId,
       );
       if (!target || target.status !== "activa") return false;
 
       const bed = newBed.trim();
-      if (!bed || !beds.includes(bed)) return false;
+      const identity = bedKey(target, bed);
+      const existsInScope = allBeds.some(
+        (item) => bedKey(item, item.name) === identity,
+      );
+      if (!bed || !existsInScope) return false;
       if (target.bed === bed) return true;
 
-      const occupiedBeds = getOccupiedBeds(hospitalizations, getPatient);
-      if (occupiedBeds.has(bed)) return false;
+      const occupiedBeds = getOccupiedBeds(allHospitalizations, getPatient);
+      if (occupiedBeds.has(identity)) return false;
 
       setHospitalizations((prev) =>
         prev.map((h) =>
@@ -338,7 +368,7 @@ export function useHospitalizations() {
 
       return true;
     },
-    [hospitalizations, beds, getPatient, setHospitalizations],
+    [allHospitalizations, allBeds, getPatient, setHospitalizations],
   );
 
   /**
@@ -725,25 +755,32 @@ export function useHospitalizations() {
   );
 
   /**
-   * Camas libres según las internaciones activas.
+   * Camas libres del alcance activo. El mismo nombre en otra sucursal tiene
+   * una clave distinta, por lo que no se descuenta de esta lista.
    */
-  const getAvailableBeds = useCallback((): string[] => {
-    const occupied = getOccupiedBeds(hospitalizations, getPatient);
-    return beds.filter((bed) => !occupied.has(bed));
-  }, [hospitalizations, beds, getPatient]);
+  const getAvailableBeds = useCallback((): HospitalBed[] => {
+    const occupied = getOccupiedBeds(allHospitalizations, getPatient);
+    return bedEntities.filter(
+      (bed) => !occupied.has(bedKey(bed, bed.name)),
+    );
+  }, [allHospitalizations, bedEntities, getPatient]);
 
   /**
    * Indica si una cama está ocupada por otra internación activa.
+   * La referencia incluye la sucursal para no confundir camas homónimas.
    */
   const isBedOccupied = useCallback(
-    (bed: string, exceptHospitalizationId?: string): boolean =>
-      hospitalizations.some(
+    (bed: HospitalBed, exceptHospitalizationId?: string): boolean => {
+      const identity = bedKey(bed, bed.name);
+      return allHospitalizations.some(
         (h) =>
-          h.bed === bed &&
+          h.bed &&
+          bedKey(h, h.bed) === identity &&
           h.id !== exceptHospitalizationId &&
           isActiveHospitalization(h, getPatient),
-      ),
-    [hospitalizations, getPatient],
+      );
+    },
+    [allHospitalizations, getPatient],
   );
 
   return {

@@ -7,6 +7,9 @@ import {
   X,
 } from "lucide-react";
 import type { Owner, Patient } from "../../types/patient";
+import type { HospitalBed } from "../../types/hospitalization";
+import { useBranchScope } from "../../context/branchScope";
+import { bedKey } from "../../utils/bedScope";
 import type { SucursalId } from "../../constants/appConstants";
 import { SUCURSALES, isValidSucursalId } from "../../constants/appConstants";
 import {
@@ -36,7 +39,7 @@ interface AdmissionFormModalProps {
   isOpen: boolean;
   patients: Patient[];
   getOwner: (ownerId: string) => Owner | undefined;
-  availableBeds: string[];
+  availableBeds: HospitalBed[];
   onAdmit: (data: AdmissionData) => string | null;
   onClose: () => void;
 }
@@ -49,18 +52,25 @@ export const AdmissionFormModal = ({
   onAdmit,
   onClose,
 }: AdmissionFormModalProps) => {
+  const { activeBranch } = useBranchScope();
+  const sucursalesDisponibles =
+    activeBranch === "all"
+      ? SUCURSALES
+      : SUCURSALES.filter((sucursal) => sucursal.id === activeBranch);
+  const sucursalInicial = sucursalesDisponibles[0]?.id ?? SUCURSALES[0].id;
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPatientId, setSelectedPatientId] = useState("");
   const [reason, setReason] = useState("");
   const [diagnosis, setDiagnosis] = useState("");
   const [weight, setWeight] = useState("");
   const [weightUnit, setWeightUnit] = useState<WeightUnit>(DEFAULT_WEIGHT_UNIT);
-  const [bed, setBed] = useState("");
+  const [bedKeyState, setBedKeyState] = useState("");
   const [monitoringFrequency, setMonitoringFrequency] = useState(
     DEFAULT_MONITORING_FREQUENCY,
   );
   const [initialTreatment, setInitialTreatment] = useState("");
-  const [sucursalId, setSucursalId] = useState<SucursalId>(SUCURSALES[0].id);
+  const [sucursalId, setSucursalId] = useState<SucursalId>(sucursalInicial);
   const [error, setError] = useState("");
 
   const filteredPatients = useMemo(() => {
@@ -77,10 +87,25 @@ export const AdmissionFormModal = ({
     });
   }, [patients, searchQuery, getOwner]);
 
-  // Mantener una cama válida aunque cambie la disponibilidad entre aperturas.
-  const selectedBed = availableBeds.includes(bed)
-    ? bed
-    : (availableBeds[0] ?? "");
+  // Si el alcance cambia mientras el modal está abierto, la sucursal efectiva
+  // vuelve a una válida sin escribir estado durante el render.
+  const sucursalEfectiva = sucursalesDisponibles.some(
+    (sucursal) => sucursal.id === sucursalId,
+  )
+    ? sucursalId
+    : sucursalInicial;
+  const bedsForSucursal = useMemo(
+    () =>
+      availableBeds.filter(
+        (bed) => bed.sucursalId === sucursalEfectiva,
+      ),
+    [availableBeds, sucursalEfectiva],
+  );
+  const selectedBedEntity =
+    bedsForSucursal.find(
+      (bed) => bedKey(bed, bed.name) === bedKeyState,
+    ) ?? bedsForSucursal[0];
+  const selectedBed = selectedBedEntity?.name ?? "";
 
   if (!isOpen) return null;
 
@@ -91,10 +116,10 @@ export const AdmissionFormModal = ({
     setDiagnosis("");
     setWeight("");
     setWeightUnit(DEFAULT_WEIGHT_UNIT);
-    setBed("");
+    setBedKeyState("");
     setMonitoringFrequency(DEFAULT_MONITORING_FREQUENCY);
     setInitialTreatment("");
-    setSucursalId(SUCURSALES[0].id);
+    setSucursalId(sucursalInicial);
     setError("");
   };
 
@@ -137,7 +162,7 @@ export const AdmissionFormModal = ({
       bed: selectedBed,
       monitoringFrequency,
       initialTreatment: initialTreatment.trim() || undefined,
-      sucursalId,
+      sucursalId: sucursalEfectiva,
     });
 
     if (submitError) {
@@ -328,19 +353,26 @@ export const AdmissionFormModal = ({
                 Cama asignada *
               </label>
               <select
-                value={selectedBed}
-                onChange={(event) => setBed(event.target.value)}
-                disabled={availableBeds.length === 0}
+                value={
+                  selectedBedEntity
+                    ? bedKey(selectedBedEntity, selectedBedEntity.name)
+                    : ""
+                }
+                onChange={(event) => setBedKeyState(event.target.value)}
+                disabled={bedsForSucursal.length === 0}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#ece883] transition-colors disabled:text-slate-500"
               >
-                {availableBeds.length === 0 ? (
+                {bedsForSucursal.length === 0 ? (
                   <option value="">Sin camas disponibles</option>
                 ) : (
-                  availableBeds.map((availableBed) => (
-                    <option key={availableBed} value={availableBed}>
-                      {availableBed}
-                    </option>
-                  ))
+                  bedsForSucursal.map((availableBed) => {
+                    const key = bedKey(availableBed, availableBed.name);
+                    return (
+                      <option key={key} value={key}>
+                        {availableBed.name}
+                      </option>
+                    );
+                  })
                 )}
               </select>
             </div>
@@ -369,14 +401,19 @@ export const AdmissionFormModal = ({
                 Sucursal *
               </label>
               <select
-                value={sucursalId}
+                value={sucursalEfectiva}
+                disabled={sucursalesDisponibles.length === 1}
                 onChange={(event) => {
                   const value = event.target.value;
-                  if (isValidSucursalId(value)) setSucursalId(value);
+                  if (isValidSucursalId(value)) {
+                    setSucursalId(value);
+                    setBedKeyState("");
+                    setError("");
+                  }
                 }}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#ece883] transition-colors"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#ece883] transition-colors disabled:text-slate-500 disabled:cursor-not-allowed"
               >
-                {SUCURSALES.map((sucursal) => (
+                {sucursalesDisponibles.map((sucursal) => (
                   <option key={sucursal.id} value={sucursal.id}>
                     {sucursal.name}
                   </option>
@@ -425,7 +462,7 @@ export const AdmissionFormModal = ({
           <button
             type="submit"
             form="admission-form"
-            disabled={availableBeds.length === 0}
+            disabled={!selectedBed}
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#ece883] hover:bg-[#e4df68] disabled:bg-slate-700 disabled:text-slate-500 text-slate-950 text-sm font-bold transition-colors shadow-lg shadow-[#ece883]/10 disabled:shadow-none disabled:cursor-not-allowed cursor-pointer"
           >
             <BedDouble className="w-4 h-4" />

@@ -11,9 +11,10 @@ import {
   DEFAULT_SUCURSAL_ID,
   isValidSucursalId,
 } from "../constants/appConstants";
+import type { SucursalId } from "../constants/appConstants";
 import type { BranchScoped } from "../types/organization";
 
-export const STORAGE_SCHEMA_VERSION = 1;
+export const STORAGE_SCHEMA_VERSION = 2;
 export const SCHEMA_VERSION_KEY = "vet_schema_version";
 
 /** Keys cuyos elementos son entidades con alcance de sucursal. */
@@ -22,6 +23,7 @@ const BRANCH_SCOPED_KEYS = new Set([
   "vet_patients",
   "vet_appointments",
   "vet_hospitalizations",
+  "vet_hospital_beds",
   "vet_inventory",
   "vet_inventory_movements",
   "vet_inventory_tags",
@@ -67,6 +69,72 @@ const normalizePatients = (value: unknown[]): unknown[] =>
     return { ...patient, history };
   });
 
+const PREFIJO_SUCURSAL_CAMA: Record<string, SucursalId> = {
+  C: "centro",
+  N: "norte",
+  S: "sur",
+};
+
+/** Las camas antiguas llevaban el prefijo de sucursal en el nombre. */
+const inferSucursalDeCama = (name: string): SucursalId => {
+  const match = /^Cama\s+([CNS])-/i.exec(name);
+  if (!match) return DEFAULT_SUCURSAL_ID;
+  return PREFIJO_SUCURSAL_CAMA[match[1].toUpperCase()] ?? DEFAULT_SUCURSAL_ID;
+};
+
+/**
+ * `vet_hospital_beds` pasó de `string[]` a entidades con alcance. El mismo
+ * nombre puede existir en dos sucursales, así que el duplicado se decide por
+ * organización + sucursal + nombre, no solo por nombre.
+ */
+const normalizeHospitalBeds = (value: unknown[]): unknown[] => {
+  const seen = new Set<string>();
+  const normalized: unknown[] = [];
+
+  for (const item of value) {
+    let bed: ({ name: string } & BranchScoped) | undefined;
+
+    if (typeof item === "string" && item.trim()) {
+      const name = item.trim();
+      bed = {
+        ...withScope(
+          {},
+          {
+            organizationId: DEFAULT_ORGANIZATION_ID,
+            sucursalId: inferSucursalDeCama(name),
+          },
+        ),
+        name,
+      };
+    } else if (
+      isRecord(item) &&
+      typeof item.name === "string" &&
+      item.name.trim()
+    ) {
+      const name = item.name.trim();
+      bed = withScope(
+        { ...item, name },
+        {
+          organizationId: DEFAULT_ORGANIZATION_ID,
+          sucursalId: inferSucursalDeCama(name),
+        },
+      ) as { name: string } & BranchScoped;
+    }
+
+    if (!bed) {
+      normalized.push(item);
+      continue;
+    }
+
+    const key = `${bed.organizationId}|${bed.sucursalId}|${bed.name}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    normalized.push(bed);
+  }
+
+  return normalized;
+};
+
 export interface NormalizedStorageValue<T> {
   value: T;
   changed: boolean;
@@ -85,9 +153,12 @@ export function normalizeStoredValue<T>(
   }
 
   const items = stored as unknown[];
-  const normalized = key === "vet_patients"
-    ? normalizePatients(items)
-    : items.map((item) => (isRecord(item) ? withScope(item) : item));
+  const normalized =
+    key === "vet_patients"
+      ? normalizePatients(items)
+      : key === "vet_hospital_beds"
+        ? normalizeHospitalBeds(items)
+        : items.map((item) => (isRecord(item) ? withScope(item) : item));
 
   if (JSON.stringify(items) === JSON.stringify(normalized)) {
     return { value: stored, changed: false };

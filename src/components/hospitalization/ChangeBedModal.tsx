@@ -1,14 +1,18 @@
 import { useState } from "react";
 import { ArrowRightLeft, BedDouble, CheckCircle2, X } from "lucide-react";
 import type { Patient } from "../../types/patient";
-import type { Hospitalization } from "../../types/hospitalization";
+import type {
+  HospitalBed,
+  Hospitalization,
+} from "../../types/hospitalization";
+import { bedKey } from "../../utils/bedScope";
 
 interface ChangeBedModalProps {
   isOpen: boolean;
   patient: Patient | null;
   hospitalization: Hospitalization | null;
   /** Camas libres en este momento. */
-  availableBeds: string[];
+  availableBeds: HospitalBed[];
   onConfirm: (bed: string) => void;
   onCancel: () => void;
 }
@@ -26,15 +30,25 @@ export const ChangeBedModal = ({
   onConfirm,
   onCancel,
 }: ChangeBedModalProps) => {
-  const [selectedBed, setSelectedBed] = useState("");
+  const [selectedBedKey, setSelectedBedKey] = useState("");
   const [error, setError] = useState("");
 
   if (!isOpen || !patient || !hospitalization) return null;
 
+  const bedsForHospitalization = availableBeds.filter(
+    (bed) =>
+      bed.organizationId === hospitalization.organizationId &&
+      bed.sucursalId === hospitalization.sucursalId,
+  );
+  const selectedBedEntity =
+    bedsForHospitalization.find(
+      (bed) => bedKey(bed, bed.name) === selectedBedKey,
+    ) ?? bedsForHospitalization[0];
+  const selectedBed = selectedBedEntity?.name ?? "";
   const currentBed = hospitalization.bed || "Sin cama";
 
   const handleCancel = () => {
-    setSelectedBed("");
+    setSelectedBedKey("");
     setError("");
     onCancel();
   };
@@ -48,7 +62,7 @@ export const ChangeBedModal = ({
     }
 
     onConfirm(selectedBed);
-    setSelectedBed("");
+    setSelectedBedKey("");
     setError("");
   };
 
@@ -90,10 +104,10 @@ export const ChangeBedModal = ({
             paciente.
           </p>
 
-          {availableBeds.length === 0 ? (
+          {bedsForHospitalization.length === 0 ? (
             <p className="text-sm text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3">
-              No hay camas disponibles en este momento. Libera una cama o
-              agrega una nueva desde el mapa de camas.
+              No hay camas disponibles en la sucursal de esta internación.
+              Libera una cama o agrega una nueva desde el mapa de camas.
             </p>
           ) : (
             <div>
@@ -101,15 +115,18 @@ export const ChangeBedModal = ({
                 Cama de destino *
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {availableBeds.map((bed) => {
-                  const isSelected = selectedBed === bed;
+                {bedsForHospitalization.map((bed) => {
+                  const key = bedKey(bed, bed.name);
+                  const isSelected =
+                    selectedBedEntity !== undefined &&
+                    bedKey(selectedBedEntity, selectedBedEntity.name) === key;
 
                   return (
                     <button
-                      key={bed}
+                      key={key}
                       type="button"
                       onClick={() => {
-                        setSelectedBed(bed);
+                        setSelectedBedKey(key);
                         setError("");
                       }}
                       className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border text-xs font-semibold transition-colors cursor-pointer ${
@@ -119,7 +136,7 @@ export const ChangeBedModal = ({
                       }`}
                     >
                       <BedDouble className="w-4 h-4 shrink-0" />
-                      {bed}
+                      {bed.name}
                     </button>
                   );
                 })}
@@ -146,7 +163,7 @@ export const ChangeBedModal = ({
           <button
             type="submit"
             form="change-bed-form"
-            disabled={availableBeds.length === 0}
+            disabled={!selectedBed}
             className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#ece883] hover:bg-[#e4df68] disabled:bg-slate-800 disabled:text-slate-500 text-slate-950 text-sm font-bold transition-colors shadow-lg shadow-[#ece883]/10 disabled:shadow-none disabled:cursor-not-allowed cursor-pointer"
           >
             <CheckCircle2 className="w-4 h-4" />

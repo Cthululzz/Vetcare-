@@ -42,11 +42,11 @@ Todos manejan `Page.javascriptDialogOpening` automáticamente para que un
 | Script | Objetivo |
 | --- | --- |
 | `stress-test.mjs` | Volumen alto y barrido de rutas. |
-| `stress-fixes.mjs` | Límite del recordatorio de inventario y curación de camas duplicadas. |
+| `stress-fixes.mjs` | Límite del recordatorio de inventario y curación de camas duplicadas dentro de una misma sucursal. |
 | `stress-interactions.mjs` | Evolución, dosis con confirmación propia y alta de paciente. |
 | `stress-flows2.mjs` | Atomicidad de la finalización de consulta. |
 | `stress-final.mjs` | Agenda semana/mes, historial, inventario y tareas. |
-| `stress-multisucursal.mjs` | 3 sucursales, colisión de camas entre sedes, consulta por sucursal y aislamiento del selector (ADMIN/VET). |
+| `stress-multisucursal.mjs` | 3 sucursales, camas con alcance por sede (incluida una colisión deliberada), consulta por sucursal y aislamiento del selector (ADMIN/VET). |
 
 `vetcare-cdp.mjs` es el helper de conexión usado durante el desarrollo.
 
@@ -57,3 +57,8 @@ campo obligatorio a una entidad, la migración de
 `src/utils/storageMigration.ts` debe completarlo al leer. Después de cualquier
 cambio de ese tipo, correr la batería completa y verificar que los diagnósticos
 sigan en cero.
+
+Desde el esquema `2`, `vet_hospital_beds` guarda entidades con `organizationId`,
+`sucursalId` y `name`. El nombre de una cama puede repetirse entre sedes: la
+ocupación y la curación de duplicados se comparan por organización + sucursal +
+nombre, nunca solo por nombre.

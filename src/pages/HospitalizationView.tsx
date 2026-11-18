@@ -29,6 +29,8 @@ import {
 import { useInventory } from "../hooks/useInventory";
 import { useInventoryMovements } from "../hooks/useInventoryMovements";
 import { useHospitalBeds } from "../hooks/useHospitalBeds";
+import { useBranchScope } from "../context/branchScope";
+import { bedKey } from "../utils/bedScope";
 import { useAuth } from "../hooks/useAuth";
 import { usePermissions } from "../hooks/usePermissions";
 import { AdmissionFormModal } from "../components/hospitalization/AdmissionFormModal";
@@ -43,15 +45,22 @@ import { MedicationPlanModal } from "../components/hospitalization/MedicationPla
 import type { MedicationPlanInput } from "../hooks/useHospitalizations";
 import { HospitalizationDetailModal } from "../components/hospitalization/HospitalizationDetailModal";
 import { ChangeBedModal } from "../components/hospitalization/ChangeBedModal";
-import { BedMap } from "../components/hospitalization/BedMap";
+import { BedMap, type BedMapItem } from "../components/hospitalization/BedMap";
 import { formatWeightWithUnit } from "../utils/weight";
 import type { Patient, Owner } from "../types/patient";
-import type { Hospitalization, MedicationPlan } from "../types/hospitalization";
+import type {
+  HospitalBed,
+  Hospitalization,
+  MedicationPlan,
+} from "../types/hospitalization";
 import {
   DEFAULT_MONITORING_FREQUENCY,
   calcularProximaRevision,
 } from "../constants/hospitalization";
-import { getSucursalName } from "../constants/appConstants";
+import {
+  DEFAULT_ORGANIZATION_ID,
+  getSucursalName,
+} from "../constants/appConstants";
 import { formatDateShort, formatDateTimeShort } from "../utils/dateUtils";
 import {
   buildDischargeMessage,
@@ -159,6 +168,7 @@ const buildEvolutionNotes = (data: EvolutionData): string => {
 // ============================================
 const HospitalizationView = () => {
   const navigate = useNavigate();
+  const { activeBranch } = useBranchScope();
 
   const { getOwner, getPatient, getActivePatients, addMedicalRecord } =
     usePatients();
@@ -179,7 +189,7 @@ const HospitalizationView = () => {
     isHospitalized,
     isBedOccupied,
   } = useHospitalizations();
-  const { beds, addBed, removeBed } = useHospitalBeds();
+  const { bedEntities, addBed, removeBed } = useHospitalBeds();
   const { getProducts, getProduct } = useInventory();
   const { createMovement } = useInventoryMovements();
   const { user } = useAuth();
@@ -248,13 +258,26 @@ const HospitalizationView = () => {
   );
   const products = getProducts();
 
-  const bedMapItems = beds.map((bed) => {
-    const entry = activeViews.find(
-      (item) => item.hospitalization.bed === bed,
-    );
+  const activeByBedKey = new Map<string, HospitalizedPatientView>();
+  for (const item of activeViews) {
+    if (item.hospitalization.bed) {
+      activeByBedKey.set(
+        bedKey(item.hospitalization, item.hospitalization.bed),
+        item,
+      );
+    }
+  }
+
+  const bedMapItems: BedMapItem[] = bedEntities.map((bed) => {
+    const key = bedKey(bed, bed.name);
+    const entry = activeByBedKey.get(key);
 
     return {
-      bed,
+      bed: bed.name,
+      bedKey: key,
+      entity: bed,
+      sucursalLabel:
+        activeBranch === "all" ? getSucursalName(bed.sucursalId) : undefined,
       patientName: entry?.patient.name,
       species: entry?.patient.species,
       gender: entry?.patient.gender,
@@ -268,7 +291,7 @@ const HospitalizationView = () => {
     (item) => item.reviewPending,
   ).length;
   const camasDisponibles = availableBeds.length;
-  const totalCamas = beds.length;
+  const totalCamas = bedEntities.length;
   const totalAltas = dischargedViews.length;
 
   // ============================================
@@ -284,7 +307,13 @@ const HospitalizationView = () => {
     if (isHospitalized(data.patientId)) {
       return "Ese paciente ya tiene una hospitalización activa.";
     }
-    if (data.bed && isBedOccupied(data.bed)) {
+    const patient = getPatient(data.patientId);
+    const bedReference: HospitalBed = {
+      organizationId: patient?.organizationId ?? DEFAULT_ORGANIZATION_ID,
+      sucursalId: data.sucursalId,
+      name: data.bed,
+    };
+    if (data.bed && isBedOccupied(bedReference)) {
       return "La cama seleccionada ya está ocupada. Elige otra.";
     }
 
@@ -305,8 +334,6 @@ const HospitalizationView = () => {
     if (!created) {
       return "No se pudo registrar el ingreso. Revisa los datos e inténtalo nuevamente.";
     }
-
-    const patient = getPatient(data.patientId);
 
     addMedicalRecord(data.patientId, {
       date: new Date().toISOString(),
@@ -462,20 +489,20 @@ const HospitalizationView = () => {
     const bed = addBed();
     setFeedback({
       type: "success",
-      message: `Se agregó ${bed} al área de hospitalización.`,
+      message: `Se agregó ${bed.name} a ${getSucursalName(bed.sucursalId)}.`,
     });
   };
 
-  const handleRemoveBed = (bed: string) => {
-    if (isBedOccupied(bed)) {
+  const handleRemoveBed = (item: BedMapItem) => {
+    if (isBedOccupied(item.entity)) {
       setFeedback({
         type: "error",
-        message: `No puedes quitar ${bed}: está ocupada por un paciente hospitalizado.`,
+        message: `No puedes quitar ${item.bed}: está ocupada por un paciente hospitalizado.`,
       });
       return;
     }
 
-    if (beds.length <= 1) {
+    if (bedEntities.length <= 1) {
       setFeedback({
         type: "error",
         message: "Debe existir al menos una cama configurada.",
@@ -483,10 +510,10 @@ const HospitalizationView = () => {
       return;
     }
 
-    removeBed(bed);
+    removeBed(item.entity);
     setFeedback({
       type: "success",
-      message: `Se quitó ${bed} del área de hospitalización.`,
+      message: `Se quitó ${item.bed} de ${getSucursalName(item.entity.sucursalId)}.`,
     });
   };
 
@@ -816,7 +843,7 @@ const HospitalizationView = () => {
           onOpenHospitalization={handleOpenDetailById}
           onAddBed={handleAddBed}
           onRemoveBed={handleRemoveBed}
-          canRemoveBeds={beds.length > 1}
+          canRemoveBeds={bedEntities.length > 1}
         />
 
         {/* Pestañas */}

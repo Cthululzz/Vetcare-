@@ -1,9 +1,16 @@
 import { BedDouble, CheckCircle2, Plus, Trash2 } from "lucide-react";
 import type { EspecieMascota, Genero } from "../../constants/appConstants";
+import type { HospitalBed } from "../../types/hospitalization";
 import { PetAvatar } from "../common/PetAvatar";
 
 export interface BedMapItem {
+  /** Nombre visible de la cama. Puede repetirse entre sucursales. */
   bed: string;
+  /** Clave única con organización + sucursal + nombre. */
+  bedKey: string;
+  /** Entidad persistida, necesaria para quitar solo esta cama. */
+  entity: HospitalBed;
+  sucursalLabel?: string;
   patientName?: string;
   species?: EspecieMascota | string;
   gender?: Genero | string;
@@ -14,7 +21,7 @@ interface BedMapProps {
   beds: BedMapItem[];
   onOpenHospitalization?: (hospitalizationId: string) => void;
   onAddBed?: () => void;
-  onRemoveBed?: (bed: string) => void;
+  onRemoveBed?: (bed: BedMapItem) => void;
   canRemoveBeds?: boolean;
 }
 
@@ -62,7 +69,7 @@ export const BedMap = ({
             const isOccupied = Boolean(item.patientName);
 
             return (
-              <div key={item.bed} className="relative">
+              <div key={item.bedKey} className="relative">
                 <button
                   type="button"
                   disabled={!isOccupied || !item.hospitalizationId}
@@ -84,6 +91,11 @@ export const BedMap = ({
                       }`}
                     >
                       {item.bed}
+                      {item.sucursalLabel && (
+                        <span className="ml-1 font-medium text-slate-500">
+                          · {item.sucursalLabel}
+                        </span>
+                      )}
                     </span>
                     {isOccupied && item.species ? (
                       <PetAvatar
@@ -109,8 +121,8 @@ export const BedMap = ({
                 {!isOccupied && onRemoveBed && canRemoveBeds && (
                   <button
                     type="button"
-                    onClick={() => onRemoveBed(item.bed)}
-                    title={`Quitar ${item.bed}`}
+                    onClick={() => onRemoveBed(item)}
+                    title={`Quitar ${item.bed}${item.sucursalLabel ? ` (${item.sucursalLabel})` : ""}`}
                     className="absolute top-1.5 right-1.5 p-1 rounded-md text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
                   >
                     <Trash2 className="w-3.5 h-3.5" />

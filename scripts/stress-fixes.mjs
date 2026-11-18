@@ -70,7 +70,13 @@ if (results.recordatorio.verTodos) {
 await evaluate(`(() => {
   const hs = JSON.parse(localStorage.getItem('vet_hospitalizations'));
   const activas = hs.filter(h=>h.status==='activa').slice(0,3);
-  for (const h of activas) h.bed = 'Cama TEST-DUP';
+  // El duplicado debe ser real dentro de una misma sucursal; el mismo nombre
+  // en sedes distintas es válido y ya no se cura.
+  for (const h of activas) {
+    h.bed = 'Cama TEST-DUP';
+    h.organizationId = 'vet-demo';
+    h.sucursalId = 'centro';
+  }
   const value = JSON.stringify(hs);
   localStorage.setItem('vet_hospitalizations', value);
   window.dispatchEvent(new StorageEvent('storage', { key:'vet_hospitalizations', newValue:value }));
@@ -112,7 +118,8 @@ results.camasDespues = await evaluate(`(() => {
   const by = Object.fromEntries(ps.map(p=>[p.id,p]));
   const activas = hs.filter(h=>h.status==='activa' && h.bed && by[h.patientId]?.isActive);
   const beds = activas.map(h=>h.bed);
-  const dupes = beds.filter((b,i)=>beds.indexOf(b)!==i);
+  const claves = activas.map(h=>[h.organizationId,h.sucursalId,h.bed].join('|'));
+  const dupes = claves.filter((b,i)=>claves.indexOf(b)!==i);
   return {
     totalActivasConCama: activas.length,
     camasUnicas: new Set(beds).size,
