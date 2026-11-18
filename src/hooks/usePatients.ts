@@ -1,11 +1,12 @@
+import { useMemo } from "react";
 import { useLocalStorage } from "./useLocalStorage";
+import { useBranchScope } from "../context/branchScope";
 import type { Patient, Owner, MedicalRecord } from "../types/patient";
 import type {
   EspecieMascota,
   Genero,
   EstadoVacuna,
 } from "../constants/appConstants";
-import { defaultBranchScope } from "../utils/storageMigration";
 
 // ============================================
 // KEYS DE ALMACENAMIENTO
@@ -28,8 +29,21 @@ function isoNow(): string {
 // HOOK PRINCIPAL
 // ============================================
 export function usePatients() {
-  const [patients, setPatients] = useLocalStorage<Patient[]>(PATIENTS_KEY, []);
-  const [owners, setOwners] = useLocalStorage<Owner[]>(OWNERS_KEY, []);
+  const { filterByScope, writeScope } = useBranchScope();
+  const [storedPatients, setPatients] = useLocalStorage<Patient[]>(
+    PATIENTS_KEY,
+    [],
+  );
+  const [storedOwners, setOwners] = useLocalStorage<Owner[]>(OWNERS_KEY, []);
+
+  const patients = useMemo(
+    () => filterByScope(storedPatients),
+    [filterByScope, storedPatients],
+  );
+  const owners = useMemo(
+    () => filterByScope(storedOwners),
+    [filterByScope, storedOwners],
+  );
 
   // ---------- OWNERS ----------
 
@@ -44,7 +58,7 @@ export function usePatients() {
   ): Owner => {
     const newOwner: Owner = {
       ...data,
-      ...defaultBranchScope(),
+      ...writeScope(),
       id: generateId(),
       createdAt: isoNow(),
     };
@@ -90,7 +104,7 @@ export function usePatients() {
     const owner = owners.find((o) => o.id === data.ownerId);
     const scope = owner
       ? { organizationId: owner.organizationId, sucursalId: owner.sucursalId }
-      : defaultBranchScope();
+      : writeScope();
     const newPatient: Patient = {
       ...data,
       ...scope,

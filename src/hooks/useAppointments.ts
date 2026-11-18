@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import type { Appointment } from "../types/appointment";
 import type { EstadoCita } from "../constants/appConstants";
 import { useLocalStorage } from "./useLocalStorage";
-import { defaultBranchScope } from "../utils/storageMigration";
+import { useBranchScope } from "../context/branchScope";
 import {
   getLocalTodayStr,
   sortAppointmentsByDateTime,
@@ -31,9 +31,14 @@ function isoNow(): string {
 // HOOK PRINCIPAL
 // ============================================
 export function useAppointments() {
-  const [appointments, setAppointments] = useLocalStorage<Appointment[]>(
+  const { filterByScope, writeScope } = useBranchScope();
+  const [storedAppointments, setAppointments] = useLocalStorage<Appointment[]>(
     APPOINTMENTS_KEY,
     [],
+  );
+  const appointments = useMemo(
+    () => filterByScope(storedAppointments),
+    [filterByScope, storedAppointments],
   );
 
   // ---------- CRUD ----------
@@ -54,8 +59,8 @@ export function useAppointments() {
     data: Omit<Appointment, "id" | "createdAt" | "updatedAt" | "organizationId">,
   ): Appointment => {
     const newAppointment: Appointment = {
+      ...writeScope(),
       ...data,
-      organizationId: defaultBranchScope().organizationId,
       id: generateId(),
       createdAt: isoNow(),
       updatedAt: isoNow(),

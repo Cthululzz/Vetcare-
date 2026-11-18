@@ -380,6 +380,67 @@ results.migracion = await evaluate(`(() => {
   return res;
 })()`);
 
+// ============================================================
+// AISLAMIENTO POR SUCURSAL ACTIVA
+// ============================================================
+results.aislamiento = {};
+
+// ADMIN con "Todas": selector de 4 opciones y 9 citas de hoy.
+await evaluate(`localStorage.setItem('vet_auth_state', JSON.stringify({ user:{ id:'user-001', email:'admin@vetcare.com', name:'Dr. Silva', role:'ADMIN', sucursalId:'centro' }, isAuthenticated:true })); localStorage.setItem('vet_active_branch', JSON.stringify('all'));`);
+await go('/agenda');
+await closeReminder();
+results.aislamiento.admin = await evaluate(`(() => {
+  const sel = document.querySelector('#sucursal-activa');
+  const t = document.body.innerText;
+  const textoVisible = [...document.querySelectorAll('body *')].filter(el => !el.closest('select') && el.children.length === 0).map(el => el.textContent || '').join(' ');
+  return {
+    opciones: sel ? [...sel.options].map(o=>o.value) : [],
+    valor: sel ? sel.value : null,
+    citasHoy: (t.match(/Control multi-sucursal/g)||[]).length,
+    sucursalesVisibles: ['Central (Providencia)','Norte (Las Condes)','Sur (Ñuñoa)'].filter(n=>textoVisible.includes(n)),
+  };
+})()`);
+
+// ADMIN elige norte: solo 3 citas y solo esa sucursal.
+results.aislamiento.cambioSelect = await evaluate(`(() => {
+  const sel = document.querySelector('#sucursal-activa');
+  if (!sel) return { ok:false };
+  const setter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set;
+  setter.call(sel, 'norte');
+  sel.dispatchEvent(new Event('change', { bubbles:true }));
+  return { ok:true };
+})()`);
+await sleep(600);
+results.aislamiento.norte = await evaluate(`(() => {
+  const t = document.body.innerText;
+  const textoVisible = [...document.querySelectorAll('body *')].filter(el => !el.closest('select') && el.children.length === 0).map(el => el.textContent || '').join(' ');
+  return {
+    persistido: JSON.parse(localStorage.getItem('vet_active_branch')),
+    valorSelector: document.querySelector('#sucursal-activa')?.value ?? null,
+    citasHoy: (t.match(/Control multi-sucursal/g)||[]).length,
+    sucursalesVisibles: ['Central (Providencia)','Norte (Las Condes)','Sur (Ñuñoa)'].filter(n=>textoVisible.includes(n)),
+  };
+})()`);
+
+// VET de norte: aunque quede guardado "all", el rol lo fuerza a su sucursal.
+await evaluate(`localStorage.setItem('vet_auth_state', JSON.stringify({ user:{ id:'user-002', email:'vet@vetcare.com', name:'Dra. Gómez', role:'VET', sucursalId:'norte' }, isAuthenticated:true })); localStorage.setItem('vet_active_branch', JSON.stringify('all'));`);
+await go('/agenda');
+await closeReminder();
+results.aislamiento.vet = await evaluate(`(() => {
+  const t = document.body.innerText;
+  return {
+    haySelector: Boolean(document.querySelector('#sucursal-activa')),
+    sucursalAsignadaVisible: t.includes('Norte (Las Condes)'),
+    etiquetaSucursal: (t.match(/sucursal activa[^\\n]{0,80}/i)||[])[0] || null,
+    citasHoy: (t.match(/Control multi-sucursal/g)||[]).length,
+    sucursalesVisibles: ['Central (Providencia)','Norte (Las Condes)','Sur (Ñuñoa)'].filter(n=>t.includes(n)),
+    persistido: JSON.parse(localStorage.getItem('vet_active_branch')),
+  };
+})()`);
+
+// Restaurar ADMIN con "Todas" para el resto de la batería.
+await evaluate(`localStorage.setItem('vet_auth_state', JSON.stringify({ user:{ id:'user-001', email:'admin@vetcare.com', name:'Dr. Silva', role:'ADMIN', sucursalId:'centro' }, isAuthenticated:true })); localStorage.setItem('vet_active_branch', JSON.stringify('all'));`);
+
 // Agenda: las 9 citas de hoy deben mostrar las 3 sucursales
 await go('/agenda');
 await closeReminder();

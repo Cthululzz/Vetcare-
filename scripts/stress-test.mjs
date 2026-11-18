@@ -81,7 +81,7 @@ const seedExpression = `(() => {
   const pick = (a) => a[Math.floor(rnd() * a.length)];
   const int = (a, b) => a + Math.floor(rnd() * (b - a + 1));
   const iso = (t) => new Date(t).toISOString();
-  const day = (offset) => new Date(Date.now() + offset * 86400000).toISOString().slice(0, 10);
+  const day = (offset) => { const d = new Date(Date.now() + offset * 86400000); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); };
   const now = Date.now();
 
   const nombres = ['Ana','Carlos','María','Luis','Fernanda','Pedro','Camila','Diego','Valentina','Juan','Antonia','Rodrigo','Paula','Miguel','Catalina','Andrés','Javiera','Cristóbal','Francisca','Sebastián','Daniela','Felipe','Ignacia','Mateo','Renata','Nicolás','Elena','Tomás','Sofía','Gabriel','Isidora','Alejandro','Trinidad','Bastián','Maite','Joaquín','Florencia','Marcos','Arantxa','Rafael'];

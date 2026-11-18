@@ -1,9 +1,10 @@
+import { useMemo } from "react";
 import { useLocalStorage } from "./useLocalStorage";
+import { useBranchScope } from "../context/branchScope";
 import type {
   Prescription,
   PrescriptionMedication,
 } from "../types/prescription";
-import { defaultBranchScope } from "../utils/storageMigration";
 
 const PRESCRIPTIONS_KEY = "vet_prescriptions";
 
@@ -16,9 +17,14 @@ function isoNow(): string {
 }
 
 export function usePrescriptions() {
-  const [prescriptions, setPrescriptions] = useLocalStorage<Prescription[]>(
+  const { filterByScope, writeScope } = useBranchScope();
+  const [storedPrescriptions, setPrescriptions] = useLocalStorage<Prescription[]>(
     PRESCRIPTIONS_KEY,
     [],
+  );
+  const prescriptions = useMemo(
+    () => filterByScope(storedPrescriptions),
+    [filterByScope, storedPrescriptions],
   );
 
   const createPrescription = (
@@ -28,7 +34,7 @@ export function usePrescriptions() {
     notes?: string,
   ): Prescription => {
     const newPrescription: Prescription = {
-      ...defaultBranchScope(),
+      ...writeScope(),
       id: generateId(),
       patientId,
       appointmentId,

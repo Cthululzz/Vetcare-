@@ -1,6 +1,7 @@
+import { useMemo } from "react";
 import { useLocalStorage } from "./useLocalStorage";
+import { useBranchScope } from "../context/branchScope";
 import type { InventoryItem } from "../types/inventory";
-import { defaultBranchScope } from "../utils/storageMigration";
 
 const INVENTORY_KEY = "vet_inventory";
 
@@ -13,7 +14,15 @@ function isoNow(): string {
 }
 
 export function useInventory() {
-  const [items, setItems] = useLocalStorage<InventoryItem[]>(INVENTORY_KEY, []);
+  const { filterByScope, writeScope } = useBranchScope();
+  const [storedItems, setItems] = useLocalStorage<InventoryItem[]>(
+    INVENTORY_KEY,
+    [],
+  );
+  const items = useMemo(
+    () => filterByScope(storedItems),
+    [filterByScope, storedItems],
+  );
 
   const getProducts = (): InventoryItem[] => items.filter((i) => i.isActive);
 
@@ -33,7 +42,7 @@ export function useInventory() {
   ): InventoryItem => {
     const newItem: InventoryItem = {
       ...data,
-      ...defaultBranchScope(),
+      ...writeScope(),
       id: generateId(),
       createdAt: isoNow(),
       updatedAt: isoNow(),

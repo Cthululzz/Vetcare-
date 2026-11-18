@@ -1,5 +1,6 @@
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { useLocalStorage } from "./useLocalStorage";
+import { useBranchScope } from "../context/branchScope";
 import type { AppointmentReminderKind } from "../utils/whatsappUtils";
 import type { SentAppointmentReminder } from "../utils/appointmentReminders";
 import type { BranchScoped } from "../types/organization";
@@ -19,9 +20,14 @@ function isoNow(): string {
  * El cálculo de cuáles corresponden vive en `utils/appointmentReminders.ts`.
  */
 export function useAppointmentReminders() {
-  const [sentReminders, setSentReminders] = useLocalStorage<
+  const { filterByScope } = useBranchScope();
+  const [storedReminders, setSentReminders] = useLocalStorage<
     SentAppointmentReminder[]
   >(APPOINTMENT_REMINDERS_KEY, []);
+  const sentReminders = useMemo(
+    () => filterByScope(storedReminders),
+    [filterByScope, storedReminders],
+  );
 
   const markAsSent = (
     appointmentId: string,

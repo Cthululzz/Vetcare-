@@ -1,8 +1,9 @@
+import { useMemo } from "react";
 import { useLocalStorage } from "./useLocalStorage";
+import { useBranchScope } from "../context/branchScope";
 import type { InventoryMovement, MovementType } from "../types/inventory";
 import { useInventory } from "./useInventory";
 import { getLocalTodayStr } from "../utils/dateUtils";
-import { defaultBranchScope } from "../utils/storageMigration";
 
 const MOVEMENTS_KEY = "vet_inventory_movements";
 
@@ -21,9 +22,14 @@ function localDateOf(isoDateTime: string): string {
 }
 
 export function useInventoryMovements() {
-  const [movements, setMovements] = useLocalStorage<InventoryMovement[]>(
+  const { filterByScope, writeScope } = useBranchScope();
+  const [storedMovements, setMovements] = useLocalStorage<InventoryMovement[]>(
     MOVEMENTS_KEY,
     [],
+  );
+  const movements = useMemo(
+    () => filterByScope(storedMovements),
+    [filterByScope, storedMovements],
   );
   const { getProduct, updateProduct } = useInventory();
 
@@ -83,9 +89,16 @@ export function useInventoryMovements() {
     patientName?: string;
     isComplete?: boolean;
   }): InventoryMovement => {
+    const product = getProduct(data.productId);
+    const scope = product
+      ? {
+          organizationId: product.organizationId,
+          sucursalId: product.sucursalId,
+        }
+      : writeScope();
     const newMovement: InventoryMovement = {
       ...data,
-      ...defaultBranchScope(),
+      ...scope,
       id: generateId(),
       date: isoNow(),
       isComplete: data.isComplete ?? true,
@@ -96,7 +109,6 @@ export function useInventoryMovements() {
     setMovements((prev) => [newMovement, ...prev]);
 
     // Actualizar stock del producto
-    const product = getProduct(data.productId);
     if (product) {
       let newStock = product.currentStock;
       if (data.type === "ingreso" || data.type === "devolucion") {

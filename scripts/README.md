@@ -46,7 +46,7 @@ Todos manejan `Page.javascriptDialogOpening` automáticamente para que un
 | `stress-interactions.mjs` | Evolución, dosis con confirmación propia y alta de paciente. |
 | `stress-flows2.mjs` | Atomicidad de la finalización de consulta. |
 | `stress-final.mjs` | Agenda semana/mes, historial, inventario y tareas. |
-| `stress-multisucursal.mjs` | 3 sucursales, colisión de camas entre sedes y consulta por sucursal. |
+| `stress-multisucursal.mjs` | 3 sucursales, colisión de camas entre sedes, consulta por sucursal y aislamiento del selector (ADMIN/VET). |
 
 `vetcare-cdp.mjs` es el helper de conexión usado durante el desarrollo.
 

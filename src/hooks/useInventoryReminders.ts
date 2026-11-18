@@ -1,6 +1,7 @@
+import { useMemo } from "react";
 import { useLocalStorage } from "./useLocalStorage";
+import { useBranchScope } from "../context/branchScope";
 import type { PendingInventoryReminder } from "../types/inventory";
-import { defaultBranchScope } from "../utils/storageMigration";
 
 const REMINDERS_KEY = "vet_inventory_reminders";
 
@@ -13,9 +14,13 @@ function isoNow(): string {
 }
 
 export function useInventoryReminders() {
-  const [reminders, setReminders] = useLocalStorage<PendingInventoryReminder[]>(
-    REMINDERS_KEY,
-    [],
+  const { filterByScope, writeScope } = useBranchScope();
+  const [storedReminders, setReminders] = useLocalStorage<
+    PendingInventoryReminder[]
+  >(REMINDERS_KEY, []);
+  const reminders = useMemo(
+    () => filterByScope(storedReminders),
+    [filterByScope, storedReminders],
   );
 
   const getPendingReminders = (): PendingInventoryReminder[] => reminders;
@@ -25,7 +30,7 @@ export function useInventoryReminders() {
     userId: string,
   ): PendingInventoryReminder => {
     const newReminder: PendingInventoryReminder = {
-      ...defaultBranchScope(),
+      ...writeScope(),
       id: generateId(),
       movementId,
       userId,

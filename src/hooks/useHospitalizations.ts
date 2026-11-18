@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from "react";
 import { useLocalStorage } from "./useLocalStorage";
+import { useBranchScope } from "../context/branchScope";
 import type {
   DischargeSummary,
   Hospitalization,
@@ -17,7 +18,6 @@ import { useHospitalBeds } from "./useHospitalBeds";
 import type { WeightUnit } from "../utils/weight";
 import type { SucursalId } from "../constants/appConstants";
 import { isValidSucursalId } from "../constants/appConstants";
-import { defaultBranchScope } from "../utils/storageMigration";
 
 const HOSPITALIZATIONS_KEY = "vet_hospitalizations";
 
@@ -172,6 +172,7 @@ export interface AdministerPlanDoseInput {
 }
 
 export function useHospitalizations() {
+  const { filterByScope, writeScope } = useBranchScope();
   const [storedHospitalizations, setStoredHospitalizations] = useLocalStorage<
     Hospitalization[]
   >(HOSPITALIZATIONS_KEY, []);
@@ -180,9 +181,13 @@ export function useHospitalizations() {
 
   // Camas sin duplicados incluso si los datos vienen de una importación o de
   // otra pestaña. Toda lectura y toda escritura pasan por el mismo filtro.
+  const scopedHospitalizations = useMemo(
+    () => filterByScope(storedHospitalizations),
+    [filterByScope, storedHospitalizations],
+  );
   const hospitalizations = useMemo(
-    () => resolveDuplicateBeds(storedHospitalizations, getPatient),
-    [storedHospitalizations, getPatient],
+    () => resolveDuplicateBeds(scopedHospitalizations, getPatient),
+    [scopedHospitalizations, getPatient],
   );
 
   const setHospitalizations: typeof setStoredHospitalizations = useCallback(
@@ -216,7 +221,7 @@ export function useHospitalizations() {
       if (alreadyAdmitted) return null;
 
       const patient = getPatient(patientId);
-      const fallbackScope = defaultBranchScope();
+      const fallbackScope = writeScope();
       const requestedSucursal = options?.sucursalId;
       const scope = {
         organizationId: patient?.organizationId ?? fallbackScope.organizationId,
@@ -277,7 +282,7 @@ export function useHospitalizations() {
       setHospitalizations((prev) => [...prev, record]);
       return record;
     },
-    [hospitalizations, beds, getPatient, setHospitalizations],
+    [hospitalizations, beds, getPatient, setHospitalizations, writeScope],
   );
 
   const updateHospitalization = useCallback(

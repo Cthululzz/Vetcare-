@@ -195,7 +195,7 @@ results.consulta.after = await evaluate(`(() => {
 })()`);
 
 // ---------- 4. Crear paciente desde fichas ----------
-await go("/pacientes");
+await go("/pacientes/fichas");
 results.nuevoPaciente = await evaluate(`(() => {
   const btn = [...document.querySelectorAll('button')].find(b=>(b.textContent||'').includes('Nuevo Registro'));
   const before = JSON.parse(localStorage.getItem('vet_patients')).length;

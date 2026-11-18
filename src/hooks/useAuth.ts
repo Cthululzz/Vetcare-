@@ -1,7 +1,8 @@
 import { useCallback } from "react";
 import { useLocalStorage } from "./useLocalStorage";
 import { useNavigate } from "react-router-dom";
-import type { UserRole } from "../constants/appConstants";
+import type { SucursalId, UserRole } from "../constants/appConstants";
+import { DEFAULT_SUCURSAL_ID } from "../constants/appConstants";
 
 // ============================================
 // TIPOS
@@ -11,6 +12,8 @@ export interface User {
   email: string;
   name: string;
   role: UserRole;
+  /** Sede asignada al usuario; limita su alcance si no es ADMIN. */
+  sucursalId: SucursalId;
   avatar?: string;
 }
 
@@ -30,6 +33,7 @@ const MOCK_USERS: Array<User & { password: string }> = [
     password: "admin123",
     name: "Dr. Silva",
     role: "ADMIN",
+    sucursalId: DEFAULT_SUCURSAL_ID,
   },
   {
     id: "user-002",
@@ -37,6 +41,7 @@ const MOCK_USERS: Array<User & { password: string }> = [
     password: "vet123",
     name: "Dra. Gómez",
     role: "VET",
+    sucursalId: "norte",
   },
   {
     id: "user-003",
@@ -44,6 +49,7 @@ const MOCK_USERS: Array<User & { password: string }> = [
     password: "recep123",
     name: "María Pérez",
     role: "RECEPTIONIST",
+    sucursalId: "sur",
   },
 ];
 
