@@ -5,6 +5,7 @@ import type {
   Prescription,
   PrescriptionMedication,
 } from "../types/prescription";
+import type { BranchScoped } from "../types/organization";
 
 const PRESCRIPTIONS_KEY = "vet_prescriptions";
 
@@ -32,9 +33,10 @@ export function usePrescriptions() {
     appointmentId: string,
     medications: PrescriptionMedication[],
     notes?: string,
+    scope?: BranchScoped,
   ): Prescription => {
     const newPrescription: Prescription = {
-      ...writeScope(),
+      ...(scope ?? writeScope()),
       id: generateId(),
       patientId,
       appointmentId,

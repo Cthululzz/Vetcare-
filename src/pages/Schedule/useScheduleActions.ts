@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useBranchScope } from "../../context/branchScope";
 import { useAppointments } from "../../hooks/useAppointments";
 import { usePatients } from "../../hooks/usePatients";
 import { useHospitalizations } from "../../hooks/useHospitalizations";
@@ -11,6 +12,7 @@ import type { EditingState, ConsultationData, DayDetail } from "./types";
 
 export function useScheduleActions() {
   const navigate = useNavigate();
+  const { writeScope } = useBranchScope();
 
   const {
     appointments,
@@ -118,14 +120,21 @@ export function useScheduleActions() {
     }
 
     try {
+      // La sucursal elegida se valida una sola vez y se usa para todas las
+      // entidades nuevas de este flujo (dueño, paciente y cita).
+      const scope = writeScope(data.sucursalId);
+
       // 1. Buscar o crear dueño
       let owner = getOwnerByPhone(data.ownerPhone);
       if (!owner) {
-        owner = createOwner({
-          name: data.ownerName,
-          phone: data.ownerPhone,
-          email: data.ownerEmail,
-        });
+        owner = createOwner(
+          {
+            name: data.ownerName,
+            phone: data.ownerPhone,
+            email: data.ownerEmail,
+          },
+          scope,
+        );
       } else if (
         owner.name !== data.ownerName ||
         owner.email !== data.ownerEmail
@@ -171,7 +180,8 @@ export function useScheduleActions() {
           patientId: patient.id,
           ownerId: owner.id,
           doctorId: data.doctorId,
-          sucursalId: data.sucursalId,
+          // No se re-alcancea una cita existente: sus derivadas ya tienen el
+          // alcance original y el selector queda bloqueado al editar.
           fecha: data.fecha,
           hora: data.hora,
           motivo: data.motivo,
@@ -183,7 +193,7 @@ export function useScheduleActions() {
           patientId: patient.id,
           ownerId: owner.id,
           doctorId: data.doctorId,
-          sucursalId: data.sucursalId,
+          sucursalId: scope.sucursalId,
           fecha: data.fecha,
           hora: data.hora,
           motivo: data.motivo,
@@ -256,7 +266,9 @@ export function useScheduleActions() {
         recommendations,
         type: "consulta",
         veterinarian: getDoctorName(appointment.doctorId),
-      });
+      },
+      appointment,
+      );
       updateStatus(appointment.id, "finalizada");
     } else {
       updateStatus(appointment.id, "en_consulta");
@@ -302,6 +314,7 @@ export function useScheduleActions() {
     // 2. Registrar ingreso a hospitalización (hereda la sucursal de la cita).
     // El diagnóstico, la frecuencia y los planes vienen del popup de confirmación.
     admitPatient(patient.id, hospitalization?.reason, {
+      organizationId: appointment.organizationId,
       sucursalId: appointment.sucursalId,
       weight,
       weightUnit,
@@ -325,7 +338,9 @@ export function useScheduleActions() {
       recommendations,
       type: "consulta",
       veterinarian: getDoctorName(appointment.doctorId),
-    });
+    },
+    appointment,
+    );
     updateStatus(appointment.id, "finalizada");
 
     setIsConsultationModalOpen(false);

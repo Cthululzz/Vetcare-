@@ -57,10 +57,7 @@ import {
   DEFAULT_MONITORING_FREQUENCY,
   calcularProximaRevision,
 } from "../constants/hospitalization";
-import {
-  DEFAULT_ORGANIZATION_ID,
-  getSucursalName,
-} from "../constants/appConstants";
+import { getSucursalName } from "../constants/appConstants";
 import { formatDateShort, formatDateTimeShort } from "../utils/dateUtils";
 import {
   buildDischargeMessage,
@@ -168,7 +165,7 @@ const buildEvolutionNotes = (data: EvolutionData): string => {
 // ============================================
 const HospitalizationView = () => {
   const navigate = useNavigate();
-  const { activeBranch } = useBranchScope();
+  const { activeBranch, writeScope } = useBranchScope();
 
   const { getOwner, getPatient, getActivePatients, addMedicalRecord } =
     usePatients();
@@ -308,9 +305,9 @@ const HospitalizationView = () => {
       return "Ese paciente ya tiene una hospitalización activa.";
     }
     const patient = getPatient(data.patientId);
+    const scope = writeScope(data.sucursalId);
     const bedReference: HospitalBed = {
-      organizationId: patient?.organizationId ?? DEFAULT_ORGANIZATION_ID,
-      sucursalId: data.sucursalId,
+      ...scope,
       name: data.bed,
     };
     if (data.bed && isBedOccupied(bedReference)) {
@@ -320,6 +317,8 @@ const HospitalizationView = () => {
     const nextReviewAt = calcularProximaRevision(data.monitoringFrequency);
 
     const created = admitPatient(data.patientId, data.reason, {
+      organizationId: scope.organizationId,
+      sucursalId: scope.sucursalId,
       bed: data.bed,
       diagnosis: data.diagnosis,
       weight: data.weight,
@@ -327,7 +326,6 @@ const HospitalizationView = () => {
       monitoringFrequency: data.monitoringFrequency,
       nextReviewAt,
       notes: data.initialTreatment,
-      sucursalId: data.sucursalId,
       createdBy: user?.name,
     });
 
@@ -358,7 +356,9 @@ const HospitalizationView = () => {
         .join("\n"),
       recommendations:
         "Paciente hospitalizado. Monitoreo y tratamiento según indicaciones médicas.",
-    });
+    },
+    created,
+    );
 
     setShowAdmissionModal(false);
     setFeedback({
@@ -423,7 +423,9 @@ const HospitalizationView = () => {
       veterinarian: user?.name,
       notes: buildEvolutionNotes(evolutionData),
       recommendations: `Continuar monitoreo según evolución. Próxima revisión: ${formatDateTime(nextReviewAt)}.`,
-    });
+    },
+    active.hospitalization,
+    );
 
     setShowEvolutionModal(false);
     setSelectedHospitalizationId(null);
@@ -474,7 +476,9 @@ const HospitalizationView = () => {
         .filter(Boolean)
         .join("\n\n"),
       recommendations: data.indications,
-    });
+    },
+    selectedHospitalization,
+    );
 
     setShowDischargeModal(false);
     setSelectedHospitalizationId(null);

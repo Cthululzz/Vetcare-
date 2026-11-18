@@ -59,8 +59,8 @@ export function useAppointments() {
     data: Omit<Appointment, "id" | "createdAt" | "updatedAt" | "organizationId">,
   ): Appointment => {
     const newAppointment: Appointment = {
-      ...writeScope(),
       ...data,
+      ...writeScope(data.sucursalId),
       id: generateId(),
       createdAt: isoNow(),
       updatedAt: isoNow(),

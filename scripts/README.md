@@ -46,7 +46,7 @@ Todos manejan `Page.javascriptDialogOpening` automáticamente para que un
 | `stress-interactions.mjs` | Evolución, dosis con confirmación propia y alta de paciente. |
 | `stress-flows2.mjs` | Atomicidad de la finalización de consulta. |
 | `stress-final.mjs` | Agenda semana/mes, historial, inventario y tareas. |
-| `stress-multisucursal.mjs` | 3 sucursales, camas con alcance por sede (incluida una colisión deliberada), consulta por sucursal y aislamiento del selector (ADMIN/VET). |
+| `stress-multisucursal.mjs` | 3 sucursales, camas con alcance por sede (incluida una colisión deliberada), consulta por sucursal, aislamiento del selector (ADMIN/VET) y herencia de alcance en citas, registros, recetas e internaciones. |
 
 `vetcare-cdp.mjs` es el helper de conexión usado durante el desarrollo.
 
@@ -62,3 +62,10 @@ Desde el esquema `2`, `vet_hospital_beds` guarda entidades con `organizationId`,
 `sucursalId` y `name`. El nombre de una cama puede repetirse entre sedes: la
 ocupación y la curación de duplicados se comparan por organización + sucursal +
 nombre, nunca solo por nombre.
+
+Regla de herencia verificada por la batería: una entidad derivada debe conservar
+`organizationId` y `sucursalId` de su origen. Una cita nueva usa la sucursal
+activa (o la elegida por un ADMIN con "Todas"); su dueño y paciente se crean con
+el mismo alcance. Los registros médicos y las recetas heredan de la cita, y la
+internación, sus registros y sus planes heredan de la internación de origen.
+Editar una cita no cambia su sucursal ni la de sus derivadas.

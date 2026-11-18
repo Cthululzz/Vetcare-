@@ -349,6 +349,7 @@ export const ConsultationModal = ({
       {showConfirmModal && (
         <HospitalizationConfirmModal
           patientName={patient.name}
+          scope={appointment}
           onConfirm={handleConfirmHospitalization}
           onCancel={() => {
             setIsHospitalizing(false);

@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useLocalStorage } from "./useLocalStorage";
 import { useBranchScope } from "../context/branchScope";
 import type { Patient, Owner, MedicalRecord } from "../types/patient";
+import type { BranchScoped } from "../types/organization";
 import type {
   EspecieMascota,
   Genero,
@@ -55,10 +56,11 @@ export function usePatients() {
 
   const createOwner = (
     data: Omit<Owner, "id" | "createdAt" | "organizationId" | "sucursalId">,
+    scope?: BranchScoped,
   ): Owner => {
     const newOwner: Owner = {
       ...data,
-      ...writeScope(),
+      ...(scope ?? writeScope()),
       id: generateId(),
       createdAt: isoNow(),
     };
@@ -147,15 +149,19 @@ export function usePatients() {
   const addMedicalRecord = (
     patientId: string,
     record: Omit<MedicalRecord, "id" | "organizationId" | "sucursalId">,
+    scope?: BranchScoped,
   ) => {
     setPatients((prev) =>
       prev.map((p) => {
         if (p.id !== patientId) return p;
 
-        const newRecord: MedicalRecord = {
-          ...record,
+        const recordScope = scope ?? {
           organizationId: p.organizationId,
           sucursalId: p.sucursalId,
+        };
+        const newRecord: MedicalRecord = {
+          ...record,
+          ...recordScope,
           id: generateId(),
         };
         return {

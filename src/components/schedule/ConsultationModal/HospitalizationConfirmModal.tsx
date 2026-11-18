@@ -6,6 +6,7 @@ import {
 } from "../../../constants/hospitalization";
 import { useInventory } from "../../../hooks/useInventory";
 import type { MedicationPlanInput } from "../../../hooks/useHospitalizations";
+import type { BranchScoped } from "../../../types/organization";
 import type { HospitalizationFormData } from "../../../types/consultation";
 import { formatQuantityDisplay } from "../../../utils/inventoryUnits";
 
@@ -53,6 +54,8 @@ const createEmptyPlanDraft = (): PlanDraft => ({
 
 interface HospitalizationConfirmModalProps {
   patientName: string;
+  /** Alcance de la cita: los remedios deben venir de esa misma sede. */
+  scope: BranchScoped;
   onConfirm: (data: HospitalizationFormData) => void;
   onCancel: () => void;
 }
@@ -64,11 +67,12 @@ interface HospitalizationConfirmModalProps {
  */
 export const HospitalizationConfirmModal = ({
   patientName,
+  scope,
   onConfirm,
   onCancel,
 }: HospitalizationConfirmModalProps) => {
-  const { getProducts } = useInventory();
-  const products = getProducts();
+  const { getProductsForScope } = useInventory();
+  const products = getProductsForScope(scope);
 
   const [reason, setReason] = useState("");
   const [monitoringFrequency, setMonitoringFrequency] = useState(

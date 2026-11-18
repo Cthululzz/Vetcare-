@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useBranchScope } from "../../../context/branchScope";
 import type { ChangeEvent, FormEvent } from "react";
 import {
   Calendar,
@@ -91,14 +92,22 @@ export const AppointmentForm = ({
   onCancel,
   initialData,
 }: AppointmentFormProps) => {
-  const [formData, setFormData] =
-    useState<AppointmentFormData>(INITIAL_FORM_STATE);
+  const { activeBranch, writeScope } = useBranchScope();
+  const [formData, setFormData] = useState<AppointmentFormData>(() => ({
+    ...INITIAL_FORM_STATE,
+    sucursalId: initialData?.sucursalId ?? writeScope().sucursalId,
+  }));
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
   const isPreselectedDate = Boolean(
     initialData?.fecha && !initialData?.patientName,
   );
+  const isEditing = Boolean(initialData?.patientName);
+  const sucursalesDisponibles =
+    activeBranch === "all"
+      ? SUCURSALES
+      : SUCURSALES.filter((sucursal) => sucursal.id === activeBranch);
 
   useEffect(() => {
     if (initialData) {
@@ -252,9 +261,10 @@ export const AppointmentForm = ({
                     name="sucursalId"
                     value={formData.sucursalId}
                     onChange={handleChange}
-                    className={fieldClassName}
+                    disabled={isEditing}
+                    className={`${fieldClassName} disabled:cursor-not-allowed disabled:opacity-60`}
                   >
-                    {SUCURSALES.map((s) => (
+                    {sucursalesDisponibles.map((s) => (
                       <option
                         key={s.id}
                         value={s.id}
@@ -264,6 +274,11 @@ export const AppointmentForm = ({
                       </option>
                     ))}
                   </select>
+                  {isEditing && (
+                    <p className="mt-1 text-[11px] text-slate-500">
+                      La sucursal de una cita existente no se modifica.
+                    </p>
+                  )}
                 </div>
               </div>
 

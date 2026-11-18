@@ -18,6 +18,7 @@ import {
 import { useHospitalBeds } from "./useHospitalBeds";
 import type { WeightUnit } from "../utils/weight";
 import type { SucursalId } from "../constants/appConstants";
+import type { OrganizationId } from "../types/organization";
 import { isValidSucursalId } from "../constants/appConstants";
 import { bedKey } from "../utils/bedScope";
 
@@ -142,6 +143,8 @@ export interface AdmitPatientOptions {
   nextReviewAt?: string;
   notes?: string;
   sucursalId?: SucursalId;
+  /** Alcance de la entidad de origen (por ejemplo, la cita que derivó en ingreso). */
+  organizationId?: OrganizationId;
   createdBy?: string;
   /** Planes de remedios que se crean junto con el ingreso. */
   medicationPlans?: MedicationPlanInput[];
@@ -229,7 +232,10 @@ export function useHospitalizations() {
       const fallbackScope = writeScope();
       const requestedSucursal = options?.sucursalId;
       const scope = {
-        organizationId: patient?.organizationId ?? fallbackScope.organizationId,
+        organizationId:
+          options?.organizationId ??
+          patient?.organizationId ??
+          fallbackScope.organizationId,
         sucursalId: isValidSucursalId(requestedSucursal)
           ? requestedSucursal
           : (patient?.sucursalId ?? fallbackScope.sucursalId),

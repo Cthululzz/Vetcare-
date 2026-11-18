@@ -29,7 +29,11 @@ export interface BranchContextValue {
   setActiveBranch: (branch: string) => void;
   filterByScope: <T extends BranchScoped>(items: T[]) => T[];
   matchesScope: (item: BranchScoped) => boolean;
-  writeScope: () => BranchScoped;
+  /**
+   * Alcance de una escritura. Si se indica una sucursal, solo se respeta para
+   * ADMIN mientras ve "Todas"; los demás roles quedan en la sucursal asignada.
+   */
+  writeScope: (sucursalId?: unknown) => BranchScoped;
 }
 
 export const BranchContext = createContext<BranchContextValue | null>(null);
@@ -97,11 +101,23 @@ export function useActiveBranchState(user: {
   );
 
   const writeScope = useCallback(
-    (): BranchScoped => ({
-      organizationId: DEFAULT_ORGANIZATION_ID,
-      sucursalId: activeBranch === "all" ? userSucursalId : activeBranch,
-    }),
-    [activeBranch, userSucursalId],
+    (sucursalId?: unknown): BranchScoped => {
+      const destinoPorDefecto =
+        activeBranch === "all" ? userSucursalId : activeBranch;
+      const sucursalSolicitada = isValidSucursalId(sucursalId)
+        ? sucursalId
+        : undefined;
+      const destino =
+        canViewAll && sucursalSolicitada
+          ? sucursalSolicitada
+          : destinoPorDefecto;
+
+      return {
+        organizationId: DEFAULT_ORGANIZATION_ID,
+        sucursalId: destino,
+      };
+    },
+    [activeBranch, canViewAll, userSucursalId],
   );
 
   return {

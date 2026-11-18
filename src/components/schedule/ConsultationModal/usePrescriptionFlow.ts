@@ -53,6 +53,8 @@ export function usePrescriptionFlow({
         pendingConsultationData.patient.id,
         pendingConsultationData.appointment.id,
         medications,
+        undefined,
+        pendingConsultationData.appointment,
       );
       onSaveConsultation(pendingConsultationData);
       setHasUnsavedChanges(false);

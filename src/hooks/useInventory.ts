@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useLocalStorage } from "./useLocalStorage";
 import { useBranchScope } from "../context/branchScope";
 import type { InventoryItem } from "../types/inventory";
+import type { BranchScoped } from "../types/organization";
 
 const INVENTORY_KEY = "vet_inventory";
 
@@ -25,6 +26,15 @@ export function useInventory() {
   );
 
   const getProducts = (): InventoryItem[] => items.filter((i) => i.isActive);
+
+  /** Productos activos de un alcance explícito, sin depender de la sede activa. */
+  const getProductsForScope = (scope: BranchScoped): InventoryItem[] =>
+    storedItems.filter(
+      (item) =>
+        item.isActive &&
+        item.organizationId === scope.organizationId &&
+        item.sucursalId === scope.sucursalId,
+    );
 
   const getProduct = (id: string): InventoryItem | undefined =>
     items.find((i) => i.id === id);
@@ -114,6 +124,7 @@ export function useInventory() {
   return {
     items,
     getProducts,
+    getProductsForScope,
     getProduct,
     createProduct,
     updateProduct,

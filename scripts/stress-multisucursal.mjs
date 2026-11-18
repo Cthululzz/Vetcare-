@@ -233,6 +233,7 @@ const seedExpression = `(() => {
         category: pick(['Medicamentos','Insumos','Vacunas']),
         tags: [sucursales[b]],
         currentStock: int(0,60), minStock: int(5,20), unit: pick(unidades),
+        organizationId: 'vet-demo', sucursalId: sucursales[b],
         location: 'Bodega ' + sucursales[b] + ' / Estante ' + int(1,8),
         batch: 'LOTE-' + i,
         expirationDate: day(int(-30,400)),
@@ -470,6 +471,174 @@ results.agendaHoy = await evaluate(`(() => {
   };
 })()`);
 
+// ============================================================
+// HERENCIA DE SUCURSAL EN CITAS, CONSULTAS E INTERNACIONES
+// ============================================================
+results.herencia = {};
+
+// ADMIN con sede activa norte: una cita nueva debe nacer en norte, igual que su dueño y paciente.
+await evaluate(`localStorage.setItem('vet_active_branch', JSON.stringify('norte'));`);
+await go('/agenda');
+await closeReminder();
+results.herencia.apertura = await evaluate(`(() => {
+  const b = [...document.querySelectorAll('button')].find(x=>(x.textContent||'').includes('Agendar cita para hoy'));
+  if (!b) return { ok:false };
+  b.click();
+  return { ok:true };
+})()`);
+await sleep(700);
+results.herencia.formulario = await evaluate(`(() => {
+  const sel = document.querySelector('select[name="sucursalId"]');
+  return {
+    opciones: sel ? [...sel.options].map(o=>o.value) : [],
+    valor: sel ? sel.value : null,
+  };
+})()`);
+results.herencia.llenado = await evaluate(`(() => {
+  const setVal = (el, value) => {
+    if (!el) return false;
+    const ctor = el.tagName === 'TEXTAREA' ? HTMLTextAreaElement : el.tagName === 'SELECT' ? HTMLSelectElement : HTMLInputElement;
+    Object.getOwnPropertyDescriptor(ctor.prototype, 'value').set.call(el, value);
+    el.dispatchEvent(new Event('input', { bubbles:true }));
+    el.dispatchEvent(new Event('change', { bubbles:true }));
+    return true;
+  };
+  const set = (name, value) => setVal(document.querySelector('[name="'+name+'"]'), value);
+  return {
+    owner: set('ownerName', 'Dueño Herencia Norte'),
+    phone: set('ownerPhone', '+56 9 77770001'),
+    patient: set('patientName', 'Paciente-Herencia-Norte'),
+    hora: set('hora', '23:45'),
+    motivo: set('motivo', 'Herencia de sucursal norte'),
+  };
+})()`);
+await sleep(300);
+results.herencia.guardado = await evaluate(`(() => {
+  const b = [...document.querySelectorAll('button')].find(x=>(x.textContent||'').trim()==='Guardar Cita');
+  if (!b) return { ok:false };
+  b.click();
+  return { ok:true };
+})()`);
+await sleep(800);
+results.herencia.citaCreada = await evaluate(`(() => {
+  const apps = JSON.parse(localStorage.getItem('vet_appointments'));
+  const owners = JSON.parse(localStorage.getItem('vet_owners'));
+  const patients = JSON.parse(localStorage.getItem('vet_patients'));
+  const c = apps.find(a=>a.motivo==='Herencia de sucursal norte');
+  const o = owners.find(x=>x.phone==='+56 9 77770001');
+  const p = patients.find(x=>x.name==='Paciente-Herencia-Norte');
+  return {
+    cita: c ? { organizationId:c.organizationId, sucursalId:c.sucursalId } : null,
+    owner: o ? { organizationId:o.organizationId, sucursalId:o.sucursalId } : null,
+    patient: p ? { organizationId:p.organizationId, sucursalId:p.sucursalId } : null,
+    todoEnMismaSede: Boolean(c && o && p && c.sucursalId==='norte' && o.organizationId===c.organizationId && o.sucursalId===c.sucursalId && p.organizationId===c.organizationId && p.sucursalId===c.sucursalId),
+  };
+})()`);
+
+// Editar no debe re-alcancear la cita: el selector queda bloqueado.
+results.herencia.edicion = {};
+results.herencia.edicion.apertura = await evaluate(`(() => {
+  const btns = [...document.querySelectorAll('button')].filter(b=>(b.textContent||'').trim()==='Editar');
+  const target = btns.find(b => { let el=b; while (el && el.parentElement) { el=el.parentElement; const t=el.textContent||''; if (t.includes('Paciente-Herencia-Norte') && t.includes('Herencia de sucursal norte') && el.querySelectorAll('button').length <= 8) return true; } return false; });
+  if (!target) return { ok:false, botones:btns.length };
+  target.click();
+  return { ok:true };
+})()`);
+await sleep(700);
+results.herencia.edicion.formulario = await evaluate(`(() => {
+  const sel = document.querySelector('select[name="sucursalId"]');
+  return { valor: sel ? sel.value : null, deshabilitado: sel ? sel.disabled : null };
+})()`);
+results.herencia.edicion.guardado = await evaluate(`(() => {
+  const setVal = (el, value) => {
+    if (!el) return false;
+    const proto = el.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : el.tagName === 'SELECT' ? HTMLSelectElement.prototype : HTMLInputElement.prototype;
+    Object.getOwnPropertyDescriptor(proto, 'value').set.call(el, value);
+    el.dispatchEvent(new Event('input', { bubbles:true }));
+    return true;
+  };
+  const motivo = [...document.querySelectorAll('textarea')].find(t=>t.name==='motivo');
+  const sel = document.querySelector('select[name="sucursalId"]');
+  const intentoReSucursal = setVal(sel, 'sur');
+  const cambioMotivo = setVal(motivo, 'Herencia editada norte');
+  const b = [...document.querySelectorAll('button')].find(x=>(x.textContent||'').trim()==='Guardar Cambios');
+  if (!b) return { ok:false, intentoReSucursal, cambioMotivo };
+  b.click();
+  return { ok:true, intentoReSucursal, cambioMotivo };
+})()`);
+await sleep(800);
+results.herencia.edicion.despues = await evaluate(`(() => {
+  const c = JSON.parse(localStorage.getItem('vet_appointments')).find(a=>a.motivo==='Herencia editada norte');
+  return c ? { organizationId:c.organizationId, sucursalId:c.sucursalId, conservaSucursal:c.sucursalId==='norte' } : null;
+})()`);
+
+// Finalizar consulta y hospitalizar con ADMIN en "Todas": la internación y el remedio deben seguir a la cita de norte.
+await evaluate(`localStorage.setItem('vet_active_branch', JSON.stringify('all'));`);
+await go('/agenda');
+await closeReminder();
+results.herencia.internacionDesdeConsulta = {};
+results.herencia.internacionDesdeConsulta.seleccion = await evaluate(`(() => {
+  const c = JSON.parse(localStorage.getItem('vet_appointments')).find(a=>a.motivo==='Herencia editada norte');
+  if (!c) return { ok:false };
+  localStorage.setItem('__test_hosp_app_id', c.id);
+  localStorage.setItem('__test_hosp_patient_id', c.patientId);
+  return { ok:true, patientId:c.patientId, sucursalId:c.sucursalId };
+})()`);
+results.herencia.internacionDesdeConsulta.apertura = await evaluate(`(() => {
+  const btns = [...document.querySelectorAll('button')].filter(b=>['Iniciar Consulta','Continuar Consulta'].includes((b.textContent||'').trim()));
+  const target = btns.find(b => { let el=b; while (el && el.parentElement) { el=el.parentElement; const t=el.textContent||''; if (t.includes('Paciente-Herencia-Norte') && t.includes('Herencia editada norte') && el.querySelectorAll('button').length <= 8) return true; } return false; });
+  if (!target) return { ok:false, botones:btns.length };
+  target.click();
+  return { ok:true };
+})()`);
+await sleep(700);
+results.herencia.internacionDesdeConsulta.hospitalizar = await evaluate(`(() => {
+  const b = [...document.querySelectorAll('button')].find(x=>(x.textContent||'').includes('Finalizar consulta y hospitalizar'));
+  if (!b) return { ok:false };
+  b.click();
+  return { ok:true };
+})()`);
+await sleep(700);
+results.herencia.internacionDesdeConsulta.abrirPlan = await evaluate(`(() => {
+  const b = [...document.querySelectorAll('button')].find(x=>(x.textContent||'').includes('Agregar remedio'));
+  if (!b) return { ok:false };
+  b.click();
+  return { ok:true };
+})()`);
+await sleep(300);
+results.herencia.internacionDesdeConsulta.productos = await evaluate(`(() => {
+  const sel = [...document.querySelectorAll('select')].find(s=>[...s.options].some(o=>o.textContent.includes('(norte)')));
+  const opciones = sel ? [...sel.options].filter(o=>o.value).map(o=>o.textContent.trim()) : [];
+  return { total:opciones.length, todasDeNorte: opciones.length > 0 && opciones.every(o=>o.includes('(norte)')), muestra: opciones.slice(0,2) };
+})()`);
+results.herencia.internacionDesdeConsulta.confirmar = await evaluate(`(() => {
+  const ta = document.querySelector('textarea[placeholder="Ej. Postoperatorio, deshidratación, observación..."]');
+  if (!ta) return { ok:false, motivo:'sin motivo' };
+  Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(ta, 'Herencia norte desde consulta');
+  ta.dispatchEvent(new Event('input', { bubbles:true }));
+  const b = [...document.querySelectorAll('button')].find(x=>(x.textContent||'').trim()==='Confirmar hospitalización');
+  if (!b) return { ok:false, motivo:'sin confirmación' };
+  b.click();
+  return { ok:true };
+})()`);
+await sleep(1100);
+results.herencia.internacionDesdeConsulta.despues = await evaluate(`(() => {
+  const id = localStorage.getItem('__test_hosp_app_id');
+  const pid = localStorage.getItem('__test_hosp_patient_id');
+  const c = JSON.parse(localStorage.getItem('vet_appointments')).find(a=>a.id===id);
+  const h = JSON.parse(localStorage.getItem('vet_hospitalizations')).find(x=>x.patientId===pid && x.reason==='Herencia norte desde consulta');
+  const p = JSON.parse(localStorage.getItem('vet_patients')).find(x=>x.id===pid);
+  const rec = p && p.history[0];
+  return {
+    cita: c ? { organizationId:c.organizationId, sucursalId:c.sucursalId, status:c.status } : null,
+    modalSigueAbierto: document.body.innerText.includes('Confirmar hospitalización'),
+    internacion: h ? { organizationId:h.organizationId, sucursalId:h.sucursalId, status:h.status } : null,
+    registro: rec ? { organizationId:rec.organizationId, sucursalId:rec.sucursalId, type:rec.type } : null,
+    internacionHeredaCita: Boolean(c && h && h.organizationId===c.organizationId && h.sucursalId===c.sucursalId),
+    registroHeredaCita: Boolean(c && rec && rec.organizationId===c.organizationId && rec.sucursalId===c.sucursalId),
+  };
+})()`);
+
 // Detalle de internación: debe mostrar la sucursal
 await go('/pacientes/hospitalizados');
 await closeReminder();
@@ -636,9 +805,20 @@ results.consultaSucursal.finalizar = await evaluate(`(() => {
 })()`);
 await sleep(500);
 results.consultaSucursal.confirmar = await evaluate(`(() => {
-  const btns = [...document.querySelectorAll('button')].filter(x=>(x.textContent||'').trim()==='No');
+  const btns = [...document.querySelectorAll('button')].filter(x=>(x.textContent||'').trim()==='Sí');
   if (!btns.length) return { ok:false };
   btns[btns.length-1].click();
+  return { ok:true };
+})()`);
+await sleep(500);
+results.consultaSucursal.receta = await evaluate(`(() => {
+  const input = document.querySelector('input[placeholder="Ej. Amoxicilina 500mg"]');
+  if (!input) return { ok:false, motivo:'sin formulario de receta' };
+  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input, 'Receta heredada de cita norte');
+  input.dispatchEvent(new Event('input', { bubbles:true }));
+  const b = [...document.querySelectorAll('button')].find(x=>(x.textContent||'').includes('Guardar Receta'));
+  if (!b) return { ok:false, motivo:'sin botón de guardar' };
+  b.click();
   return { ok:true };
 })()`);
 await sleep(1000);
@@ -648,10 +828,14 @@ results.consultaSucursal.despues = await evaluate(`(() => {
   const c = JSON.parse(localStorage.getItem('vet_appointments')).find(a=>a.id===id);
   const p = JSON.parse(localStorage.getItem('vet_patients')).find(x=>x.id===pid);
   const nuevo = p.history[0];
+  const receta = JSON.parse(localStorage.getItem('vet_prescriptions')||'[]').find(x=>x.appointmentId===id);
   return {
-    cita: c ? { id:c.id, sucursalId:c.sucursalId, status:c.status, patientId:c.patientId } : null,
+    cita: c ? { id:c.id, organizationId:c.organizationId, sucursalId:c.sucursalId, status:c.status, patientId:c.patientId } : null,
     historiaDespues: p.history.length,
-    registroNuevo: nuevo ? { type:nuevo.type, diagnosis:nuevo.diagnosis||null, date:nuevo.date } : null,
+    registroNuevo: nuevo ? { organizationId:nuevo.organizationId, sucursalId:nuevo.sucursalId, type:nuevo.type, diagnosis:nuevo.diagnosis||null, date:nuevo.date } : null,
+    recetaNueva: receta ? { organizationId:receta.organizationId, sucursalId:receta.sucursalId } : null,
+    registroHeredaCita: Boolean(c && nuevo && nuevo.organizationId===c.organizationId && nuevo.sucursalId===c.sucursalId),
+    recetaHeredaCita: Boolean(c && receta && receta.organizationId===c.organizationId && receta.sucursalId===c.sucursalId),
   };
 })()`);
 
