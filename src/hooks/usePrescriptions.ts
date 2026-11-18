@@ -3,6 +3,7 @@ import type {
   Prescription,
   PrescriptionMedication,
 } from "../types/prescription";
+import { defaultBranchScope } from "../utils/storageMigration";
 
 const PRESCRIPTIONS_KEY = "vet_prescriptions";
 
@@ -27,6 +28,7 @@ export function usePrescriptions() {
     notes?: string,
   ): Prescription => {
     const newPrescription: Prescription = {
+      ...defaultBranchScope(),
       id: generateId(),
       patientId,
       appointmentId,

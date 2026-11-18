@@ -2,6 +2,8 @@
 // CONSTANTES GLOBALES DE LA APLICACIÓN
 // ============================================
 
+import type { OrganizationId } from "../types/organization";
+
 // --- Configuración general ---
 export const APP_CONFIG = {
   appName: "VetFlow Manager",
@@ -24,6 +26,15 @@ export const SUCURSALES = [
   { id: "sur", name: "Sucursal Sur (Ñuñoa)" },
 ] as const;
 export type SucursalId = (typeof SUCURSALES)[number]["id"];
+
+/** Organización única de la etapa actual, usada como valor de migración. */
+export const DEFAULT_ORGANIZATION_ID: OrganizationId = "vet-demo";
+/** Sucursal asignada a los datos históricos que todavía no la registran. */
+export const DEFAULT_SUCURSAL_ID: SucursalId = "centro";
+
+/** Valida un ID de sucursal antes de aceptarlo como parte del contrato. */
+export const isValidSucursalId = (value: unknown): value is SucursalId =>
+  typeof value === "string" && SUCURSALES.some((s) => s.id === value);
 
 // --- Doctores ---
 export const DOCTORES = [

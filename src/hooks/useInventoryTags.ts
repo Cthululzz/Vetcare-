@@ -1,5 +1,6 @@
 import { useLocalStorage } from "./useLocalStorage";
 import type { InventoryTag } from "../types/inventory";
+import { defaultBranchScope } from "../utils/storageMigration";
 
 const TAGS_KEY = "vet_inventory_tags";
 
@@ -12,7 +13,10 @@ function isoNow(): string {
 }
 
 // Tags iniciales del sistema
-const SYSTEM_TAGS: Omit<InventoryTag, "id" | "createdAt">[] = [
+const SYSTEM_TAGS: Omit<
+  InventoryTag,
+  "id" | "createdAt" | "organizationId" | "sucursalId"
+>[] = [
   { name: "antibioticos", isSystem: true },
   { name: "antiparasitarios", isSystem: true },
   { name: "analgesicos", isSystem: true },
@@ -28,6 +32,7 @@ export function useInventoryTags() {
     TAGS_KEY,
     SYSTEM_TAGS.map((t) => ({
       ...t,
+      ...defaultBranchScope(),
       id: generateId(),
       createdAt: isoNow(),
     })),
@@ -45,6 +50,7 @@ export function useInventoryTags() {
     if (existing) return existing;
 
     const newTag: InventoryTag = {
+      ...defaultBranchScope(),
       id: generateId(),
       name: normalized,
       isSystem: false,

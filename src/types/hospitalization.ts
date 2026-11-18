@@ -1,4 +1,6 @@
 import type { WeightUnit } from "../utils/weight";
+import type { SucursalId } from "../constants/appConstants";
+import type { BranchScoped } from "./organization";
 
 export type HospitalizationStatus = "activa" | "alta";
 
@@ -68,7 +70,7 @@ export interface DischargeSummary {
   dischargedBy?: string;
 }
 
-export interface Hospitalization {
+export interface Hospitalization extends BranchScoped {
   id: string;
   patientId: string;
   admittedAt: string; // ISO
@@ -86,7 +88,8 @@ export interface Hospitalization {
   weightAtAdmissionUnit?: WeightUnit;
   monitoringFrequency?: number; // horas entre revisiones
   nextReviewAt?: string; // ISO
-  sucursalId?: string;
+  /** Sucursal donde está físicamente la cama del paciente. */
+  sucursalId: SucursalId;
   createdBy?: string;
 
   // Seguimiento clínico

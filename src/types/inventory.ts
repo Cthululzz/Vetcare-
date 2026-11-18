@@ -2,7 +2,9 @@
 // TIPOS DE INVENTARIO Y FARMACIA
 // ============================================
 
-export interface InventoryItem {
+import type { BranchScoped } from "./organization";
+
+export interface InventoryItem extends BranchScoped {
   id: string;
   name: string;
   description?: string;
@@ -42,7 +44,7 @@ export type MovementType =
   | "devolucion"
   | "merma";
 
-export interface InventoryMovement {
+export interface InventoryMovement extends BranchScoped {
   id: string;
   productId: string;
   type: MovementType;
@@ -74,14 +76,14 @@ export interface InventoryMovement {
   createdAt: string;
 }
 
-export interface InventoryTag {
+export interface InventoryTag extends BranchScoped {
   id: string;
   name: string;
   isSystem: boolean;
   createdAt: string;
 }
 
-export interface PendingInventoryReminder {
+export interface PendingInventoryReminder extends BranchScoped {
   id: string;
   movementId: string;
   userId: string;

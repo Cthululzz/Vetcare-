@@ -5,8 +5,9 @@ import type {
   EstadoCita,
 } from "../constants/appConstants";
 import type { WeightUnit } from "../utils/weight";
+import type { BranchScoped } from "./organization";
 
-export interface Appointment {
+export interface Appointment extends BranchScoped {
   id: string;
 
   // --- Relaciones (IDs, no datos duplicados) ---

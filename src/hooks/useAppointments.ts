@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import type { Appointment } from "../types/appointment";
 import type { EstadoCita } from "../constants/appConstants";
 import { useLocalStorage } from "./useLocalStorage";
+import { defaultBranchScope } from "../utils/storageMigration";
 import {
   getLocalTodayStr,
   sortAppointmentsByDateTime,
@@ -50,10 +51,11 @@ export function useAppointments() {
     appointments.filter((app) => app.fecha === fecha);
 
   const createAppointment = (
-    data: Omit<Appointment, "id" | "createdAt" | "updatedAt">,
+    data: Omit<Appointment, "id" | "createdAt" | "updatedAt" | "organizationId">,
   ): Appointment => {
     const newAppointment: Appointment = {
       ...data,
+      organizationId: defaultBranchScope().organizationId,
       id: generateId(),
       createdAt: isoNow(),
       updatedAt: isoNow(),

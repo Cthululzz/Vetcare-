@@ -15,6 +15,9 @@ import {
 } from "../constants/hospitalization";
 import { useHospitalBeds } from "./useHospitalBeds";
 import type { WeightUnit } from "../utils/weight";
+import type { SucursalId } from "../constants/appConstants";
+import { isValidSucursalId } from "../constants/appConstants";
+import { defaultBranchScope } from "../utils/storageMigration";
 
 const HOSPITALIZATIONS_KEY = "vet_hospitalizations";
 
@@ -134,7 +137,7 @@ export interface AdmitPatientOptions {
   monitoringFrequency?: number;
   nextReviewAt?: string;
   notes?: string;
-  sucursalId?: string;
+  sucursalId?: SucursalId;
   createdBy?: string;
   /** Planes de remedios que se crean junto con el ingreso. */
   medicationPlans?: MedicationPlanInput[];
@@ -212,6 +215,16 @@ export function useHospitalizations() {
       );
       if (alreadyAdmitted) return null;
 
+      const patient = getPatient(patientId);
+      const fallbackScope = defaultBranchScope();
+      const requestedSucursal = options?.sucursalId;
+      const scope = {
+        organizationId: patient?.organizationId ?? fallbackScope.organizationId,
+        sucursalId: isValidSucursalId(requestedSucursal)
+          ? requestedSucursal
+          : (patient?.sucursalId ?? fallbackScope.sucursalId),
+      };
+
       const occupiedBeds = getOccupiedBeds(hospitalizations, getPatient);
       let bed = options?.bed?.trim() || undefined;
 
@@ -253,7 +266,8 @@ export function useHospitalizations() {
         monitoringFrequency,
         nextReviewAt,
         notes: options?.notes,
-        sucursalId: options?.sucursalId,
+        organizationId: scope.organizationId,
+        sucursalId: scope.sucursalId,
         createdBy: options?.createdBy,
         evolutions: [],
         medications: [],

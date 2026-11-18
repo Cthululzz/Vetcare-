@@ -4,8 +4,9 @@ import type {
   EstadoVacuna,
 } from "../constants/appConstants";
 import type { WeightUnit } from "../utils/weight";
+import type { BranchScoped } from "./organization";
 
-export interface Owner {
+export interface Owner extends BranchScoped {
   id: string;
   name: string;
   phone: string;
@@ -22,7 +23,7 @@ export type MedicalRecordType =
   | "hospitalizacion"
   | "nota";
 
-export interface MedicalRecord {
+export interface MedicalRecord extends BranchScoped {
   id: string;
   date: string;
   notes: string;
@@ -44,7 +45,7 @@ export interface MedicalRecord {
   nextVisitAt?: string;
 }
 
-export interface Patient {
+export interface Patient extends BranchScoped {
   id: string;
   name: string;
   species: EspecieMascota;

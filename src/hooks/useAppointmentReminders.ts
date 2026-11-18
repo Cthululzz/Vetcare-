@@ -2,6 +2,7 @@ import { useCallback } from "react";
 import { useLocalStorage } from "./useLocalStorage";
 import type { AppointmentReminderKind } from "../utils/whatsappUtils";
 import type { SentAppointmentReminder } from "../utils/appointmentReminders";
+import type { BranchScoped } from "../types/organization";
 
 const APPOINTMENT_REMINDERS_KEY = "vet_appointment_reminders";
 
@@ -25,6 +26,7 @@ export function useAppointmentReminders() {
   const markAsSent = (
     appointmentId: string,
     kind: AppointmentReminderKind,
+    scope: BranchScoped,
   ): void => {
     setSentReminders((prev) => {
       const alreadySent = prev.some(
@@ -36,6 +38,7 @@ export function useAppointmentReminders() {
       return [
         ...prev,
         {
+          ...scope,
           id: generateId(),
           appointmentId,
           kind,

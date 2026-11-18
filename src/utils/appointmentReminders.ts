@@ -7,6 +7,7 @@
 
 import type { Appointment } from "../types/appointment";
 import type { Owner, Patient } from "../types/patient";
+import type { BranchScoped } from "../types/organization";
 import type { AppointmentReminderKind } from "./whatsappUtils";
 
 /** Horas antes de la cita en que corresponde cada aviso. */
@@ -15,14 +16,14 @@ export const REMINDER_WINDOWS: Record<AppointmentReminderKind, number> = {
   "1h": 1,
 };
 
-export interface SentAppointmentReminder {
+export interface SentAppointmentReminder extends BranchScoped {
   id: string;
   appointmentId: string;
   kind: AppointmentReminderKind;
   sentAt: string; // ISO
 }
 
-export interface DueAppointmentReminder {
+export interface DueAppointmentReminder extends BranchScoped {
   appointment: Appointment;
   kind: AppointmentReminderKind;
   /** Fecha y hora de la cita como instante ISO. */
@@ -104,6 +105,8 @@ export const buildDueAppointmentReminders = (
 
     reminders.push({
       appointment,
+      organizationId: appointment.organizationId,
+      sucursalId: appointment.sucursalId,
       kind,
       appointmentAt: date.toISOString(),
       patientName: patient.name,

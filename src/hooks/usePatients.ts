@@ -5,6 +5,7 @@ import type {
   Genero,
   EstadoVacuna,
 } from "../constants/appConstants";
+import { defaultBranchScope } from "../utils/storageMigration";
 
 // ============================================
 // KEYS DE ALMACENAMIENTO
@@ -38,9 +39,12 @@ export function usePatients() {
   const getOwnerByPhone = (phone: string): Owner | undefined =>
     owners.find((o) => o.phone === phone);
 
-  const createOwner = (data: Omit<Owner, "id" | "createdAt">): Owner => {
+  const createOwner = (
+    data: Omit<Owner, "id" | "createdAt" | "organizationId" | "sucursalId">,
+  ): Owner => {
     const newOwner: Owner = {
       ...data,
+      ...defaultBranchScope(),
       id: generateId(),
       createdAt: isoNow(),
     };
@@ -74,11 +78,22 @@ export function usePatients() {
   const createPatient = (
     data: Omit<
       Patient,
-      "id" | "createdAt" | "updatedAt" | "history" | "isActive"
+      | "id"
+      | "createdAt"
+      | "updatedAt"
+      | "history"
+      | "isActive"
+      | "organizationId"
+      | "sucursalId"
     >,
   ): Patient => {
+    const owner = owners.find((o) => o.id === data.ownerId);
+    const scope = owner
+      ? { organizationId: owner.organizationId, sucursalId: owner.sucursalId }
+      : defaultBranchScope();
     const newPatient: Patient = {
       ...data,
+      ...scope,
       id: generateId(),
       history: [],
       isActive: true,
@@ -117,22 +132,24 @@ export function usePatients() {
 
   const addMedicalRecord = (
     patientId: string,
-    record: Omit<MedicalRecord, "id">,
+    record: Omit<MedicalRecord, "id" | "organizationId" | "sucursalId">,
   ) => {
-    const newRecord: MedicalRecord = {
-      ...record,
-      id: generateId(),
-    };
     setPatients((prev) =>
-      prev.map((p) =>
-        p.id === patientId
-          ? {
-              ...p,
-              history: [newRecord, ...p.history],
-              updatedAt: isoNow(),
-            }
-          : p,
-      ),
+      prev.map((p) => {
+        if (p.id !== patientId) return p;
+
+        const newRecord: MedicalRecord = {
+          ...record,
+          organizationId: p.organizationId,
+          sucursalId: p.sucursalId,
+          id: generateId(),
+        };
+        return {
+          ...p,
+          history: [newRecord, ...p.history],
+          updatedAt: isoNow(),
+        };
+      }),
     );
   };
 
@@ -182,7 +199,7 @@ export function usePatients() {
     birthDate?: string;
     microchip?: string;
     vaccineStatus: EstadoVacuna;
-    record: Omit<MedicalRecord, "id">;
+    record: Omit<MedicalRecord, "id" | "organizationId" | "sucursalId">;
   }): { patient: Patient; owner: Owner } => {
     // 1. Buscar o crear dueño
     let owner = getOwnerByPhone(params.ownerPhone);

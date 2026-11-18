@@ -2,6 +2,7 @@ import { useLocalStorage } from "./useLocalStorage";
 import type { InventoryMovement, MovementType } from "../types/inventory";
 import { useInventory } from "./useInventory";
 import { getLocalTodayStr } from "../utils/dateUtils";
+import { defaultBranchScope } from "../utils/storageMigration";
 
 const MOVEMENTS_KEY = "vet_inventory_movements";
 
@@ -84,6 +85,7 @@ export function useInventoryMovements() {
   }): InventoryMovement => {
     const newMovement: InventoryMovement = {
       ...data,
+      ...defaultBranchScope(),
       id: generateId(),
       date: isoNow(),
       isComplete: data.isComplete ?? true,

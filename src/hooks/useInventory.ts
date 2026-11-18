@@ -1,5 +1,6 @@
 import { useLocalStorage } from "./useLocalStorage";
 import type { InventoryItem } from "../types/inventory";
+import { defaultBranchScope } from "../utils/storageMigration";
 
 const INVENTORY_KEY = "vet_inventory";
 
@@ -20,10 +21,19 @@ export function useInventory() {
     items.find((i) => i.id === id);
 
   const createProduct = (
-    data: Omit<InventoryItem, "id" | "createdAt" | "updatedAt" | "isActive">,
+    data: Omit<
+      InventoryItem,
+      | "id"
+      | "createdAt"
+      | "updatedAt"
+      | "isActive"
+      | "organizationId"
+      | "sucursalId"
+    >,
   ): InventoryItem => {
     const newItem: InventoryItem = {
       ...data,
+      ...defaultBranchScope(),
       id: generateId(),
       createdAt: isoNow(),
       updatedAt: isoNow(),

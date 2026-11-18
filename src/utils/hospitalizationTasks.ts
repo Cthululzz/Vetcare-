@@ -8,6 +8,7 @@
 
 import type { Hospitalization, MedicationPlan } from "../types/hospitalization";
 import type { Patient } from "../types/patient";
+import type { BranchScoped } from "../types/organization";
 import { formatFractionWithUnit } from "./inventoryUnits";
 
 /** Minutos de tolerancia antes de marcar una dosis como atrasada. */
@@ -21,7 +22,7 @@ const HOUR_MS = 60 * MINUTE_MS;
 
 export type HospitalizationTaskType = "medicacion" | "revision";
 
-export interface HospitalizationTask {
+export interface HospitalizationTask extends BranchScoped {
   id: string;
   type: HospitalizationTaskType;
   hospitalizationId: string;
@@ -64,6 +65,8 @@ export const buildHospitalizationTasks = (
         id: `med-${plan.id}`,
         type: "medicacion",
         hospitalizationId: hospitalization.id,
+        organizationId: hospitalization.organizationId,
+        sucursalId: hospitalization.sucursalId,
         patientId: patient.id,
         patientName: patient.name,
         bed: hospitalization.bed,
@@ -81,6 +84,8 @@ export const buildHospitalizationTasks = (
           id: `review-${hospitalization.id}`,
           type: "revision",
           hospitalizationId: hospitalization.id,
+          organizationId: hospitalization.organizationId,
+          sucursalId: hospitalization.sucursalId,
           patientId: patient.id,
           patientName: patient.name,
           bed: hospitalization.bed,

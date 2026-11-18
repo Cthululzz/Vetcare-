@@ -7,7 +7,8 @@ import {
   X,
 } from "lucide-react";
 import type { Owner, Patient } from "../../types/patient";
-import { SUCURSALES } from "../../constants/appConstants";
+import type { SucursalId } from "../../constants/appConstants";
+import { SUCURSALES, isValidSucursalId } from "../../constants/appConstants";
 import {
   DEFAULT_MONITORING_FREQUENCY,
   FRECUENCIAS_MONITOREO,
@@ -28,7 +29,7 @@ export interface AdmissionData {
   bed: string;
   monitoringFrequency: number;
   initialTreatment?: string;
-  sucursalId: string;
+  sucursalId: SucursalId;
 }
 
 interface AdmissionFormModalProps {
@@ -59,7 +60,7 @@ export const AdmissionFormModal = ({
     DEFAULT_MONITORING_FREQUENCY,
   );
   const [initialTreatment, setInitialTreatment] = useState("");
-  const [sucursalId, setSucursalId] = useState<string>(SUCURSALES[0].id);
+  const [sucursalId, setSucursalId] = useState<SucursalId>(SUCURSALES[0].id);
   const [error, setError] = useState("");
 
   const filteredPatients = useMemo(() => {
@@ -369,7 +370,10 @@ export const AdmissionFormModal = ({
               </label>
               <select
                 value={sucursalId}
-                onChange={(event) => setSucursalId(event.target.value)}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  if (isValidSucursalId(value)) setSucursalId(value);
+                }}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#ece883] transition-colors"
               >
                 {SUCURSALES.map((sucursal) => (

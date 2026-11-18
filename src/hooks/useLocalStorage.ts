@@ -1,4 +1,9 @@
 import { useCallback, useSyncExternalStore } from "react";
+import {
+  ensureSchemaVersion,
+  migrateAllStoredValues,
+  normalizeStoredValue,
+} from "../utils/storageMigration";
 
 // ============================================
 // STORE CENTRALIZADO (singleton a nivel de módulo)
@@ -14,7 +19,18 @@ const listeners = new Map<string, Set<Listener>>();
 function readFromStorage<T>(key: string, initialValue: T): T {
   try {
     const item = window.localStorage.getItem(key);
-    return item ? (JSON.parse(item) as T) : initialValue;
+    const stored = item ? (JSON.parse(item) as T) : initialValue;
+    const { value, changed } = normalizeStoredValue(key, stored);
+
+    if (changed) {
+      try {
+        window.localStorage.setItem(key, JSON.stringify(value));
+      } catch (error) {
+        console.error(`Error migrando localStorage key "${key}":`, error);
+      }
+    }
+
+    return value;
   } catch (error) {
     console.error(`Error leyendo localStorage key "${key}":`, error);
     return initialValue;
@@ -71,12 +87,22 @@ export const storageStore = {
 // SINCRONIZACIÓN ENTRE PESTAÑAS (evento storage nativo)
 // ============================================
 if (typeof window !== "undefined") {
+  ensureSchemaVersion();
+  migrateAllStoredValues();
+
   window.addEventListener("storage", (event: StorageEvent) => {
     if (event.key === null) return;
 
     if (event.newValue !== null) {
       try {
-        const newValue = JSON.parse(event.newValue);
+        const incoming = JSON.parse(event.newValue);
+        const { value: newValue, changed } = normalizeStoredValue(
+          event.key,
+          incoming,
+        );
+        if (changed) {
+          window.localStorage.setItem(event.key, JSON.stringify(newValue));
+        }
         cache.set(event.key, newValue);
         notify(event.key);
       } catch (error) {

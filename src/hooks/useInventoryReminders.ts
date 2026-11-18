@@ -1,5 +1,6 @@
 import { useLocalStorage } from "./useLocalStorage";
 import type { PendingInventoryReminder } from "../types/inventory";
+import { defaultBranchScope } from "../utils/storageMigration";
 
 const REMINDERS_KEY = "vet_inventory_reminders";
 
@@ -24,6 +25,7 @@ export function useInventoryReminders() {
     userId: string,
   ): PendingInventoryReminder => {
     const newReminder: PendingInventoryReminder = {
+      ...defaultBranchScope(),
       id: generateId(),
       movementId,
       userId,

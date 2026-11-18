@@ -4,7 +4,9 @@ export interface PrescriptionMedication {
   instructions: string;
 }
 
-export interface Prescription {
+import type { BranchScoped } from "./organization";
+
+export interface Prescription extends BranchScoped {
   id: string;
   patientId: string;
   appointmentId: string;

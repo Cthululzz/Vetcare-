@@ -120,7 +120,11 @@ const Tasks = () => {
 
   const confirmMarkAsSent = () => {
     if (!reminderToConfirm) return;
-    markAsSent(reminderToConfirm.appointment.id, reminderToConfirm.kind);
+    markAsSent(
+      reminderToConfirm.appointment.id,
+      reminderToConfirm.kind,
+      reminderToConfirm,
+    );
     setReminderToConfirm(null);
   };
 
@@ -143,7 +147,7 @@ const Tasks = () => {
       "noopener,noreferrer",
     );
     markTaskAsSeen(reminderKey(reminder));
-    markAsSent(reminder.appointment.id, reminder.kind);
+    markAsSent(reminder.appointment.id, reminder.kind, reminder);
   };
 
   const renderTask = (task: HospitalizationTask, overdueStyle: boolean) => {
