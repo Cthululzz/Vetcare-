@@ -1,4 +1,10 @@
 import { DEFAULT_ORGANIZATION_ID } from "./appConstants";
+import {
+  PROVIDER_EMAIL,
+  PROVIDER_NAME,
+  PROVIDER_PASSWORD,
+  PROVIDER_SUCURSAL_ID,
+} from "./provider";
 import type { StoredUser } from "../types/user";
 
 // Usuarios de desarrollo. Se usan solo cuando VITE_BYPASS_AUTH=true para
@@ -35,6 +41,17 @@ export const DEMO_USERS: StoredUser[] = [
     role: "RECEPTIONIST",
     organizationId: DEFAULT_ORGANIZATION_ID,
     sucursalId: "sur",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    isActive: true,
+  },
+  {
+    id: "user-provider",
+    email: PROVIDER_EMAIL,
+    password: PROVIDER_PASSWORD,
+    name: PROVIDER_NAME,
+    role: "PROVEEDOR",
+    organizationId: DEFAULT_ORGANIZATION_ID,
+    sucursalId: PROVIDER_SUCURSAL_ID,
     createdAt: "2026-01-01T00:00:00.000Z",
     isActive: true,
   },

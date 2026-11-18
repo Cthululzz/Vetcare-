@@ -8,15 +8,24 @@ import {
   PROVIDER_SUCURSAL_ID,
 } from "../../constants/provider";
 import { useAuth } from "../../hooks/useAuth";
+import { useLicense } from "../../hooks/useLicense";
+import { useProviderClinics } from "../../hooks/useProviderClinics";
 import { useUsers } from "../../hooks/useUsers";
-import { TRIAL_DAYS } from "../../constants/license";
+import {
+  PILOT_ACTIVATION_CODE,
+  PILOT_ORGANIZATION_ID,
+  TRIAL_DAYS,
+} from "../../constants/license";
 
 const EMAIL_VALIDO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const SetupScreen = () => {
   const { createUser } = useUsers();
   const { signIn } = useAuth();
+  const { license } = useLicense();
+  const { registerClinic } = useProviderClinics();
 
+  const [nombreClinica, setNombreClinica] = useState("");
   const [nombre, setNombre] = useState("");
   const [correo, setCorreo] = useState("");
   const [password, setPassword] = useState("");
@@ -63,6 +72,16 @@ export const SetupScreen = () => {
       sucursalId: PROVIDER_SUCURSAL_ID,
     });
 
+    // La veterinaria base queda en el registro que consulta el proveedor.
+    registerClinic({
+      name: nombreClinica.trim() || `${nombre.trim()} · Veterinaria base`,
+      organizationId: license?.organizationId ?? PILOT_ORGANIZATION_ID,
+      adminName: nombre.trim(),
+      adminEmail: correo.trim().toLowerCase(),
+      activationCode: license?.activationCode ?? PILOT_ACTIVATION_CODE,
+      trialStart: license?.trialStart ?? "",
+    });
+
     signIn(admin);
   };
 
@@ -93,6 +112,25 @@ export const SetupScreen = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-1.5">
+            <label
+              htmlFor="setup-clinica"
+              className="block text-xs font-bold uppercase tracking-wider text-slate-400"
+            >
+              Nombre de la veterinaria base
+            </label>
+            <input
+              id="setup-clinica"
+              value={nombreClinica}
+              onChange={(event) => {
+                setNombreClinica(event.target.value);
+                setError("");
+              }}
+              placeholder="Ej. Clínica Veterinaria Central"
+              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm text-white outline-none transition-colors placeholder:text-slate-600 focus:border-[#ece883]"
+            />
+          </div>
+
           <div className="space-y-1.5">
             <label
               htmlFor="setup-nombre"

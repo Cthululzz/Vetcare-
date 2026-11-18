@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   Package,
   Settings,
+  ShieldCheck,
   Users,
 } from "lucide-react";
 import { usePermissions } from "../../hooks/usePermissions";
@@ -55,6 +56,13 @@ const navItems: NavItem[] = [
     icon: Settings,
     exact: true,
     permissions: [PERMISSIONS.SYSTEM_ADMIN, PERMISSIONS.LICENSE_MANAGE],
+  },
+  {
+    to: "/proveedor",
+    label: "Consola de proveedor",
+    icon: ShieldCheck,
+    exact: true,
+    permissions: [PERMISSIONS.LICENSE_MANAGE],
   },
 ];
 

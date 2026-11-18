@@ -8,7 +8,7 @@
 const SECRETO = "vetcare-piloto-pagos-2026";
 const ANIO_POR_DEFECTO = 2026;
 
-const firma = (payload: string): string => {
+export const firmaCorta = (payload: string): string => {
   let hash = 2166136261;
   for (let index = 0; index < payload.length; index += 1) {
     hash ^= payload.charCodeAt(index);
@@ -34,7 +34,7 @@ export const buildPaymentCode = (
   const consecutivo = String(secuencia).padStart(3, "0");
   const duracion = String(meses).padStart(2, "0");
   const payload = `VETCARE|${anio}|${consecutivo}|${duracion}|${SECRETO}`;
-  return `VETPAGO-${anio}-${consecutivo}-${duracion}M-${firma(payload)}`;
+  return `VETPAGO-${anio}-${consecutivo}-${duracion}M-${firmaCorta(payload)}`;
 };
 
 export const parsePaymentCode = (value: string): PaymentCodeData | null => {
@@ -48,7 +48,7 @@ export const parsePaymentCode = (value: string): PaymentCodeData | null => {
   if (!anio || !secuencia || meses <= 0) return null;
 
   const payload = `VETCARE|${anio}|${match[2]}|${match[3]}|${SECRETO}`;
-  if (firma(payload) !== match[4]) return null;
+  if (firmaCorta(payload) !== match[4]) return null;
 
   return { anio, secuencia, meses };
 };

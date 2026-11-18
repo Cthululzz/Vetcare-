@@ -8,6 +8,7 @@ import HospitalizationView from "./pages/HospitalizationView";
 import Inventory from "./pages/Inventory"; // ← AGREGAR
 import Tasks from "./pages/Tasks";
 import Configuration from "./pages/Configuration";
+import ProviderConsole from "./pages/ProviderConsole";
 import Login from "./pages/Login";
 import AppLayout from "./components/common/AppLayout";
 import { DevAuthBypass } from "./components/common/DevAuthBypass";
@@ -197,6 +198,14 @@ function App() {
                   ]}
                 >
                   <Configuration />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="/proveedor"
+              element={
+                <RequirePermission permission={PERMISSIONS.LICENSE_MANAGE}>
+                  <ProviderConsole />
                 </RequirePermission>
               }
             />

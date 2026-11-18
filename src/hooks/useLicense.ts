@@ -5,6 +5,10 @@ import {
   parsePaymentCode,
 } from "../utils/paymentCodes";
 import {
+  normalizeUpdateCode,
+  parseProviderUpdateCode,
+} from "../utils/licenseUpdateCodes";
+import {
   isValidActivationCode,
   LICENSE_KEY,
   PILOT_ACTIVATION_CODE,
@@ -23,6 +27,7 @@ const licenciaDeDesarrollo = (): License => ({
   status: "trial",
   payments: [],
   usedPaymentCodes: [],
+  usedUpdateCodes: [],
 });
 
 const diasDesde = (fecha: string, hoy: string): number => {
@@ -56,6 +61,7 @@ export const useLicense = () => {
     ? {
         ...storedLicense,
         usedPaymentCodes: storedLicense.usedPaymentCodes ?? [],
+        usedUpdateCodes: storedLicense.usedUpdateCodes ?? [],
       }
     : null;
 
@@ -78,6 +84,7 @@ export const useLicense = () => {
       status: "trial",
       payments: [],
       usedPaymentCodes: [],
+      usedUpdateCodes: [],
     });
     return true;
   };
@@ -101,9 +108,10 @@ export const useLicense = () => {
         status: "active",
         payments: [
           ...prev.payments,
-          { date: fechaActual, months: meses },
+          { date: fechaActual, months: meses, origin: "pago" },
         ],
         usedPaymentCodes: prev.usedPaymentCodes ?? [],
+        usedUpdateCodes: prev.usedUpdateCodes ?? [],
       };
     });
   };
@@ -138,13 +146,79 @@ export const useLicense = () => {
         status: "active",
         payments: [
           ...prev.payments,
-          { date: fechaActual, months: datos.meses, code: normalizado },
+          {
+            date: fechaActual,
+            months: datos.meses,
+            code: normalizado,
+            origin: "pago",
+          },
         ],
         usedPaymentCodes: [...usados, normalizado],
+        usedUpdateCodes: prev.usedUpdateCodes ?? [],
       };
     });
 
     return { ok: true, meses: datos.meses };
+  };
+
+  /** Aplica una actualización generada por el proveedor para esta veterinaria. */
+  const applyProviderUpdateCode = (code: string): RedeemResult => {
+    const datos = parseProviderUpdateCode(code);
+    if (!datos) {
+      return { ok: false, error: "El código de actualización no es válido." };
+    }
+    if (!license) {
+      return { ok: false, error: "La licencia no está activada." };
+    }
+    if (datos.organizationId !== license.organizationId) {
+      return {
+        ok: false,
+        error: "Este código corresponde a otra veterinaria base.",
+      };
+    }
+
+    const normalizado = normalizeUpdateCode(code);
+    if (license.usedUpdateCodes.includes(normalizado)) {
+      return { ok: false, error: "Ese código de actualización ya fue aplicado." };
+    }
+    if (license.paidUntil && license.paidUntil >= datos.paidUntil) {
+      return { ok: true, meses: 0 };
+    }
+
+    const months = datos.months;
+
+    const fechaActual = getLocalTodayStr();
+    setLicense((prev) => {
+      if (!prev) return prev;
+      const aplicados = prev.usedUpdateCodes ?? [];
+      if (aplicados.includes(normalizado)) return prev;
+      return {
+        ...prev,
+        paidUntil: datos.paidUntil,
+        status: "active",
+        payments: [
+          ...prev.payments,
+          {
+            date: fechaActual,
+            months,
+            code: normalizado,
+            origin: "proveedor",
+          },
+        ],
+        usedPaymentCodes: prev.usedPaymentCodes ?? [],
+        usedUpdateCodes: [...aplicados, normalizado],
+      };
+    });
+
+    return { ok: true, meses: months };
+  };
+
+  /** Acepta tanto actualizaciones del proveedor como códigos de pago. */
+  const applyLicenseCode = (code: string): RedeemResult => {
+    if (parseProviderUpdateCode(code)) {
+      return applyProviderUpdateCode(code);
+    }
+    return redeemPaymentCode(code);
   };
 
   return {
@@ -158,5 +232,7 @@ export const useLicense = () => {
     setTrialStart,
     registerManualPayment,
     redeemPaymentCode,
+    applyProviderUpdateCode,
+    applyLicenseCode,
   };
 };
