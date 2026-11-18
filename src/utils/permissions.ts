@@ -34,6 +34,7 @@ export const PERMISSIONS = {
 
   // Sistema
   SYSTEM_ADMIN: "system.admin",
+  LICENSE_MANAGE: "license.manage",
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -46,8 +47,16 @@ export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
  * Define qué permisos tiene cada rol.
  * Fácil de leer, modificar y auditar.
  */
+const ADMIN_PERMISSIONS: Permission[] = Object.values(PERMISSIONS).filter(
+  (permission) => permission !== PERMISSIONS.LICENSE_MANAGE,
+);
+
 const PERMISSION_MATRIX: Record<UserRole, Permission[]> = {
-  ADMIN: Object.values(PERMISSIONS), // Admin tiene todos los permisos
+  // El administrador de la clínica gestiona usuarios, pero no la licencia.
+  ADMIN: ADMIN_PERMISSIONS,
+
+  // El proveedor solo entra a Licencia y suscripción.
+  PROVEEDOR: [PERMISSIONS.LICENSE_MANAGE],
 
   VET: [
     PERMISSIONS.PATIENTS_VIEW,
@@ -159,4 +168,7 @@ export const can = {
 
   adminAccess: (roles: UserRole[]) =>
     anyRoleHasPermission(roles, PERMISSIONS.SYSTEM_ADMIN),
+
+  manageLicense: (roles: UserRole[]) =>
+    anyRoleHasPermission(roles, PERMISSIONS.LICENSE_MANAGE),
 };

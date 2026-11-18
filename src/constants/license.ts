@@ -11,6 +11,8 @@ export type LicenseStatus = "trial" | "active";
 export interface LicensePayment {
   date: string;
   months: number;
+  /** Código canjeado, cuando la extensión no se registró en persona. */
+  code?: string;
 }
 
 export interface License {
@@ -20,6 +22,8 @@ export interface License {
   paidUntil: string | null;
   status: LicenseStatus;
   payments: LicensePayment[];
+  /** Códigos de pago ya canjeados, guardados sin guiones. */
+  usedPaymentCodes: string[];
 }
 
 export const normalizeActivationCode = (value: string): string =>

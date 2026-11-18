@@ -51,7 +51,11 @@ export const UserManagement = () => {
   const [feedback, setFeedback] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  const adminsActivos = users.filter(
+  const rolesGestionables = (Object.keys(ROLES_USUARIO) as UserRole[]).filter(
+    (role) => role !== "PROVEEDOR",
+  );
+  const usuariosVisibles = users.filter((user) => user.role !== "PROVEEDOR");
+  const adminsActivos = usuariosVisibles.filter(
     (user) => user.role === "ADMIN" && user.isActive,
   );
   const esUltimoAdmin = (user: User): boolean =>
@@ -199,6 +203,8 @@ export const UserManagement = () => {
     setFeedback("Usuario eliminado.");
   };
 
+  if (currentUser?.role === "PROVEEDOR") return null;
+
   return (
     <section className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-5">
       <div className="flex items-start gap-2 border-b border-slate-800 pb-3">
@@ -296,7 +302,7 @@ export const UserManagement = () => {
                 }
                 className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white outline-none focus:border-[#ece883]"
               >
-                {(Object.keys(ROLES_USUARIO) as UserRole[]).map((role) => (
+                {rolesGestionables.map((role) => (
                   <option key={role} value={role}>
                     {ROLES_USUARIO[role]}
                   </option>
@@ -395,14 +401,14 @@ export const UserManagement = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800">
-            {users.length === 0 && (
+            {usuariosVisibles.length === 0 && (
               <tr>
                 <td colSpan={6} className="px-4 py-6 text-center text-slate-500">
                   Todavía no hay usuarios cargados.
                 </td>
               </tr>
             )}
-            {users.map((user) => (
+            {usuariosVisibles.map((user) => (
               <tr key={user.id} className="text-slate-300">
                 <td className="px-4 py-3 font-semibold text-white">
                   {user.name}

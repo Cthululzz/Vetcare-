@@ -51,12 +51,15 @@ function RequirePermission({
   permission,
   children,
 }: {
-  permission: Permission;
+  permission: Permission | Permission[];
   children: ReactNode;
 }) {
-  const { can } = usePermissions();
+  const { canAny } = usePermissions();
+  const permitido = Array.isArray(permission)
+    ? canAny(permission)
+    : canAny([permission]);
 
-  if (!can(permission)) {
+  if (!permitido) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-6">
         <h1 className="text-2xl font-black text-white mb-2">Sin acceso</h1>
@@ -187,7 +190,12 @@ function App() {
             <Route
               path="/configuracion"
               element={
-                <RequirePermission permission={PERMISSIONS.SYSTEM_ADMIN}>
+                <RequirePermission
+                  permission={[
+                    PERMISSIONS.SYSTEM_ADMIN,
+                    PERMISSIONS.LICENSE_MANAGE,
+                  ]}
+                >
                   <Configuration />
                 </RequirePermission>
               }

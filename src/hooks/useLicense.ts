@@ -1,6 +1,10 @@
 import { useLocalStorage } from "./useLocalStorage";
 import { getLocalTodayStr } from "../utils/dateUtils";
 import {
+  normalizePaymentCode,
+  parsePaymentCode,
+} from "../utils/paymentCodes";
+import {
   isValidActivationCode,
   LICENSE_KEY,
   PILOT_ACTIVATION_CODE,
@@ -18,6 +22,7 @@ const licenciaDeDesarrollo = (): License => ({
   paidUntil: null,
   status: "trial",
   payments: [],
+  usedPaymentCodes: [],
 });
 
 const diasDesde = (fecha: string, hoy: string): number => {
@@ -33,12 +38,26 @@ const sumarMeses = (fecha: string, meses: number): string => {
   return getLocalTodayStr(base);
 };
 
+export interface RedeemResult {
+  ok: boolean;
+  meses?: number;
+  error?: string;
+}
+
 export const useLicense = () => {
   const bypass = import.meta.env.VITE_BYPASS_AUTH === "true";
-  const [license, setLicense] = useLocalStorage<License | null>(
+  const [storedLicense, setLicense] = useLocalStorage<License | null>(
     LICENSE_KEY,
     bypass ? licenciaDeDesarrollo() : null,
   );
+
+  // Licencias creadas antes de los códigos de pago no traen este campo.
+  const license: License | null = storedLicense
+    ? {
+        ...storedLicense,
+        usedPaymentCodes: storedLicense.usedPaymentCodes ?? [],
+      }
+    : null;
 
   const hoy = getLocalTodayStr();
   const trialTranscurrido = license ? diasDesde(license.trialStart, hoy) : 0;
@@ -58,6 +77,7 @@ export const useLicense = () => {
       paidUntil: null,
       status: "trial",
       payments: [],
+      usedPaymentCodes: [],
     });
     return true;
   };
@@ -68,20 +88,63 @@ export const useLicense = () => {
 
   const registerManualPayment = (meses: number): void => {
     if (meses <= 0) return;
-    const hoy = getLocalTodayStr();
+    const fechaActual = getLocalTodayStr();
     setLicense((prev) => {
       if (!prev) return prev;
       const base =
-        prev.paidUntil && new Date(`${prev.paidUntil}T00:00:00`) > new Date()
+        prev.paidUntil && prev.paidUntil >= fechaActual
           ? prev.paidUntil
-          : hoy;
+          : fechaActual;
       return {
         ...prev,
         paidUntil: sumarMeses(base, meses),
         status: "active",
-        payments: [...prev.payments, { date: hoy, months: meses }],
+        payments: [
+          ...prev.payments,
+          { date: fechaActual, months: meses },
+        ],
+        usedPaymentCodes: prev.usedPaymentCodes ?? [],
       };
     });
+  };
+
+  /** Canjea un código entregado por el proveedor. */
+  const redeemPaymentCode = (code: string): RedeemResult => {
+    const datos = parsePaymentCode(code);
+    if (!datos) {
+      return { ok: false, error: "El código de pago no es válido." };
+    }
+    if (!license) {
+      return { ok: false, error: "La licencia no está activada." };
+    }
+
+    const normalizado = normalizePaymentCode(code);
+    if (license.usedPaymentCodes.includes(normalizado)) {
+      return { ok: false, error: "Ese código de pago ya fue utilizado." };
+    }
+
+    const fechaActual = getLocalTodayStr();
+    setLicense((prev) => {
+      if (!prev) return prev;
+      const usados = prev.usedPaymentCodes ?? [];
+      if (usados.includes(normalizado)) return prev;
+      const base =
+        prev.paidUntil && prev.paidUntil >= fechaActual
+          ? prev.paidUntil
+          : fechaActual;
+      return {
+        ...prev,
+        paidUntil: sumarMeses(base, datos.meses),
+        status: "active",
+        payments: [
+          ...prev.payments,
+          { date: fechaActual, months: datos.meses, code: normalizado },
+        ],
+        usedPaymentCodes: [...usados, normalizado],
+      };
+    });
+
+    return { ok: true, meses: datos.meses };
   };
 
   return {
@@ -94,5 +157,6 @@ export const useLicense = () => {
     activate,
     setTrialStart,
     registerManualPayment,
+    redeemPaymentCode,
   };
 };

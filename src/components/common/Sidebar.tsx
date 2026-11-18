@@ -16,7 +16,7 @@ interface NavItem {
   label: string;
   icon: typeof LayoutDashboard;
   exact: boolean;
-  permission?: Permission;
+  permissions?: Permission[];
 }
 
 const navItems: NavItem[] = [
@@ -26,44 +26,44 @@ const navItems: NavItem[] = [
     label: "Agenda",
     icon: Calendar,
     exact: true,
-    permission: PERMISSIONS.APPOINTMENTS_VIEW,
+    permissions: [PERMISSIONS.APPOINTMENTS_VIEW],
   },
   {
     to: "/pacientes",
     label: "Pacientes",
     icon: Users,
     exact: false, // usa startsWith
-    permission: PERMISSIONS.PATIENTS_VIEW,
+    permissions: [PERMISSIONS.PATIENTS_VIEW],
   },
   {
     to: "/tareas",
     label: "Tareas y Alertas",
     icon: Bell,
     exact: true,
-    permission: PERMISSIONS.CLINICAL_HISTORY_VIEW,
+    permissions: [PERMISSIONS.CLINICAL_HISTORY_VIEW],
   },
   {
     to: "/inventario",
     label: "Inventario y Farmacia",
     icon: Package,
     exact: true,
-    permission: PERMISSIONS.INVENTORY_VIEW,
+    permissions: [PERMISSIONS.INVENTORY_VIEW],
   },
   {
     to: "/configuracion",
     label: "Configuración",
     icon: Settings,
     exact: true,
-    permission: PERMISSIONS.SYSTEM_ADMIN,
+    permissions: [PERMISSIONS.SYSTEM_ADMIN, PERMISSIONS.LICENSE_MANAGE],
   },
 ];
 
 export const Sidebar = () => {
   const location = useLocation();
-  const { can } = usePermissions();
+  const { canAny } = usePermissions();
 
   const visibleItems = navItems.filter(
-    (item) => !item.permission || can(item.permission),
+    (item) => !item.permissions || canAny(item.permissions),
   );
 
   return (
@@ -93,7 +93,7 @@ export const Sidebar = () => {
                   : "text-slate-300 hover:text-white hover:bg-slate-800/60"
               }`}
             >
-              <Icon className="w-4 h-4" />
+              <Icon className="h-4 w-4" />
               {label}
             </Link>
           );

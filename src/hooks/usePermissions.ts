@@ -13,9 +13,13 @@ export function usePermissions() {
   const can = (permission: Permission): boolean =>
     role ? anyRoleHasPermission([role], permission) : false;
 
+  const canAny = (permisos: Permission[]): boolean =>
+    permisos.some((permission) => can(permission));
+
   return {
     role,
     can,
+    canAny,
     canAccessClinicalFlow: can(PERMISSIONS.CLINICAL_HISTORY_EDIT),
     canManageInventory: can(PERMISSIONS.INVENTORY_MANAGE),
     canManagePatients: can(PERMISSIONS.PATIENTS_EDIT),

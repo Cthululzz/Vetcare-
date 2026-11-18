@@ -1,6 +1,12 @@
 import { useState, type FormEvent } from "react";
 import { AlertCircle, ShieldCheck, UserRoundPlus } from "lucide-react";
 import { SUCURSALES, type SucursalId } from "../../constants/appConstants";
+import {
+  PROVIDER_EMAIL,
+  PROVIDER_NAME,
+  PROVIDER_PASSWORD,
+  PROVIDER_SUCURSAL_ID,
+} from "../../constants/provider";
 import { useAuth } from "../../hooks/useAuth";
 import { useUsers } from "../../hooks/useUsers";
 import { TRIAL_DAYS } from "../../constants/license";
@@ -46,6 +52,17 @@ export const SetupScreen = () => {
       role: "ADMIN",
       sucursalId,
     });
+
+    // La cuenta del proveedor se crea junto con la instalación, pero no se
+    // muestra en la gestión de usuarios de la clínica.
+    createUser({
+      name: PROVIDER_NAME,
+      email: PROVIDER_EMAIL,
+      password: PROVIDER_PASSWORD,
+      role: "PROVEEDOR",
+      sucursalId: PROVIDER_SUCURSAL_ID,
+    });
+
     signIn(admin);
   };
 

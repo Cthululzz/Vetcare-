@@ -16,6 +16,7 @@ export const ROLES_USUARIO = {
   VET: "Médico Veterinario",
   RECEPTIONIST: "Recepcionista",
   INVENTORY: "Encargado de Inventario",
+  PROVEEDOR: "Proveedor VetCare+",
 } as const;
 export type UserRole = keyof typeof ROLES_USUARIO;
 
