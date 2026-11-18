@@ -97,7 +97,8 @@ const Schedule = () => {
         <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-[#ece883]/5 rounded-full blur-2xl pointer-events-none" />
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="space-y-1">
-            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-3">
+              <CalendarIcon className="w-8 h-8 text-[#ece883]" />
               Citas Agendadas
             </h1>
             <p className="text-sm text-slate-400 max-w-xl">
