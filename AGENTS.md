@@ -9,7 +9,7 @@ VetCare+ is a **frontend-only** veterinary clinic manager (React 19 + TypeScript
 - `npm run lint` — ESLint flat config (`eslint.config.js`).
 - No test script or test framework exists. Do not invent `npm test`; verify with `npm run build` / `npm run lint` plus manual browser checks.
 
-`npm run build` currently passes. `npm run lint` still fails on 12 pre-existing errors (React `set-state-in-effect` in `GreetingBanner`, `PatientConditionsCard`, `AppointmentForm`, `ConsultationModal`; unused `_` in `useAuth`; `any` in `Schedule/types.ts`; `prefer-const` in `dateUtils.ts`) plus 1 warning. Don't chase unrelated pre-existing lint failures; just don't add new ones.
+`npm run build` and `npm run lint` both currently pass. Keep them clean: don't introduce unused imports/variables, `any`, or `set-state-in-effect` patterns.
 
 ## Toolchain constraints
 

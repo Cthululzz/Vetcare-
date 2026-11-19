@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { PageBanner } from "../components/common/PageBanner";
 import { PageShell } from "../components/common/PageShell";
+import { Pagination } from "../components/common/Pagination";
 import { useInventory } from "../hooks/useInventory";
 import { useInventoryTags } from "../hooks/useInventoryTags";
 import { usePermissions } from "../hooks/usePermissions";
@@ -28,6 +29,8 @@ import {
   getStockDisplay,
 } from "../utils/inventoryUnits";
 
+const PAGE_SIZE = 20;
+
 const Inventory = () => {
   const { searchProducts, getLowStockProducts, getProducts } = useInventory();
   const { getTags } = useInventoryTags();
@@ -38,6 +41,7 @@ const Inventory = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [lowStockOnly, setLowStockOnly] = useState(false);
+  const [page, setPage] = useState(1);
   const [showMovementForm, setShowMovementForm] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showProductForm, setShowProductForm] = useState(false);
@@ -57,6 +61,17 @@ const Inventory = () => {
     searchQuery.trim().length > 0 ||
     selectedTags.length > 0 ||
     lowStockOnly;
+  const totalPaginas = Math.max(1, Math.ceil(products.length / PAGE_SIZE));
+  const paginaActual = Math.min(page, totalPaginas);
+  const productosVisibles = products.slice(
+    (paginaActual - 1) * PAGE_SIZE,
+    paginaActual * PAGE_SIZE,
+  );
+
+  const cambiarBusqueda = (valor: string) => {
+    setSearchQuery(valor);
+    setPage(1);
+  };
 
   const toggleTag = (tagName: string) => {
     setSelectedTags((prev) =>
@@ -64,6 +79,7 @@ const Inventory = () => {
         ? prev.filter((t) => t !== tagName)
         : [...prev, tagName],
     );
+    setPage(1);
   };
 
   const getStockStatus = (current: number, min: number) => {
@@ -175,7 +191,7 @@ const Inventory = () => {
             <input
               type="text"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => cambiarBusqueda(e.target.value)}
               placeholder="Buscar por nombre, descripción o lote..."
               className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-11 pr-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#ece883] transition-colors"
             />
@@ -209,7 +225,10 @@ const Inventory = () => {
               <input
                 type="checkbox"
                 checked={lowStockOnly}
-                onChange={(e) => setLowStockOnly(e.target.checked)}
+                onChange={(e) => {
+                  setLowStockOnly(e.target.checked);
+                  setPage(1);
+                }}
                 className="w-4 h-4 rounded border-slate-700 bg-slate-950 text-[#ece883] focus:ring-[#ece883]"
               />
               <span className="text-sm font-semibold text-slate-300">
@@ -263,7 +282,7 @@ const Inventory = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {products.map((product) => {
+              {productosVisibles.map((product) => {
                 const stockStatus = getStockStatus(
                   product.currentStock,
                   product.minStock,
@@ -373,6 +392,14 @@ const Inventory = () => {
               })}
             </div>
           )}
+
+          <Pagination
+            total={products.length}
+            page={paginaActual}
+            pageSize={PAGE_SIZE}
+            onPageChange={setPage}
+            label="productos"
+          />
         </div>
 
       {/* Modals */}

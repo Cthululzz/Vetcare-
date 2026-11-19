@@ -50,7 +50,7 @@ export const Pagination = ({
       aria-label="Paginación de resultados"
       className="flex flex-col gap-3 rounded-xl border border-slate-800 bg-slate-950/60 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
     >
-      <p className="text-xs text-slate-400">
+      <p aria-live="polite" className="text-xs text-slate-400">
         Mostrando <span className="font-semibold text-slate-200">{desde}</span>–
         <span className="font-semibold text-slate-200">{hasta}</span> de{" "}
         <span className="font-semibold text-slate-200">{total}</span> {label}
