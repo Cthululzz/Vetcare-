@@ -1,18 +1,20 @@
+import { lazy } from "react";
 import { Routes, Route, Navigate, Link, useLocation } from "react-router-dom";
-import Dashboard from "./pages/Dashboard";
-import Patients from "./pages/Patients";
-import PatientRecords from "./pages/PatientRecords";
-import ClinicalHistory from "./pages/ClinicalHistory";
-import Schedule from "./pages/Schedule/Schedule";
-import HospitalizationView from "./pages/HospitalizationView";
-import Inventory from "./pages/Inventory"; // ← AGREGAR
-import Tasks from "./pages/Tasks";
-import Configuration from "./pages/Configuration";
-import ProviderConsole from "./pages/ProviderConsole";
-import Reports from "./pages/Reports";
-import Prescriptions from "./pages/Prescriptions";
-import MyAccount from "./pages/MyAccount";
 import Login from "./pages/Login";
+
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Patients = lazy(() => import("./pages/Patients"));
+const PatientRecords = lazy(() => import("./pages/PatientRecords"));
+const ClinicalHistory = lazy(() => import("./pages/ClinicalHistory"));
+const Schedule = lazy(() => import("./pages/Schedule/Schedule"));
+const HospitalizationView = lazy(() => import("./pages/HospitalizationView"));
+const Inventory = lazy(() => import("./pages/Inventory"));
+const Tasks = lazy(() => import("./pages/Tasks"));
+const Configuration = lazy(() => import("./pages/Configuration"));
+const ProviderConsole = lazy(() => import("./pages/ProviderConsole"));
+const Reports = lazy(() => import("./pages/Reports"));
+const Prescriptions = lazy(() => import("./pages/Prescriptions"));
+const MyAccount = lazy(() => import("./pages/MyAccount"));
 import AppLayout from "./components/common/AppLayout";
 import { DevAuthBypass } from "./components/common/DevAuthBypass";
 import { ActivationScreen } from "./components/license/ActivationScreen";

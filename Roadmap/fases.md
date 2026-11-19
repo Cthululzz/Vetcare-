@@ -23,7 +23,7 @@
 - [x] Módulo de reportes: citas por estado/tipo, pacientes por especie y stock crítico, con filtro de fechas.
 - [x] Módulo de Recetas: listado, búsqueda, detalle, impresión y eliminación con confirmación.
 - [ ] Seguridad real de contraseñas (hoy se guardan en claro en localStorage; se resuelve con el backend).
-- [ ] Optimización: dividir el bundle JS (~721 kB) y reducir el logo (2,28 MB).
+- [x] Optimización: dividir el bundle JS (~245 kB inicial) y reducir el logo (~38 kB).
 
 ## Fase 2: Arquitectura & Multi-sucursal (planificada, no implementada)
 

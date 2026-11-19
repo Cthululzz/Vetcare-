@@ -1,6 +1,6 @@
 import { useState, useEffect, type FormEvent } from "react";
 import { Mail, Lock, Eye, EyeOff, AlertCircle } from "lucide-react";
-import logo from "../assets/logo.png";
+import logo from "../assets/logo.webp";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { isBypassAuthEnabled } from "../utils/authBypass";

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { Outlet } from "react-router-dom";
 import { MapPin, Menu } from "lucide-react";
 import { Sidebar } from "./Sidebar";
@@ -70,7 +70,15 @@ export default function AppLayout() {
           </div>
         )}
         <div className="flex min-h-0 flex-1 flex-col">
-          <Outlet />
+          <Suspense
+            fallback={
+              <div className="flex min-h-[40vh] items-center justify-center text-sm text-slate-400">
+                Cargando sección...
+              </div>
+            }
+          >
+            <Outlet />
+          </Suspense>
         </div>
       </main>
       {can(PERMISSIONS.INVENTORY_MANAGE) && <GlobalInventoryReminder />}
