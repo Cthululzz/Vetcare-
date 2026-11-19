@@ -13,6 +13,7 @@ import Login from "./pages/Login";
 import AppLayout from "./components/common/AppLayout";
 import { DevAuthBypass } from "./components/common/DevAuthBypass";
 import { ActivationScreen } from "./components/license/ActivationScreen";
+import { LicenseBlockedScreen } from "./components/license/LicenseBlockedScreen";
 import { LicenseProvider } from "./components/license/LicenseProvider";
 import { SetupScreen } from "./components/setup/SetupScreen";
 import { useAuth } from "./hooks/useAuth";
@@ -85,10 +86,11 @@ function RequirePermission({
 // APP PRINCIPAL
 // ============================================
 function App() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const bypassAuth = import.meta.env.VITE_BYPASS_AUTH === "true";
-  const { isActivated } = useLicense();
+  const { isActivated, isBloqueado } = useLicense();
   const { hasUsers } = useUsers();
+  const esProveedor = user?.role === "PROVEEDOR";
 
   if (!bypassAuth && !isActivated) {
     return (
@@ -99,11 +101,20 @@ function App() {
     );
   }
 
-  if (!bypassAuth && isActivated && !hasUsers) {
+  if (!bypassAuth && isActivated && !hasUsers && !esProveedor) {
     return (
       <>
         <DevAuthBypass />
         <SetupScreen />
+      </>
+    );
+  }
+
+  if (!bypassAuth && isActivated && isBloqueado && !esProveedor) {
+    return (
+      <>
+        <DevAuthBypass />
+        <LicenseBlockedScreen />
       </>
     );
   }

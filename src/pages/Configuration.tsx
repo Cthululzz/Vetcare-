@@ -47,8 +47,15 @@ const PENDING_SECTIONS: PendingSection[] = [
 ];
 
 const Configuration = () => {
-  const { license, diasRestantes, suscripcionVigente, applyLicenseCode } =
-    useLicense();
+  const {
+    license,
+    diasRestantes,
+    diasGraciaRestantes,
+    suscripcionVigente,
+    enGracia,
+    isBloqueado,
+    applyLicenseCode,
+  } = useLicense();
   const { can } = usePermissions();
 
   const esProveedor = can(PERMISSIONS.LICENSE_MANAGE);
@@ -108,9 +115,11 @@ const Configuration = () => {
             <p className="mt-1 font-semibold text-white">
               {suscripcionVigente
                 ? "Suscripción al día"
-                : diasRestantes > 0
-                  ? `Prueba · ${diasRestantes} día(s) restantes`
-                  : "Prueba finalizada · modo lectura"}
+                : isBloqueado
+                  ? "Acceso bloqueado"
+                  : enGracia
+                    ? `Gracia · ${diasGraciaRestantes} día(s) en modo lectura`
+                    : `Prueba · ${diasRestantes} día(s) restantes`}
             </p>
           </div>
           <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-4">

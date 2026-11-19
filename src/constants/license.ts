@@ -4,7 +4,12 @@
 export const LICENSE_KEY = "vet_license";
 /** Registro privado del proveedor: una entrada por veterinaria base. */
 export const PROVIDER_CLINICS_KEY = "vet_provider_clinics";
-export const TRIAL_DAYS = 21;
+/** Días de uso completo. Después empieza la gracia en modo lectura. */
+export const TRIAL_DAYS = 14;
+/** Días de gracia con acceso de solo lectura. */
+export const GRACE_DAYS = 7;
+/** A partir de este día el acceso queda bloqueado hasta regularizar. */
+export const LICENSE_BLOCK_DAYS = TRIAL_DAYS + GRACE_DAYS;
 export const PILOT_ORGANIZATION_ID = "vet-piloto";
 export const PILOT_ACTIVATION_CODE = "VET-PILOTO-2026-8F4K";
 

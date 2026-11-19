@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { AlertCircle, KeyRound, ShieldCheck } from "lucide-react";
 import { useLicense } from "../../hooks/useLicense";
-import { TRIAL_DAYS } from "../../constants/license";
+import { GRACE_DAYS, TRIAL_DAYS } from "../../constants/license";
 
 export const ActivationScreen = () => {
   const { activate } = useLicense();
@@ -70,12 +70,13 @@ export const ActivationScreen = () => {
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#ece883] px-5 py-3 text-sm font-bold text-slate-950 transition-colors hover:bg-[#e4df68] cursor-pointer"
           >
             <ShieldCheck className="h-4 w-4" />
-            Activar prueba de {TRIAL_DAYS} días
+            Activar prueba de {TRIAL_DAYS} días + {GRACE_DAYS} de gracia
           </button>
         </form>
 
         <p className="mt-5 text-center text-xs text-slate-500">
-          La prueba comienza el día de la activación y puede ser ajustada por el
+          La prueba comienza el día de la activación. Después siguen {GRACE_DAYS}{" "}
+          días de gracia en modo lectura. La fecha puede ser ajustada por el
           administrador.
         </p>
       </div>

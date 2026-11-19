@@ -40,7 +40,7 @@ const formularioVacio = (): NewClinicForm => ({
 });
 
 const estadoStyles: Record<
-  "al_dia" | "prueba" | "vencido",
+  "al_dia" | "prueba" | "gracia" | "bloqueado",
   { label: string; className: string }
 > = {
   al_dia: {
@@ -51,8 +51,12 @@ const estadoStyles: Record<
     label: "En prueba",
     className: "border-amber-400/40 bg-amber-400/10 text-amber-200",
   },
-  vencido: {
-    label: "Vencido · modo lectura",
+  gracia: {
+    label: "Gracia · modo lectura",
+    className: "border-orange-400/40 bg-orange-400/10 text-orange-200",
+  },
+  bloqueado: {
+    label: "Bloqueado",
     className: "border-red-500/40 bg-red-500/10 text-red-300",
   },
 };
@@ -357,7 +361,14 @@ const ProviderConsole = () => {
                         {clinic.estadoPago === "prueba" && (
                           <p className="mt-1 flex items-center gap-1 text-[10px] text-slate-500">
                             <Clock className="h-3 w-3" />
-                            {clinic.diasRestantes} día(s) restantes
+                            {clinic.diasRestantes} día(s) de prueba restantes
+                          </p>
+                        )}
+                        {clinic.estadoPago === "gracia" && (
+                          <p className="mt-1 flex items-center gap-1 text-[10px] text-slate-500">
+                            <Clock className="h-3 w-3" />
+                            {clinic.diasGraciaRestantes} día(s) de gracia
+                            restantes
                           </p>
                         )}
                       </td>

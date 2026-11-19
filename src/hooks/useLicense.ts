@@ -9,7 +9,9 @@ import {
   parseProviderUpdateCode,
 } from "../utils/licenseUpdateCodes";
 import {
+  GRACE_DAYS,
   isValidActivationCode,
+  LICENSE_BLOCK_DAYS,
   LICENSE_KEY,
   PILOT_ACTIVATION_CODE,
   PILOT_ORGANIZATION_ID,
@@ -66,12 +68,28 @@ export const useLicense = () => {
     : null;
 
   const hoy = getLocalTodayStr();
-  const trialTranscurrido = license ? diasDesde(license.trialStart, hoy) : 0;
-  const diasRestantes = Math.max(0, TRIAL_DAYS - trialTranscurrido);
+  const diasTranscurridos = license ? diasDesde(license.trialStart, hoy) : 0;
+  const diasRestantes = Math.max(0, TRIAL_DAYS - diasTranscurridos);
+  const diasGraciaRestantes = Math.max(
+    0,
+    LICENSE_BLOCK_DAYS - diasTranscurridos,
+  );
   const suscripcionVigente = Boolean(
     license?.paidUntil && license.paidUntil >= hoy,
   );
-  const isReadOnly = Boolean(license && !suscripcionVigente && diasRestantes === 0);
+  const vencida = Boolean(license && !suscripcionVigente);
+  const enGracia = Boolean(
+    vencida &&
+      diasTranscurridos >= TRIAL_DAYS &&
+      diasTranscurridos < LICENSE_BLOCK_DAYS,
+  );
+  const isBloqueado = Boolean(
+    vencida && diasTranscurridos >= LICENSE_BLOCK_DAYS,
+  );
+  // Durante la gracia y después del bloqueo no se permiten escrituras.
+  const isReadOnly = Boolean(
+    vencida && diasTranscurridos >= TRIAL_DAYS,
+  );
 
   const activate = (code: string): boolean => {
     if (!isValidActivationCode(code)) return false;
@@ -226,7 +244,11 @@ export const useLicense = () => {
     bypass,
     isActivated: Boolean(license),
     diasRestantes,
+    diasGraciaRestantes,
+    diasDeGracia: GRACE_DAYS,
     suscripcionVigente,
+    enGracia,
+    isBloqueado,
     isReadOnly,
     activate,
     setTrialStart,

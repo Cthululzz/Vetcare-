@@ -12,6 +12,7 @@ import { useLicense } from "../../hooks/useLicense";
 import { useProviderClinics } from "../../hooks/useProviderClinics";
 import { useUsers } from "../../hooks/useUsers";
 import {
+  GRACE_DAYS,
   PILOT_ACTIVATION_CODE,
   PILOT_ORGANIZATION_ID,
   TRIAL_DAYS,
@@ -105,9 +106,9 @@ export const SetupScreen = () => {
         <div className="mb-5 flex items-start gap-2 rounded-xl border border-[#ece883]/20 bg-[#ece883]/5 px-4 py-3 text-xs text-[#ece883]">
           <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
           <p>
-            La prueba de {TRIAL_DAYS} días ya está activa. Después de crear el
-            administrador podrás ingresar el resto del equipo desde
-            Configuración.
+            La prueba de {TRIAL_DAYS} días ya está activa, seguida de {GRACE_DAYS}{" "}
+            días de gracia en modo lectura. Después de crear el administrador
+            podrás ingresar el resto del equipo desde Configuración.
           </p>
         </div>
 

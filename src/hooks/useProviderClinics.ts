@@ -1,6 +1,8 @@
 import { useCallback } from "react";
 import { useLocalStorage } from "./useLocalStorage";
 import {
+  GRACE_DAYS,
+  LICENSE_BLOCK_DAYS,
   PILOT_ACTIVATION_CODE,
   PILOT_ORGANIZATION_ID,
   PROVIDER_CLINICS_KEY,
@@ -26,10 +28,16 @@ const sumarMeses = (fecha: string, meses: number): string => {
   return getLocalTodayStr(base);
 };
 
-export type ClinicPaymentState = "al_dia" | "prueba" | "vencido";
+export type ClinicPaymentState =
+  | "al_dia"
+  | "prueba"
+  | "gracia"
+  | "bloqueado";
 
 export interface ClinicView extends ProviderClinic {
   diasRestantes: number;
+  diasGraciaRestantes: number;
+  diasDeGracia: number;
   estadoPago: ClinicPaymentState;
 }
 
@@ -53,18 +61,28 @@ export const describeClinic = (
   clinic: ProviderClinic,
   hoy: string = getLocalTodayStr(),
 ): ClinicView => {
-  const diasRestantes = Math.max(
+  const transcurridos = diasDesde(clinic.trialStart, hoy);
+  const diasRestantes = Math.max(0, TRIAL_DAYS - transcurridos);
+  const diasGraciaRestantes = Math.max(
     0,
-    TRIAL_DAYS - diasDesde(clinic.trialStart, hoy),
+    LICENSE_BLOCK_DAYS - transcurridos,
   );
   const alDia = Boolean(clinic.paidUntil && clinic.paidUntil >= hoy);
   const estadoPago: ClinicPaymentState = alDia
     ? "al_dia"
-    : diasRestantes > 0
+    : transcurridos < TRIAL_DAYS
       ? "prueba"
-      : "vencido";
+      : transcurridos < LICENSE_BLOCK_DAYS
+        ? "gracia"
+        : "bloqueado";
 
-  return { ...clinic, diasRestantes, estadoPago };
+  return {
+    ...clinic,
+    diasRestantes,
+    diasGraciaRestantes,
+    diasDeGracia: GRACE_DAYS,
+    estadoPago,
+  };
 };
 
 /**
