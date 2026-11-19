@@ -1,5 +1,5 @@
 import { useCallback, useSyncExternalStore } from "react";
-import { canWriteStorageKey } from "../utils/licenseGuard";
+import { canWriteStorageKey, notifyReadOnlyWrite } from "../utils/licenseGuard";
 import {
   ensureSchemaVersion,
   migrateAllStoredValues,
@@ -61,7 +61,10 @@ export const storageStore = {
    * Escribe en el cache + localStorage y notifica a todos los suscriptores.
    */
   set<T>(key: string, value: T): void {
-    if (!canWriteStorageKey(key)) return;
+    if (!canWriteStorageKey(key)) {
+      notifyReadOnlyWrite();
+      return;
+    }
     cache.set(key, value);
     try {
       window.localStorage.setItem(key, JSON.stringify(value));

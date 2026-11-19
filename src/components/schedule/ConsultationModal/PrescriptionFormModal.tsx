@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Plus, Trash2, Save, X } from "lucide-react";
 
 interface Medication {
@@ -18,6 +18,7 @@ export const PrescriptionFormModal = ({
   onSave,
   onClose,
 }: PrescriptionFormModalProps) => {
+  const baseId = useId();
   const [medications, setMedications] = useState<Medication[]>([
     { id: crypto.randomUUID(), name: "", instructions: "" },
   ]);
@@ -90,6 +91,8 @@ export const PrescriptionFormModal = ({
                 </span>
                 {medications.length > 1 && (
                   <button
+                    type="button"
+                    aria-label="Eliminar medicamento"
                     onClick={() => handleRemoveMedication(medication.id)}
                     className="p-1.5 rounded-lg hover:bg-red-900/30 text-slate-400 hover:text-red-400 transition-colors"
                     title="Eliminar medicamento"
@@ -100,10 +103,14 @@ export const PrescriptionFormModal = ({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                <label
+                  htmlFor={`${baseId}-nombre-${medication.id}`}
+                  className="block text-xs font-semibold text-slate-300 mb-1.5"
+                >
                   Nombre del medicamento
                 </label>
                 <input
+                  id={`${baseId}-nombre-${medication.id}`}
                   type="text"
                   value={medication.name}
                   onChange={(e) =>
@@ -119,10 +126,14 @@ export const PrescriptionFormModal = ({
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                <label
+                  htmlFor={`${baseId}-indicaciones-${medication.id}`}
+                  className="block text-xs font-semibold text-slate-300 mb-1.5"
+                >
                   Indicaciones
                 </label>
                 <textarea
+                  id={`${baseId}-indicaciones-${medication.id}`}
                   value={medication.instructions}
                   onChange={(e) =>
                     handleUpdateMedication(

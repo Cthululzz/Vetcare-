@@ -186,10 +186,14 @@ export const HospitalizationConfirmModal = ({
         <div className="flex-1 overflow-y-auto p-5 space-y-5">
           {/* Motivo */}
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
+            <label
+              htmlFor="hospitalizacion-motivo"
+              className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider"
+            >
               Motivo de la hospitalización *
             </label>
             <textarea
+              id="hospitalizacion-motivo"
               rows={2}
               value={reason}
               onChange={(event) => {
@@ -204,10 +208,14 @@ export const HospitalizationConfirmModal = ({
           {/* Frecuencia de monitoreo */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
+              <label
+                htmlFor="hospitalizacion-frecuencia"
+                className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider"
+              >
                 Frecuencia de monitoreo *
               </label>
               <select
+                id="hospitalizacion-frecuencia"
                 value={monitoringFrequency}
                 onChange={(event) =>
                   setMonitoringFrequency(Number(event.target.value))

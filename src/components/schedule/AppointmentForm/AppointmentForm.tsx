@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useBranchScope } from "../../../context/branchScope";
 import type { ChangeEvent, FormEvent } from "react";
 import {
@@ -10,7 +10,7 @@ import {
   Phone,
   Mail,
 } from "lucide-react";
-import { formatDateShort } from "../../../utils/dateUtils";
+import { formatDateShort, normalizarHora } from "../../../utils/dateUtils";
 import { DateInput } from "../../common/DateInput";
 import {
   ESPECIES_MASCOTA,
@@ -95,6 +95,7 @@ export const AppointmentForm = ({
   const { activeBranch, writeScope } = useBranchScope();
   const [formData, setFormData] = useState<AppointmentFormData>(() => ({
     ...INITIAL_FORM_STATE,
+    ...initialData,
     sucursalId: initialData?.sucursalId ?? writeScope().sucursalId,
   }));
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -109,12 +110,6 @@ export const AppointmentForm = ({
       ? SUCURSALES
       : SUCURSALES.filter((sucursal) => sucursal.id === activeBranch);
 
-  useEffect(() => {
-    if (initialData) {
-      setFormData((prev) => ({ ...prev, ...initialData }));
-    }
-  }, [initialData]);
-
   const handleChange = (
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
   ) => {
@@ -124,7 +119,12 @@ export const AppointmentForm = ({
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    const message = onSaveAppointment(formData);
+    const hora = normalizarHora(formData.hora);
+    if (!hora) {
+      setSubmitError("Ingresa la hora en formato HH:MM, por ejemplo 10:30.");
+      return;
+    }
+    const message = onSaveAppointment({ ...formData, hora });
     if (message) {
       setSubmitError(message);
       return;
@@ -233,10 +233,14 @@ export const AppointmentForm = ({
             <div className="space-y-3.5">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+                  <label
+                    htmlFor="cita-tipo"
+                    className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2"
+                  >
                     Tipo de Cita
                   </label>
                   <select
+                    id="cita-tipo"
                     name="tipo"
                     value={formData.tipo}
                     onChange={handleChange}
@@ -254,10 +258,14 @@ export const AppointmentForm = ({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+                  <label
+                    htmlFor="cita-sucursal"
+                    className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2"
+                  >
                     Sucursal
                   </label>
                   <select
+                    id="cita-sucursal"
                     name="sucursalId"
                     value={formData.sucursalId}
                     onChange={handleChange}
@@ -284,10 +292,14 @@ export const AppointmentForm = ({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+                  <label
+                    htmlFor="cita-doctor"
+                    className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2"
+                  >
                     Doctor Asignado
                   </label>
                   <select
+                    id="cita-doctor"
                     name="doctorId"
                     value={formData.doctorId}
                     onChange={handleChange}
@@ -309,7 +321,7 @@ export const AppointmentForm = ({
                   name="hora"
                   value={formData.hora}
                   onChange={handleChange}
-                  placeholder="Ej. 10:30 hrs"
+                  type="time"
                   icon={<Clock className="w-4 h-4" />}
                   fieldClassName={fieldClassName}
                 />
@@ -328,10 +340,14 @@ export const AppointmentForm = ({
               ) : (
                 initialData?.patientName && (
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+                    <label
+                      htmlFor="cita-fecha"
+                      className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2"
+                    >
                       Modificar Fecha
                     </label>
                     <DateInput
+                      id="cita-fecha"
                       name="fecha"
                       value={formData.fecha}
                       onChange={(isoDate) =>
@@ -346,7 +362,10 @@ export const AppointmentForm = ({
               )}
 
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+                <label
+                  htmlFor="cita-motivo"
+                  className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2"
+                >
                   Motivo de la Cita
                 </label>
                 <div className="border border-slate-800 rounded-xl bg-slate-950">
@@ -355,6 +374,7 @@ export const AppointmentForm = ({
                       <FileText className="w-4 h-4" />
                     </span>
                     <textarea
+                      id="cita-motivo"
                       name="motivo"
                       rows={2}
                       required

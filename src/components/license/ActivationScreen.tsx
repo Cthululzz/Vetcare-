@@ -77,7 +77,7 @@ export const ActivationScreen = () => {
         <p className="mt-5 text-center text-xs text-slate-500">
           La prueba comienza el día de la activación. Después siguen {GRACE_DAYS}{" "}
           días de gracia en modo lectura. La fecha puede ser ajustada por el
-          administrador.
+          proveedor desde la consola.
         </p>
       </div>
     </div>

@@ -1,8 +1,9 @@
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLocalStorage } from "./useLocalStorage";
 import { toPublicUser, useUsers } from "./useUsers";
 import type { User } from "../types/user";
+import { isBypassAuthEnabled } from "../utils/authBypass";
 
 export type { User } from "../types/user";
 
@@ -28,6 +29,19 @@ export function useAuth() {
   });
   const { storedUsers, findByCredentials } = useUsers();
   const navigate = useNavigate();
+
+  // La sesión guarda solo el ID del usuario efectivo. Si el rol, el correo o el
+  // estado cambian en la gestión de usuarios, la interfaz lo refleja de inmediato
+  // y un usuario eliminado o desactivado pierde el acceso sin relogin.
+  const usuarioActual = useMemo<User | null>(() => {
+    if (!authState.isAuthenticated || !authState.user?.id) return null;
+    const guardado = storedUsers.find(
+      (item) => item.id === authState.user?.id,
+    );
+    if (!guardado || guardado.isActive === false) return null;
+    return toPublicUser(guardado);
+  }, [authState.isAuthenticated, authState.user?.id, storedUsers]);
+  const autenticado = Boolean(usuarioActual);
 
   /**
    * Inicia sesión con email y contraseña
@@ -77,17 +91,17 @@ export function useAuth() {
   /** Verifica si el usuario tiene un rol específico */
   const hasRole = useCallback(
     (role: User["role"]): boolean => {
-      return authState.user?.role === role;
+      return usuarioActual?.role === role;
     },
-    [authState.user],
+    [usuarioActual],
   );
 
   /** Verifica si el usuario tiene alguno de los roles especificados */
   const hasAnyRole = useCallback(
     (roles: User["role"][]): boolean => {
-      return !!authState.user && roles.includes(authState.user.role);
+      return !!usuarioActual && roles.includes(usuarioActual.role);
     },
-    [authState.user],
+    [usuarioActual],
   );
 
   /**
@@ -95,12 +109,12 @@ export function useAuth() {
    * Loguea automáticamente con las credenciales de VITE_DEFAULT_USER_EMAIL.
    */
   const devAutoLogin = useCallback((): boolean => {
-    const bypassAuth = import.meta.env.VITE_BYPASS_AUTH === "true";
+    const bypassAuth = isBypassAuthEnabled();
     const defaultEmail =
       import.meta.env.VITE_DEFAULT_USER_EMAIL || "admin@vetcare.com";
 
     if (!bypassAuth) return false;
-    if (authState.isAuthenticated) return true;
+    if (autenticado) return true;
 
     const defaultUser = storedUsers.find(
       (user) =>
@@ -117,12 +131,12 @@ export function useAuth() {
     }
 
     return false;
-  }, [authState.isAuthenticated, storedUsers, setAuthState]);
+  }, [autenticado, storedUsers, setAuthState]);
 
   return {
     // Estado
-    user: authState.user,
-    isAuthenticated: authState.isAuthenticated,
+    user: usuarioActual,
+    isAuthenticated: autenticado,
 
     // Acciones
     login,

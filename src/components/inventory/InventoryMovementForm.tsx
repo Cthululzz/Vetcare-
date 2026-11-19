@@ -154,7 +154,7 @@ export const InventoryMovementForm = ({
 
     // Si no está completo, crear recordatorio
     if (!isComplete) {
-      createReminder(movement.id, currentUserName);
+      createReminder(movement.id, userName.trim() || currentUserName);
     }
 
     resetForm();
@@ -167,6 +167,11 @@ export const InventoryMovementForm = ({
 
     if (!selectedProduct) {
       setError("Selecciona un producto del inventario.");
+      return;
+    }
+
+    if (isComplete && (!userName.trim() || !userRole.trim())) {
+      setError("Ingresa el nombre y el rol de quien registra el movimiento.");
       return;
     }
 

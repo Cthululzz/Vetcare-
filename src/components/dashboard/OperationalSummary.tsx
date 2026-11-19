@@ -26,9 +26,10 @@ export const OperationalSummary = ({
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {/* Citas (Azul) */}
-        <div
+        <button
+          type="button"
           onClick={() => onNavigate("/agenda")}
-          className="relative overflow-hidden bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl p-5.5 transition-all cursor-pointer group shadow-sm flex flex-col justify-between"
+          className="relative overflow-hidden bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl p-5.5 transition-all cursor-pointer group shadow-sm flex flex-col justify-between text-left"
         >
           <div className="pointer-events-none absolute w-[260px] h-[260px] bg-blue-500/10 blur-[90px] rounded-full -top-14 -right-14 group-hover:bg-blue-500/20 transition-all" />
 
@@ -52,12 +53,13 @@ export const OperationalSummary = ({
             <span>Abrir módulo de Agenda</span>
             <ArrowRight className="w-4 h-4" />
           </div>
-        </div>
+        </button>
 
         {/* Tareas (Verde) */}
-        <div
+        <button
+          type="button"
           onClick={() => onNavigate("/tareas")}
-          className={`relative overflow-hidden bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl p-5.5 transition-all cursor-pointer group shadow-sm flex flex-col justify-between ${
+          className={`relative overflow-hidden bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl p-5.5 transition-all cursor-pointer group shadow-sm flex flex-col justify-between text-left ${
             tareasParaAhora ? "vetcare-dashboard-task-urgent" : ""
           }`}
         >
@@ -83,12 +85,13 @@ export const OperationalSummary = ({
             <span>Ver listado de tareas</span>
             <ArrowRight className="w-4 h-4" />
           </div>
-        </div>
+        </button>
 
         {/* Alertas (Amarillo / #ece883) */}
-        <div
+        <button
+          type="button"
           onClick={() => onNavigate("/tareas?tab=alertas")}
-          className={`relative overflow-hidden bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl p-5.5 transition-all cursor-pointer group shadow-sm flex flex-col justify-between ${
+          className={`relative overflow-hidden bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl p-5.5 transition-all cursor-pointer group shadow-sm flex flex-col justify-between text-left ${
             alertas > 0 ? "vetcare-dashboard-alert-urgent" : ""
           }`}
         >
@@ -114,7 +117,7 @@ export const OperationalSummary = ({
             <span>Revisar alertas activas</span>
             <ArrowRight className="w-4 h-4" />
           </div>
-        </div>
+        </button>
       </div>
     </div>
   );

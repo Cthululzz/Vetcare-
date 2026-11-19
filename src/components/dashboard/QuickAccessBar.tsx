@@ -35,7 +35,7 @@ export const QuickAccessBar = ({ onNavigate }: QuickAccessBarProps) => {
 
         {/* Nueva Consulta */}
         <button
-          onClick={() => onNavigate("/consulta/nueva")}
+          onClick={() => onNavigate("/agenda?nueva=1")}
           className="relative overflow-hidden bg-slate-900 border border-slate-800 hover:border-emerald-500/50 rounded-2xl p-6 transition-all group flex items-center gap-5 text-left shadow-sm cursor-pointer"
         >
           <div className="pointer-events-none absolute w-[220px] h-[220px] bg-emerald-500/10 blur-[70px] rounded-full -top-10 -right-10 group-hover:bg-emerald-500/20 transition-all" />

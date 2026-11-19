@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { AlertTriangle, Edit2, Save } from "lucide-react";
 
 interface PatientConditionsCardProps {
@@ -12,11 +12,6 @@ export const PatientConditionsCard = ({
 }: PatientConditionsCardProps) => {
   const [isEditingConditions, setIsEditingConditions] = useState(false);
   const [condiciones, setCondiciones] = useState(conditions || "");
-
-  // Sincronizar si cambian las condiciones desde fuera
-  useEffect(() => {
-    setCondiciones(conditions || "");
-  }, [conditions]);
 
   const handleSave = () => {
     onSave(condiciones);

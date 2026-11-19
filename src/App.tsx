@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate, Link } from "react-router-dom";
+import { Routes, Route, Navigate, Link, useLocation } from "react-router-dom";
 import Dashboard from "./pages/Dashboard";
 import Patients from "./pages/Patients";
 import PatientRecords from "./pages/PatientRecords";
@@ -21,6 +21,7 @@ import { useLicense } from "./hooks/useLicense";
 import { useUsers } from "./hooks/useUsers";
 import { usePermissions } from "./hooks/usePermissions";
 import { PERMISSIONS, type Permission } from "./utils/permissions";
+import { isBypassAuthEnabled } from "./utils/authBypass";
 import type { ReactNode } from "react";
 
 // ============================================
@@ -33,7 +34,7 @@ interface ProtectedRouteProps {
 function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { isAuthenticated } = useAuth();
 
-  const bypassAuth = import.meta.env.VITE_BYPASS_AUTH === "true";
+  const bypassAuth = isBypassAuthEnabled();
 
   if (bypassAuth) {
     return <>{children}</>;
@@ -82,17 +83,28 @@ function RequirePermission({
   return <>{children}</>;
 }
 
+function HomeRoute() {
+  const { user } = useAuth();
+  return user?.role === "PROVEEDOR" ? (
+    <Navigate to="/proveedor" replace />
+  ) : (
+    <Dashboard />
+  );
+}
+
 // ============================================
 // APP PRINCIPAL
 // ============================================
 function App() {
   const { isAuthenticated, user } = useAuth();
-  const bypassAuth = import.meta.env.VITE_BYPASS_AUTH === "true";
+  const location = useLocation();
+  const bypassAuth = isBypassAuthEnabled();
   const { isActivated, isBloqueado } = useLicense();
   const { hasUsers } = useUsers();
   const esProveedor = user?.role === "PROVEEDOR";
+  const enLogin = location.pathname === "/login";
 
-  if (!bypassAuth && !isActivated) {
+  if (!bypassAuth && !isActivated && !enLogin) {
     return (
       <>
         <DevAuthBypass />
@@ -101,20 +113,20 @@ function App() {
     );
   }
 
-  if (!bypassAuth && isActivated && !hasUsers && !esProveedor) {
-    return (
-      <>
-        <DevAuthBypass />
-        <SetupScreen />
-      </>
-    );
-  }
-
-  if (!bypassAuth && isActivated && isBloqueado && !esProveedor) {
+  if (!bypassAuth && isActivated && isBloqueado && !esProveedor && !enLogin) {
     return (
       <>
         <DevAuthBypass />
         <LicenseBlockedScreen />
+      </>
+    );
+  }
+
+  if (!bypassAuth && isActivated && !hasUsers && !esProveedor && !enLogin) {
+    return (
+      <>
+        <DevAuthBypass />
+        <SetupScreen />
       </>
     );
   }
@@ -142,7 +154,7 @@ function App() {
               </ProtectedRoute>
             }
           >
-            <Route path="/" element={<Dashboard />} />
+            <Route path="/" element={<HomeRoute />} />
             <Route
               path="/pacientes"
               element={

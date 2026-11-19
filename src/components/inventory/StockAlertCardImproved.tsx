@@ -33,9 +33,10 @@ export const StockAlertCard = ({ onNavigate }: StockAlertCardProps) => {
 
   return (
     <>
-      <div
+      <button
+        type="button"
         onClick={() => setShowAllAlerts(true)}
-        className="relative overflow-hidden bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl p-7 transition-all cursor-pointer group shadow-sm flex flex-col justify-between min-h-[240px]"
+        className="relative overflow-hidden bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl p-7 transition-all cursor-pointer group shadow-sm flex flex-col justify-between min-h-[240px] text-left"
       >
         <div className="pointer-events-none absolute w-[300px] h-[300px] bg-red-500/10 blur-[100px] rounded-full -bottom-16 -right-16 group-hover:bg-red-500/20 transition-all" />
 
@@ -94,7 +95,7 @@ export const StockAlertCard = ({ onNavigate }: StockAlertCardProps) => {
           <span>Ver todos los productos con stock bajo</span>
           <ChevronRight className="w-4 h-4" />
         </div>
-      </div>
+      </button>
 
       {/* Modal con todos los productos en bajo stock */}
       {showAllAlerts && (
@@ -115,6 +116,8 @@ export const StockAlertCard = ({ onNavigate }: StockAlertCardProps) => {
                 </div>
               </div>
               <button
+                type="button"
+                aria-label="Cerrar alertas de stock"
                 onClick={() => setShowAllAlerts(false)}
                 className="p-2 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
               >

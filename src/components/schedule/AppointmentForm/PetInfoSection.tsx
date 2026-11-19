@@ -29,7 +29,10 @@ export const PetInfoSection = ({
     <div className="space-y-3.5">
       {/* Nombre del Paciente */}
       <div>
-        <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+        <label
+          htmlFor="paciente-nombre"
+          className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2"
+        >
           Nombre del Paciente
         </label>
         <div className="relative">
@@ -37,6 +40,7 @@ export const PetInfoSection = ({
             <Heart className="w-4 h-4" />
           </span>
           <input
+            id="paciente-nombre"
             type="text"
             name="patientName"
             required
@@ -50,7 +54,10 @@ export const PetInfoSection = ({
 
       {/* Raza */}
       <div>
-        <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+        <label
+          htmlFor="paciente-raza"
+          className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2"
+        >
           Raza
         </label>
         <div className="relative">
@@ -58,6 +65,7 @@ export const PetInfoSection = ({
             <Dna className="w-4 h-4" />
           </span>
           <input
+            id="paciente-raza"
             type="text"
             name="breed"
             value={formData.breed || ""}
@@ -72,10 +80,14 @@ export const PetInfoSection = ({
       <div className="grid grid-cols-2 gap-3">
         {/* Especie (select) */}
         <div>
-          <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+          <label
+            htmlFor="paciente-especie"
+            className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2"
+          >
             Especie
           </label>
           <select
+            id="paciente-especie"
             name="species"
             value={formData.species}
             onChange={onChange}
@@ -91,12 +103,17 @@ export const PetInfoSection = ({
 
         {/* Género (botones de solo ícono) */}
         <div>
-          <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+          <span
+            id="paciente-genero-label"
+            className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2"
+          >
             Género
-          </label>
-          <div className="flex gap-2">
+          </span>
+          <div className="flex gap-2" role="group" aria-labelledby="paciente-genero-label">
             <button
               type="button"
+              aria-label="Macho"
+              aria-pressed={formData.gender === "macho"}
               onClick={() =>
                 setFormData((prev) => ({ ...prev, gender: "macho" }))
               }
@@ -111,6 +128,8 @@ export const PetInfoSection = ({
             </button>
             <button
               type="button"
+              aria-label="Hembra"
+              aria-pressed={formData.gender === "hembra"}
               onClick={() =>
                 setFormData((prev) => ({ ...prev, gender: "hembra" }))
               }

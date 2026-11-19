@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, type FormEvent } from "react";
+import { useState, useMemo, type FormEvent } from "react";
 import { Save, CheckCircle2, BedDouble } from "lucide-react";
 import {
   getAppointmentBadgeStyle,
@@ -19,7 +19,6 @@ import type { Patient, Owner } from "../../../types/patient";
 import {
   convertWeight,
   normalizeWeightUnit,
-  DEFAULT_WEIGHT_UNIT,
   type WeightUnit,
 } from "../../../utils/weight";
 import { normalizeVitalSign } from "../../../utils/vitalSigns";
@@ -42,6 +41,29 @@ interface ConsultationModalProps {
   onHospitalize?: (data: ConsultationData) => void;
 }
 
+const initialFormDataFor = (appointment: Appointment, patient: Patient) => {
+  const edadInicial =
+    patient.age || (patient.birthDate ? calculateAge(patient.birthDate) : "");
+
+  return {
+    edad: edadInicial,
+    peso:
+      appointment.pesoActual != null ? String(appointment.pesoActual) : "",
+    weightUnit: normalizeWeightUnit(appointment.pesoActualUnit),
+    condicionesPrevias:
+      patient.conditions ||
+      appointment.condicionesPrevias ||
+      appointment.alergiasNotas ||
+      "",
+    recomendaciones: appointment.recomendaciones || "",
+    diagnostico: appointment.diagnostico || appointment.notas || "",
+    notas: appointment.diagnostico ? appointment.notas || "" : "",
+    temperature: appointment.temperature || "",
+    heartRate: appointment.heartRate || "",
+    respiratoryRate: appointment.respiratoryRate || "",
+  };
+};
+
 // ============================================
 // COMPONENTE PRINCIPAL
 // ============================================
@@ -60,19 +82,10 @@ export const ConsultationModal = ({
   // ============================================
   // ESTADOS DEL FORMULARIO
   // ============================================
-  const [formData, setFormData] = useState({
-    edad: "",
-    peso: "",
-    weightUnit: DEFAULT_WEIGHT_UNIT,
-    condicionesPrevias: "",
-    recomendaciones: "",
-    diagnostico: "",
-    notas: "",
-    temperature: "",
-    heartRate: "",
-    respiratoryRate: "",
-  });
-  const [initialAge, setInitialAge] = useState("");
+  const [formData, setFormData] = useState(() =>
+    initialFormDataFor(appointment, patient),
+  );
+  const [initialAge] = useState(formData.edad);
   const [isHospitalizing, setIsHospitalizing] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -156,42 +169,6 @@ export const ConsultationModal = ({
     buildConsultationData,
     setHasUnsavedChanges,
   });
-
-  // ============================================
-  // EFECTOS
-  // ============================================
-  useEffect(() => {
-    if (isOpen && appointment && patient) {
-      const edadInicial =
-        patient.age ||
-        (patient.birthDate ? calculateAge(patient.birthDate) : "");
-      setFormData({
-        edad: edadInicial,
-        peso:
-          appointment.pesoActual != null ? String(appointment.pesoActual) : "",
-        weightUnit: normalizeWeightUnit(appointment.pesoActualUnit),
-        condicionesPrevias:
-          patient.conditions ||
-          appointment.condicionesPrevias ||
-          appointment.alergiasNotas ||
-          "",
-        recomendaciones: appointment.recomendaciones || "",
-        // En consultas anteriores el cuadro único era "Notas / Diagnóstico":
-        // ese texto pasa a ser el diagnóstico para no perder la información.
-        diagnostico: appointment.diagnostico || appointment.notas || "",
-        notas: appointment.diagnostico ? appointment.notas || "" : "",
-        temperature: appointment.temperature || "",
-        heartRate: appointment.heartRate || "",
-        respiratoryRate: appointment.respiratoryRate || "",
-      });
-      setInitialAge(edadInicial);
-      setIsHospitalizing(false);
-      setShowConfirmModal(false);
-      setHasUnsavedChanges(false);
-      setShowExitConfirmModal(false);
-      prescriptionFlow.reset();
-    }
-  }, [isOpen, appointment, patient]);
 
   // ============================================
   // HANDLERS

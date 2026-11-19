@@ -24,7 +24,7 @@ export const SetupScreen = () => {
   const { createUser } = useUsers();
   const { signIn } = useAuth();
   const { license } = useLicense();
-  const { registerClinic } = useProviderClinics();
+  const { clinics, registerClinic } = useProviderClinics();
 
   const [nombreClinica, setNombreClinica] = useState("");
   const [nombre, setNombre] = useState("");
@@ -55,12 +55,22 @@ export const SetupScreen = () => {
       return;
     }
 
+    const organizationId =
+      license?.organizationId ?? PILOT_ORGANIZATION_ID;
+    if (clinics.some((clinic) => clinic.organizationId === organizationId)) {
+      setError(
+        "Esta veterinaria base ya está registrada en la consola del proveedor.",
+      );
+      return;
+    }
+
     const admin = createUser({
       name: nombre.trim(),
       email: correo.trim().toLowerCase(),
       password,
       role: "ADMIN",
       sucursalId,
+      organizationId,
     });
 
     // La cuenta del proveedor se crea junto con la instalación, pero no se
@@ -74,14 +84,18 @@ export const SetupScreen = () => {
     });
 
     // La veterinaria base queda en el registro que consulta el proveedor.
-    registerClinic({
+    const clinica = registerClinic({
       name: nombreClinica.trim() || `${nombre.trim()} · Veterinaria base`,
-      organizationId: license?.organizationId ?? PILOT_ORGANIZATION_ID,
+      organizationId,
       adminName: nombre.trim(),
       adminEmail: correo.trim().toLowerCase(),
       activationCode: license?.activationCode ?? PILOT_ACTIVATION_CODE,
       trialStart: license?.trialStart ?? "",
     });
+    if (!clinica) {
+      setError("No se pudo registrar la veterinaria base. Inténtalo nuevamente.");
+      return;
+    }
 
     signIn(admin);
   };

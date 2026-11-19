@@ -65,6 +65,7 @@ export const PatientProfileModal = ({
 
         {/* 2. Condiciones Previas / Alergias */}
         <PatientConditionsCard
+          key={`${patient.id}-${patient.conditions ?? ""}`}
           conditions={patient.conditions}
           onSave={handleSaveConditions}
         />

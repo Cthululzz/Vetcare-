@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useMemo } from "react";
 import { PawPrint } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { PageBanner } from "./PageBanner";
@@ -30,32 +30,26 @@ const frasesNoche = [
   "Cada esfuerzo realizado hoy contribuye al bienestar animal.",
 ];
 
+const saludoDelMomento = () => {
+  const hora = new Date().getHours();
+  if (hora >= 6 && hora < 12) {
+    return { saludo: "Buenos días", frases: frasesManana };
+  }
+  if (hora >= 12 && hora < 19) {
+    return { saludo: "Buenas tardes", frases: frasesTarde };
+  }
+  return { saludo: "Buenas noches", frases: frasesNoche };
+};
+
 // ============================================
 // COMPONENTE PRINCIPAL
 // ============================================
 export const GreetingBanner = () => {
   const { user } = useAuth();
-  const [saludo, setSaludo] = useState("");
-  const [fraseDelDia, setFraseDelDia] = useState("");
-
-  useEffect(() => {
-    const hora = new Date().getHours();
-    let listaSeleccionada = frasesManana;
-
-    if (hora >= 6 && hora < 12) {
-      setSaludo("Buenos días");
-      listaSeleccionada = frasesManana;
-    } else if (hora >= 12 && hora < 19) {
-      setSaludo("Buenas tardes");
-      listaSeleccionada = frasesTarde;
-    } else {
-      setSaludo("Buenas noches");
-      listaSeleccionada = frasesNoche;
-    }
-
-    const fraseAleatoria =
-      listaSeleccionada[Math.floor(Math.random() * listaSeleccionada.length)];
-    setFraseDelDia(fraseAleatoria);
+  const mensaje = useMemo(() => {
+    const { saludo, frases } = saludoDelMomento();
+    const indice = new Date().getDate() % frases.length;
+    return { saludo, frase: frases[indice] };
   }, []);
 
   // Obtener nombre del usuario logueado, o usar placeholder si no hay
@@ -64,10 +58,8 @@ export const GreetingBanner = () => {
   return (
     <PageBanner
       icon={PawPrint}
-      title={`${saludo}, ${nombreUsuario}.`}
-      description={
-        fraseDelDia || "Todo está listo para comenzar una nueva jornada."
-      }
+      title={`${mensaje.saludo}, ${nombreUsuario}.`}
+      description={mensaje.frase}
     />
   );
 };

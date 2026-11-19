@@ -29,7 +29,7 @@ export const PatientClinicalHistory = ({
 
   // Ordenar por fecha descendente (más reciente primero)
   const sortedHistory = [...history].sort((a, b) =>
-    b.date.localeCompare(a.date),
+    (b.date ?? "").localeCompare(a.date ?? ""),
   );
 
   const latestConsultation = sortedHistory.length > 0 ? sortedHistory[0] : null;
@@ -47,7 +47,9 @@ export const PatientClinicalHistory = ({
   };
 
   const formatDateDisplay = (dateStr: string) => {
-    const [year, month, day] = dateStr.split("T")[0].split("-");
+    const partes = (dateStr ?? "").split("T")[0].split("-");
+    if (partes.length !== 3) return "Fecha no disponible";
+    const [year, month, day] = partes;
     return `${day}/${month}/${year}`;
   };
 

@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Plus,
   Calendar as CalendarIcon,
@@ -28,9 +28,12 @@ import type { TabType } from "./types";
 
 const Schedule = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<TabType>("hoy");
   const [currentCalendarDate, setCurrentCalendarDate] = useState(new Date());
   const [showCompleted, setShowCompleted] = useState(false);
+  const [hoy, setHoy] = useState(getLocalTodayStr);
+  const parametrosProcesados = useRef(false);
 
   const {
     appointments,
@@ -53,7 +56,33 @@ const Schedule = () => {
     handleCloseConsultation,
   } = useScheduleActions();
 
-  const todayStr = getLocalTodayStr();
+  useEffect(() => {
+    const temporizador = window.setInterval(() => {
+      const fechaActual = getLocalTodayStr();
+      setHoy((anterior) => (anterior === fechaActual ? anterior : fechaActual));
+    }, 60_000);
+    return () => window.clearInterval(temporizador);
+  }, []);
+
+  useEffect(() => {
+    if (parametrosProcesados.current) return;
+    const consultar = searchParams.get("consultar");
+    const nueva = searchParams.get("nueva");
+    if (!consultar && !nueva) return;
+    if (consultar && appointments.length === 0) return;
+
+    parametrosProcesados.current = true;
+    queueMicrotask(() => {
+      if (consultar) {
+        const cita = appointments.find((item) => item.id === consultar);
+        if (cita) handleStartConsultation(cita);
+      } else {
+        handleOpenNew();
+      }
+    });
+  }, [appointments, handleOpenNew, handleStartConsultation, searchParams]);
+
+  const todayStr = hoy;
 
   const citasActivas = useMemo(
     () =>
@@ -76,7 +105,7 @@ const Schedule = () => {
     [citasActivas, todayStr],
   );
 
-  const weekDays = useMemo(() => getWeekDays(), []);
+  const weekDays = useMemo(() => getWeekDays(hoy), [hoy]);
 
   const { getPatient, getOwner } = usePatients();
   const { sentReminders } = useAppointmentReminders();
@@ -323,6 +352,7 @@ const Schedule = () => {
       {/* Modal de consulta médica */}
       {selectedAppointmentForConsultation && modalPatient && modalOwner && (
         <ConsultationModal
+          key={selectedAppointmentForConsultation.id}
           isOpen={isConsultationModalOpen}
           onClose={handleCloseConsultation}
           appointment={selectedAppointmentForConsultation}

@@ -4,6 +4,7 @@ import { DEFAULT_ORGANIZATION_ID } from "../constants/appConstants";
 import type { SucursalId, UserRole } from "../constants/appConstants";
 import { DEMO_USERS } from "../constants/demoUsers";
 import { PILOT_ORGANIZATION_ID } from "../constants/license";
+import { isBypassAuthEnabled } from "../utils/authBypass";
 import type { StoredUser, User } from "../types/user";
 
 export const USERS_KEY = "vet_users";
@@ -14,6 +15,8 @@ export interface NewUserData {
   password: string;
   role: UserRole;
   sucursalId: SucursalId;
+  /** Organización real de la licencia; si se omite se usa la de desarrollo. */
+  organizationId?: string;
 }
 
 export interface UserUpdates {
@@ -39,7 +42,7 @@ export const toPublicUser = (user: StoredUser): User => ({
 });
 
 export function useUsers() {
-  const bypass = import.meta.env.VITE_BYPASS_AUTH === "true";
+  const bypass = isBypassAuthEnabled();
   const [storedUsers, setStoredUsers] = useLocalStorage<StoredUser[]>(
     USERS_KEY,
     bypass ? DEMO_USERS : [],
@@ -49,7 +52,11 @@ export function useUsers() {
     () => storedUsers.map(toPublicUser),
     [storedUsers],
   );
-  const hasUsers = users.length > 0;
+  // El asistente de instalación debe reaparecer si no queda ningún administrador
+  // activo; la cuenta fija del proveedor no cuenta para este efecto.
+  const hasUsers = users.some(
+    (user) => user.role !== "PROVEEDOR" && user.isActive !== false,
+  );
 
   const findByCredentials = useCallback(
     (email: string, password: string): User | undefined => {
@@ -81,7 +88,9 @@ export function useUsers() {
       const user: StoredUser = {
         ...data,
         id: crypto.randomUUID(),
-        organizationId: bypass ? DEFAULT_ORGANIZATION_ID : PILOT_ORGANIZATION_ID,
+        organizationId:
+          data.organizationId ??
+          (bypass ? DEFAULT_ORGANIZATION_ID : PILOT_ORGANIZATION_ID),
         createdAt: new Date().toISOString(),
         isActive: true,
       };

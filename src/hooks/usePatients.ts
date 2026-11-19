@@ -8,6 +8,7 @@ import type {
   Genero,
   EstadoVacuna,
 } from "../constants/appConstants";
+import { normalizePhone } from "../utils/phone";
 
 // ============================================
 // KEYS DE ALMACENAMIENTO
@@ -51,8 +52,11 @@ export function usePatients() {
   const getOwner = (ownerId: string): Owner | undefined =>
     owners.find((o) => o.id === ownerId);
 
-  const getOwnerByPhone = (phone: string): Owner | undefined =>
-    owners.find((o) => o.phone === phone);
+  const getOwnerByPhone = (phone: string): Owner | undefined => {
+    const normalizado = normalizePhone(phone);
+    if (!normalizado) return undefined;
+    return owners.find((o) => normalizePhone(o.phone) === normalizado);
+  };
 
   const createOwner = (
     data: Omit<Owner, "id" | "createdAt" | "organizationId" | "sucursalId">,
@@ -87,6 +91,10 @@ export function usePatients() {
 
   const getPatient = (patientId: string): Patient | undefined =>
     patients.find((p) => p.id === patientId);
+
+  /** Búsqueda sin filtro de sucursal, para integridad de camas e internaciones. */
+  const getPatientEnTodasSedes = (patientId: string): Patient | undefined =>
+    storedPatients.find((p) => p.id === patientId);
 
   const getPatientsByOwner = (ownerId: string): Patient[] =>
     patients.filter((p) => p.ownerId === ownerId);
@@ -292,6 +300,7 @@ export function usePatients() {
 
     // Patients
     getPatient,
+    getPatientEnTodasSedes,
     getPatientsByOwner,
     getActivePatients,
     getHospitalizedPatients,

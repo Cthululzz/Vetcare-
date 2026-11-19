@@ -111,6 +111,12 @@ export const UserManagement = () => {
         setError("No se encontró el usuario que quieres actualizar.");
         return;
       }
+      if (anterior.id === currentUser?.id) {
+        setError(
+          "No puedes editar tu propia cuenta desde aquí. Solicita el cambio a otro administrador.",
+        );
+        return;
+      }
       if (
         esUltimoAdmin(anterior) &&
         (form.role !== "ADMIN" || !form.isActive)

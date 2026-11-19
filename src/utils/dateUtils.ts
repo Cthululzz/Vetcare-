@@ -108,7 +108,7 @@ export const parseTimeTo24h = (time12h: string): string => {
   const match = time12h.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
   if (!match) return time12h;
 
-  let [, hours, minutes, period] = match;
+  const [, hours, minutes, period] = match;
   let hoursNum = parseInt(hours, 10);
 
   if (period.toUpperCase() === "PM" && hoursNum !== 12) {
@@ -120,18 +120,36 @@ export const parseTimeTo24h = (time12h: string): string => {
   return `${String(hoursNum).padStart(2, "0")}:${minutes}`;
 };
 
+/** Normaliza una hora a HH:MM. Devuelve null si no es válida. */
+export const normalizarHora = (valor: string): string | null => {
+  const texto = (valor ?? "").trim();
+  const coincidencia = /^(\d{1,2}):(\d{2})$/.exec(texto);
+  if (!coincidencia) return null;
+
+  const horas = Number(coincidencia[1]);
+  const minutos = Number(coincidencia[2]);
+  if (horas > 23 || minutos > 59) return null;
+
+  return `${String(horas).padStart(2, "0")}:${String(minutos).padStart(2, "0")}`;
+};
+
 /**
  * Calcula edad en años y meses desde una fecha de nacimiento ISO
  */
 export const calculateAge = (birthDate: string): string => {
   if (!birthDate) return "No especificada";
 
-  const birth = new Date(birthDate);
+  // "yyyy-mm-dd" se interpreta como fecha local, no como ISO UTC.
+  const [anio, mes, dia] = birthDate.slice(0, 10).split("-").map(Number);
+  if (!anio || !mes || !dia) return "No especificada";
+
+  const birth = new Date(anio, mes - 1, dia);
   const now = new Date();
 
   let years = now.getFullYear() - birth.getFullYear();
   let months = now.getMonth() - birth.getMonth();
 
+  if (now.getDate() < birth.getDate()) months--;
   if (months < 0) {
     years--;
     months += 12;
@@ -172,8 +190,13 @@ export const isTomorrow = (dateStr: string): boolean => {
 /**
  * Obtiene los 7 días de la semana actual (lunes a domingo)
  */
-export const getWeekDays = (): Array<{ name: string; dateStr: string }> => {
-  const now = new Date();
+export const getWeekDays = (
+  fechaReferencia?: string,
+): Array<{ name: string; dateStr: string }> => {
+  const ahora = fechaReferencia
+    ? new Date(`${fechaReferencia}T12:00:00`)
+    : new Date();
+  const now = Number.isNaN(ahora.getTime()) ? new Date() : ahora;
   const currentDay = now.getDay();
   const diffToMonday = currentDay === 0 ? -6 : 1 - currentDay;
   const monday = new Date(now);
@@ -293,7 +316,7 @@ export const parseAgeToBirthDate = (ageText: string): string | null => {
   const monthsMatch = text.match(/(\d+)\s*m/); // "meses" / "mes" / "m"
 
   let years = yearsMatch ? parseInt(yearsMatch[1], 10) : 0;
-  let months = monthsMatch ? parseInt(monthsMatch[1], 10) : 0;
+  const months = monthsMatch ? parseInt(monthsMatch[1], 10) : 0;
 
   // Si no hay palabras clave, un número solo se interpreta como años
   if (!yearsMatch && !monthsMatch) {

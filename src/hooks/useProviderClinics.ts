@@ -12,21 +12,11 @@ import {
 } from "../constants/license";
 import { getLocalTodayStr } from "../utils/dateUtils";
 import { buildProviderUpdateCode } from "../utils/licenseUpdateCodes";
-
-const MS_POR_DIA = 24 * 60 * 60 * 1000;
-
-const diasDesde = (fecha: string, hoy: string): number => {
-  const inicio = new Date(`${fecha}T00:00:00`).getTime();
-  const actual = new Date(`${hoy}T00:00:00`).getTime();
-  if (Number.isNaN(inicio)) return 0;
-  return Math.floor((actual - inicio) / MS_POR_DIA);
-};
-
-const sumarMeses = (fecha: string, meses: number): string => {
-  const base = new Date(`${fecha}T00:00:00`);
-  base.setMonth(base.getMonth() + meses);
-  return getLocalTodayStr(base);
-};
+import {
+  diasDesde,
+  fechaBaseVencimiento,
+  sumarMeses,
+} from "../utils/licenseDates";
 
 export type ClinicPaymentState =
   | "al_dia"
@@ -61,8 +51,14 @@ export const describeClinic = (
   clinic: ProviderClinic,
   hoy: string = getLocalTodayStr(),
 ): ClinicView => {
-  const transcurridos = diasDesde(clinic.trialStart, hoy);
-  const diasRestantes = Math.max(0, TRIAL_DAYS - transcurridos);
+  const fechaReferencia = fechaBaseVencimiento(
+    clinic.trialStart,
+    clinic.paidUntil,
+    hoy,
+  );
+  const transcurridos = diasDesde(fechaReferencia, hoy);
+  const diasDePrueba = diasDesde(clinic.trialStart, hoy);
+  const diasRestantes = Math.max(0, TRIAL_DAYS - diasDePrueba);
   const diasGraciaRestantes = Math.max(
     0,
     LICENSE_BLOCK_DAYS - transcurridos,

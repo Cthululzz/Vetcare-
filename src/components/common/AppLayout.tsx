@@ -6,10 +6,11 @@ import { LicenseStatusBanner } from "../license/LicenseStatusBanner";
 import { useBranchScope } from "../../context/branchScope";
 import { usePermissions } from "../../hooks/usePermissions";
 import { SUCURSALES, getSucursalName } from "../../constants/appConstants";
+import { PERMISSIONS } from "../../utils/permissions";
 
 export default function AppLayout() {
   const { activeBranch, canViewAll, setActiveBranch } = useBranchScope();
-  const { role } = usePermissions();
+  const { role, can } = usePermissions();
   const sucursalActiva =
     activeBranch === "all" ? null : getSucursalName(activeBranch);
   const esProveedor = role === "PROVEEDOR";
@@ -53,7 +54,7 @@ export default function AppLayout() {
           <Outlet />
         </div>
       </main>
-      <GlobalInventoryReminder />
+      {can(PERMISSIONS.INVENTORY_MANAGE) && <GlobalInventoryReminder />}
     </div>
   );
 }

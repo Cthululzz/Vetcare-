@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import type { ChangeEvent, FocusEvent, ReactNode } from "react";
 import { formatDateShort, parseDisplayDateToIso } from "../../utils/dateUtils";
 
@@ -56,6 +56,8 @@ export const DateInput = ({
   className = "",
 }: DateInputProps) => {
   const inputRef = useRef<HTMLInputElement>(null);
+  const generatedId = useId();
+  const inputId = id ?? generatedId;
   // Mientras se escribe se usa el borrador; al salir se vuelve a la fecha ISO.
   const [draft, setDraft] = useState<string | null>(null);
   const [invalid, setInvalid] = useState(false);
@@ -132,7 +134,7 @@ export const DateInput = ({
         inputMode="numeric"
         autoComplete="off"
         name={name}
-        id={id}
+        id={inputId}
         value={displayValue}
         onChange={handleChange}
         onFocus={handleFocus}
@@ -161,7 +163,9 @@ export const DateInput = ({
 
   return (
     <div>
-      <label className={labelClassName}>{label}</label>
+      <label htmlFor={inputId} className={labelClassName}>
+        {label}
+      </label>
       {input}
       {invalid && (
         <p className="text-[11px] text-red-300 mt-1">{INVALID_DATE_MESSAGE}</p>

@@ -157,9 +157,8 @@ const Tasks = () => {
     return (
       <div
         key={task.id}
-        onClick={() => markTaskAsSeen(taskKey(task.id))}
         className={`rounded-xl border p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-          glows ? "vetcare-task-urgent cursor-pointer" : ""
+          glows ? "vetcare-task-urgent" : ""
         } ${
           overdueStyle
             ? "bg-red-500/5 border-red-500/20"
@@ -201,6 +200,7 @@ const Tasks = () => {
         </span>
         <Link
           to="/pacientes/hospitalizados"
+          onClick={() => markTaskAsSeen(taskKey(task.id))}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-colors"
         >
           <BedDouble className="w-3.5 h-3.5" /> Ir
@@ -213,10 +213,9 @@ const Tasks = () => {
   const renderReminder = (reminder: DueAppointmentReminder) => (
     <div
       key={`${reminder.appointment.id}-${reminder.kind}`}
-      onClick={() => markTaskAsSeen(reminderKey(reminder))}
       className={`bg-slate-950/60 border border-slate-800 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
         isNewTask(reminderKey(reminder))
-          ? "vetcare-task-move ring-1 ring-[#ece883]/40 cursor-pointer"
+          ? "vetcare-task-move ring-1 ring-[#ece883]/40"
           : ""
       }`}
     >
@@ -246,7 +245,10 @@ const Tasks = () => {
       <div className="flex items-center gap-2 shrink-0">
         <button
           type="button"
-          onClick={() => sendReminder(reminder)}
+          onClick={() => {
+            markTaskAsSeen(reminderKey(reminder));
+            sendReminder(reminder);
+          }}
           disabled={!reminder.ownerPhone}
           title={
             reminder.ownerPhone
@@ -259,7 +261,10 @@ const Tasks = () => {
         </button>
         <button
           type="button"
-          onClick={() => setReminderToConfirm(reminder)}
+          onClick={() => {
+            markTaskAsSeen(reminderKey(reminder));
+            setReminderToConfirm(reminder);
+          }}
           className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors cursor-pointer"
         >
           <CheckCircle2 className="w-3.5 h-3.5" /> Marcar enviado

@@ -14,6 +14,7 @@ import { PageShell } from "../components/common/PageShell";
 import { useInventory } from "../hooks/useInventory";
 import { useInventoryTags } from "../hooks/useInventoryTags";
 import { usePermissions } from "../hooks/usePermissions";
+import { useAuth } from "../hooks/useAuth";
 import { InventoryMovementForm } from "../components/inventory/InventoryMovementForm";
 import { InventoryMovementHistory } from "../components/inventory/InventoryMovementHistory";
 import { InventoryProductForm } from "../components/inventory/InventoryProductForm";
@@ -29,7 +30,8 @@ import {
 const Inventory = () => {
   const { searchProducts, getLowStockProducts, getProducts } = useInventory();
   const { getTags } = useInventoryTags();
-  const { canManageInventory } = usePermissions();
+  const { user } = useAuth();
+  const { canManageInventory, role } = usePermissions();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -392,6 +394,8 @@ const Inventory = () => {
       <InventoryMovementForm
         isOpen={showMovementForm}
         onClose={() => setShowMovementForm(false)}
+        currentUserName={user?.name}
+        currentUserRole={role ?? undefined}
       />
 
       <InventoryMovementHistory

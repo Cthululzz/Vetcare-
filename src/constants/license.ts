@@ -57,6 +57,15 @@ export interface ProviderClinic {
 export const normalizeActivationCode = (value: string): string =>
   value.toUpperCase().replace(/[\s-]/g, "");
 
+/** Código de activación único por veterinaria, derivado del ID de organización. */
+export const buildActivationCode = (organizationId: string): string => {
+  const slug = organizationId
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "")
+    .slice(0, 12);
+  return `VET-${slug || "PILOTO"}-ACT`;
+};
+
 export const isValidActivationCode = (value: string): boolean =>
   normalizeActivationCode(value) ===
   normalizeActivationCode(PILOT_ACTIVATION_CODE);

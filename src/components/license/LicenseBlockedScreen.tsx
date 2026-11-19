@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import { AlertCircle, KeyRound, Lock } from "lucide-react";
 import { useLicense } from "../../hooks/useLicense";
 import { LICENSE_BLOCK_DAYS } from "../../constants/license";
@@ -49,9 +50,10 @@ export const LicenseBlockedScreen = () => {
         </div>
 
         <p className="mb-6 rounded-xl border border-slate-800 bg-slate-950/60 px-4 py-3 text-sm leading-relaxed text-slate-300">
-          Transcurridos {LICENSE_BLOCK_DAYS} días desde el inicio de la prueba,
-          la aplicación deja de estar disponible. Para seguir usando VetCare+
-          necesitas una actualización de licencia entregada por el proveedor.
+          A partir del día {LICENSE_BLOCK_DAYS + 1} (transcurridos{" "}
+          {LICENSE_BLOCK_DAYS} días), la aplicación deja de estar disponible.
+          Para seguir usando VetCare+ necesitas una actualización de licencia
+          entregada por el proveedor.
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -100,7 +102,12 @@ export const LicenseBlockedScreen = () => {
         </form>
 
         <p className="mt-5 text-center text-xs text-slate-500">
-          Si no tienes el código, solicítalo al proveedor de VetCare+.
+          Si no tienes el código, solicítalo al proveedor de VetCare+. Si eres
+          el proveedor,{" "}
+          <Link to="/login" className="font-bold text-[#ece883] hover:underline">
+            inicia sesión aquí
+          </Link>
+          .
         </p>
       </div>
     </div>

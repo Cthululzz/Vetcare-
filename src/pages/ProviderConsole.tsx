@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { PageBanner } from "../components/common/PageBanner";
 import { PageShell } from "../components/common/PageShell";
-import { PILOT_ACTIVATION_CODE } from "../constants/license";
+import { buildActivationCode } from "../constants/license";
 import { usePermissions } from "../hooks/usePermissions";
 import {
   describeClinic,
@@ -30,6 +30,9 @@ interface NewClinicForm {
   adminEmail: string;
   trialStart: string;
 }
+
+const EMAIL_VALIDO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const ID_ORGANIZACION_VALIDO = /^[a-z0-9][a-z0-9-]{2,40}$/i;
 
 const formularioVacio = (): NewClinicForm => ({
   name: "",
@@ -95,14 +98,28 @@ const ProviderConsole = () => {
       setError("Ingresa el nombre de la veterinaria base.");
       return;
     }
-    if (!nueva.adminEmail.trim()) {
-      setError("Ingresa el correo del administrador.");
+    if (!ID_ORGANIZACION_VALIDO.test(nueva.organizationId.trim())) {
+      setError(
+        "Ingresa un identificador de organización de 3 a 40 caracteres, sin espacios.",
+      );
+      return;
+    }
+    if (!nueva.adminName.trim()) {
+      setError("Ingresa el nombre del administrador.");
+      return;
+    }
+    if (!EMAIL_VALIDO.test(nueva.adminEmail.trim())) {
+      setError("Ingresa un correo electrónico válido.");
+      return;
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(nueva.trialStart)) {
+      setError("Ingresa una fecha de inicio válida.");
       return;
     }
 
     const creada = registerClinic({
       ...nueva,
-      activationCode: PILOT_ACTIVATION_CODE,
+      activationCode: buildActivationCode(nueva.organizationId.trim()),
     });
     if (!creada) {
       setError("Ya existe una veterinaria base con ese identificador.");
@@ -147,6 +164,12 @@ const ProviderConsole = () => {
   };
 
   const handleEliminar = (organizationId: string) => {
+    const clinic = clinics.find((item) => item.organizationId === organizationId);
+    const confirmar = window.confirm(
+      `¿Eliminar la veterinaria base "${clinic?.name ?? organizationId}" y todo su historial de pagos?`,
+    );
+    if (!confirmar) return;
+
     removeClinic(organizationId);
     setSelectedId(null);
     setGenerated(null);
@@ -324,7 +347,9 @@ const ProviderConsole = () => {
                   <th className="px-3 py-2 font-bold">Estado de pago</th>
                   <th className="px-3 py-2 font-bold">Inicio prueba</th>
                   <th className="px-3 py-2 font-bold">Próximo vencimiento</th>
-                  <th className="px-3 py-2 font-bold">Última actualización</th>
+                  <th className="px-3 py-2 font-bold">
+                    Código de activación
+                  </th>
                   <th className="px-3 py-2 font-bold">Acciones</th>
                 </tr>
               </thead>
@@ -381,13 +406,15 @@ const ProviderConsole = () => {
                           : "Pendiente de pago"}
                       </td>
                       <td className="px-3 py-3 text-slate-400">
-                        {clinic.lastUpdateCode ? (
-                          <span className="font-mono text-[10px] text-[#ece883]">
-                            {clinic.lastUpdateCode.slice(-6)}
-                          </span>
-                        ) : (
-                          "—"
-                        )}
+                        <p className="font-mono text-[10px] text-[#ece883]">
+                          {clinic.activationCode}
+                        </p>
+                        <p className="mt-0.5 text-[10px] text-slate-500">
+                          Última actualización:{" "}
+                          {clinic.lastUpdateCode
+                            ? clinic.lastUpdateCode.slice(-6)
+                            : "—"}
+                        </p>
                       </td>
                       <td className="px-3 py-3">
                         <div className="flex items-center gap-2">

@@ -39,11 +39,11 @@ function isoNow(): string {
  */
 export function isActiveHospitalization(
   hospitalization: Hospitalization,
-  getPatient: (patientId: string) => Patient | undefined,
+  getPatientEnTodasSedes: (patientId: string) => Patient | undefined,
 ): boolean {
   return (
     hospitalization.status === "activa" &&
-    Boolean(getPatient(hospitalization.patientId)?.isActive)
+    Boolean(getPatientEnTodasSedes(hospitalization.patientId)?.isActive)
   );
 }
 
@@ -54,14 +54,14 @@ export function isActiveHospitalization(
  */
 export function getOccupiedBeds(
   hospitalizations: Hospitalization[],
-  getPatient: (patientId: string) => Patient | undefined,
+  getPatientEnTodasSedes: (patientId: string) => Patient | undefined,
 ): Map<string, Hospitalization> {
   const occupied = new Map<string, Hospitalization>();
 
   for (const hospitalization of hospitalizations) {
     if (
       hospitalization.bed &&
-      isActiveHospitalization(hospitalization, getPatient)
+      isActiveHospitalization(hospitalization, getPatientEnTodasSedes)
     ) {
       occupied.set(bedKey(hospitalization, hospitalization.bed), hospitalization);
     }
@@ -78,7 +78,7 @@ export function getOccupiedBeds(
  */
 export function resolveDuplicateBeds(
   hospitalizations: Hospitalization[],
-  getPatient: (patientId: string) => Patient | undefined,
+  getPatientEnTodasSedes: (patientId: string) => Patient | undefined,
 ): Hospitalization[] {
   const winners = new Set<string>();
   const seenBeds = new Set<string>();
@@ -92,7 +92,7 @@ export function resolveDuplicateBeds(
 
   for (const hospitalization of byAdmission) {
     if (!hospitalization.bed) continue;
-    if (!isActiveHospitalization(hospitalization, getPatient)) continue;
+    if (!isActiveHospitalization(hospitalization, getPatientEnTodasSedes)) continue;
     const key = bedKey(hospitalization, hospitalization.bed);
     if (seenBeds.has(key)) continue;
     seenBeds.add(key);
@@ -101,7 +101,7 @@ export function resolveDuplicateBeds(
 
   const isDuplicate = (h: Hospitalization): boolean =>
     Boolean(h.bed) &&
-    isActiveHospitalization(h, getPatient) &&
+    isActiveHospitalization(h, getPatientEnTodasSedes) &&
     !winners.has(h.id);
 
   if (!hospitalizations.some(isDuplicate)) return hospitalizations;
@@ -184,14 +184,14 @@ export function useHospitalizations() {
     Hospitalization[]
   >(HOSPITALIZATIONS_KEY, []);
 
-  const { getPatient } = usePatients();
+  const { getPatientEnTodasSedes } = usePatients();
 
   // La ocupación se calcula sobre TODAS las internaciones para que una
   // escritura en una sucursal no libere una cama con el mismo nombre en otra.
   // La vista sigue filtrándose por la sucursal activa.
   const allHospitalizations = useMemo(
-    () => resolveDuplicateBeds(storedHospitalizations, getPatient),
-    [storedHospitalizations, getPatient],
+    () => resolveDuplicateBeds(storedHospitalizations, getPatientEnTodasSedes),
+    [storedHospitalizations, getPatientEnTodasSedes],
   );
   const hospitalizations = useMemo(
     () => filterByScope(allHospitalizations),
@@ -201,12 +201,12 @@ export function useHospitalizations() {
   const setHospitalizations: typeof setStoredHospitalizations = useCallback(
     (next) => {
       setStoredHospitalizations((prev) => {
-        const normalizedPrev = resolveDuplicateBeds(prev, getPatient);
+        const normalizedPrev = resolveDuplicateBeds(prev, getPatientEnTodasSedes);
         const value = next instanceof Function ? next(normalizedPrev) : next;
-        return resolveDuplicateBeds(value, getPatient);
+        return resolveDuplicateBeds(value, getPatientEnTodasSedes);
       });
     },
-    [setStoredHospitalizations, getPatient],
+    [setStoredHospitalizations, getPatientEnTodasSedes],
   );
 
   const { bedEntities, allBeds } = useHospitalBeds();
@@ -228,7 +228,7 @@ export function useHospitalizations() {
       );
       if (alreadyAdmitted) return null;
 
-      const patient = getPatient(patientId);
+      const patient = getPatientEnTodasSedes(patientId);
       const fallbackScope = writeScope();
       const requestedSucursal = options?.sucursalId;
       const scope = {
@@ -241,7 +241,7 @@ export function useHospitalizations() {
           : (patient?.sucursalId ?? fallbackScope.sucursalId),
       };
 
-      const occupiedBeds = getOccupiedBeds(allHospitalizations, getPatient);
+      const occupiedBeds = getOccupiedBeds(allHospitalizations, getPatientEnTodasSedes);
       let bed = options?.bed?.trim() || undefined;
       const bedIdentity = bed ? bedKey(scope, bed) : undefined;
 
@@ -306,7 +306,7 @@ export function useHospitalizations() {
       setHospitalizations((prev) => [...prev, record]);
       return record;
     },
-    [allHospitalizations, allBeds, getPatient, setHospitalizations, writeScope],
+    [allHospitalizations, allBeds, getPatientEnTodasSedes, setHospitalizations, writeScope],
   );
 
   const updateHospitalization = useCallback(
@@ -325,7 +325,7 @@ export function useHospitalizations() {
           sucursalId: updates.sucursalId ?? target.sucursalId,
         };
         const occupant = bed
-          ? getOccupiedBeds(allHospitalizations, getPatient).get(
+          ? getOccupiedBeds(allHospitalizations, getPatientEnTodasSedes).get(
               bedKey(scope, bed),
             )
           : undefined;
@@ -340,7 +340,7 @@ export function useHospitalizations() {
         ),
       );
     },
-    [allHospitalizations, getPatient, setHospitalizations],
+    [allHospitalizations, getPatientEnTodasSedes, setHospitalizations],
   );
 
   /**
@@ -363,7 +363,7 @@ export function useHospitalizations() {
       if (!bed || !existsInScope) return false;
       if (target.bed === bed) return true;
 
-      const occupiedBeds = getOccupiedBeds(allHospitalizations, getPatient);
+      const occupiedBeds = getOccupiedBeds(allHospitalizations, getPatientEnTodasSedes);
       if (occupiedBeds.has(identity)) return false;
 
       setHospitalizations((prev) =>
@@ -374,7 +374,7 @@ export function useHospitalizations() {
 
       return true;
     },
-    [allHospitalizations, allBeds, getPatient, setHospitalizations],
+    [allHospitalizations, allBeds, getPatientEnTodasSedes, setHospitalizations],
   );
 
   /**
@@ -566,7 +566,21 @@ export function useHospitalizations() {
                 ? {
                     ...plan,
                     ...updates,
-                    nextDoseAt: updates.startedAt ?? plan.nextDoseAt,
+                    nextDoseAt:
+                      updates.startedAt !== undefined ||
+                      (updates.frequencyHours !== undefined &&
+                        updates.frequencyHours !== plan.frequencyHours)
+                        ? new Date(
+                            Math.max(
+                              Date.now(),
+                              new Date(updates.startedAt ?? plan.startedAt).getTime(),
+                            ) +
+                              (updates.frequencyHours ?? plan.frequencyHours) *
+                                60 *
+                                60 *
+                                1000,
+                          ).toISOString()
+                        : plan.nextDoseAt,
                   }
                 : plan,
             ),
@@ -654,9 +668,20 @@ export function useHospitalizations() {
         scheduledAt,
       };
 
-      const nextDoseAt = new Date(
-        new Date(scheduledAt).getTime() + plan.frequencyHours * 60 * 60 * 1000,
-      ).toISOString();
+      const frecuenciaMs = Math.max(1, plan.frequencyHours) * 60 * 60 * 1000;
+      const programadaMs = new Date(scheduledAt).getTime();
+      const ahoraMs = Date.now();
+      let siguienteMs = programadaMs + frecuenciaMs;
+
+      // Si la dosis se administró con atraso, saltar las dosis vencidas para
+      // que no quede permanentemente en el pasado ni se descuente dos veces.
+      if (siguienteMs <= ahoraMs) {
+        const dosisVencidas =
+          Math.floor((ahoraMs - siguienteMs) / frecuenciaMs) + 1;
+        siguienteMs += dosisVencidas * frecuenciaMs;
+      }
+
+      const nextDoseAt = new Date(siguienteMs).toISOString();
 
       const endAt = plan.durationDays
         ? new Date(plan.startedAt).getTime() +
@@ -717,13 +742,13 @@ export function useHospitalizations() {
    */
   const getActiveHospitalizations = useCallback((): ActiveHospitalization[] => {
     return hospitalizations
-      .filter((h) => isActiveHospitalization(h, getPatient))
+      .filter((h) => isActiveHospitalization(h, getPatientEnTodasSedes))
       .map((h) => ({
         hospitalization: h,
-        patient: getPatient(h.patientId),
+        patient: getPatientEnTodasSedes(h.patientId),
       }))
       .filter((x): x is ActiveHospitalization => Boolean(x.patient));
-  }, [hospitalizations, getPatient]);
+  }, [hospitalizations, getPatientEnTodasSedes]);
 
   /**
    * Historial de altas, más recientes primero.
@@ -734,7 +759,7 @@ export function useHospitalizations() {
         .filter((h) => h.status === "alta")
         .map((h) => ({
           hospitalization: h,
-          patient: getPatient(h.patientId),
+          patient: getPatientEnTodasSedes(h.patientId),
         }))
         .filter((x): x is ActiveHospitalization =>
           Boolean(x.patient && x.patient.isActive),
@@ -744,7 +769,7 @@ export function useHospitalizations() {
             a.hospitalization.dischargedAt ?? a.hospitalization.admittedAt,
           ),
         );
-    }, [hospitalizations, getPatient]);
+    }, [hospitalizations, getPatientEnTodasSedes]);
 
   const isHospitalized = useCallback(
     (patientId: string): boolean =>
@@ -765,11 +790,11 @@ export function useHospitalizations() {
    * una clave distinta, por lo que no se descuenta de esta lista.
    */
   const getAvailableBeds = useCallback((): HospitalBed[] => {
-    const occupied = getOccupiedBeds(allHospitalizations, getPatient);
+    const occupied = getOccupiedBeds(allHospitalizations, getPatientEnTodasSedes);
     return bedEntities.filter(
       (bed) => !occupied.has(bedKey(bed, bed.name)),
     );
-  }, [allHospitalizations, bedEntities, getPatient]);
+  }, [allHospitalizations, bedEntities, getPatientEnTodasSedes]);
 
   /**
    * Indica si una cama está ocupada por otra internación activa.
@@ -783,10 +808,10 @@ export function useHospitalizations() {
           h.bed &&
           bedKey(h, h.bed) === identity &&
           h.id !== exceptHospitalizationId &&
-          isActiveHospitalization(h, getPatient),
+          isActiveHospitalization(h, getPatientEnTodasSedes),
       );
     },
-    [allHospitalizations, getPatient],
+    [allHospitalizations, getPatientEnTodasSedes],
   );
 
   return {

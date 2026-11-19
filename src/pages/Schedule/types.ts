@@ -1,3 +1,5 @@
+import type { AppointmentFormData } from "../../components/schedule/AppointmentForm/AppointmentForm";
+
 export type { ConsultationData, HospitalizationFormData } from "../../types/consultation";
 
 export type TabType = "hoy" | "semana" | "mes";
@@ -9,5 +11,5 @@ export interface DayDetail {
 
 export interface EditingState {
   appointmentId?: string;
-  initialFormData: any;
+  initialFormData: Partial<AppointmentFormData>;
 }

@@ -75,10 +75,14 @@ export const ConsultationForm = ({
       {/* Edad | Peso (campos compactos) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs font-semibold text-slate-300 mb-1">
+          <label
+            htmlFor="consulta-edad"
+            className="block text-xs font-semibold text-slate-300 mb-1"
+          >
             Edad del Paciente
           </label>
           <input
+            id="consulta-edad"
             type="text"
             name="edad"
             value={formData.edad}
@@ -94,11 +98,15 @@ export const ConsultationForm = ({
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-slate-300 mb-1">
+          <label
+            htmlFor="consulta-peso"
+            className="block text-xs font-semibold text-slate-300 mb-1"
+          >
             Peso actual
           </label>
           <div className="flex gap-1.5">
             <input
+              id="consulta-peso"
               type="number"
               step={formData.weightUnit === "kg" ? "0.1" : "any"}
               min="0"
@@ -139,10 +147,14 @@ export const ConsultationForm = ({
       {/* Condiciones previas */}
       {showCondicionesPrevias && (
         <div className="p-4 bg-amber-950/10 border border-amber-500/20 rounded-xl space-y-1">
-          <label className="block text-xs font-semibold text-amber-400 mb-1">
+          <label
+            htmlFor="consulta-condiciones"
+            className="block text-xs font-semibold text-amber-400 mb-1"
+          >
             ⚠️ Condiciones Médicas Previas / Alergias (Información Crítica)
           </label>
           <textarea
+            id="consulta-condiciones"
             name="condicionesPrevias"
             rows={2}
             value={formData.condicionesPrevias}
@@ -163,10 +175,14 @@ export const ConsultationForm = ({
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
-            <label className="block text-[11px] text-slate-400 mb-1">
+            <label
+              htmlFor="consulta-temperatura"
+              className="block text-[11px] text-slate-400 mb-1"
+            >
               Temperatura (°C)
             </label>
             <input
+              id="consulta-temperatura"
               type="text"
               name="temperature"
               value={formData.temperature}
@@ -176,10 +192,14 @@ export const ConsultationForm = ({
             />
           </div>
           <div>
-            <label className="block text-[11px] text-slate-400 mb-1">
+            <label
+              htmlFor="consulta-frecuencia-cardiaca"
+              className="block text-[11px] text-slate-400 mb-1"
+            >
               Frecuencia cardíaca (lpm)
             </label>
             <input
+              id="consulta-frecuencia-cardiaca"
               type="text"
               name="heartRate"
               value={formData.heartRate}
@@ -189,10 +209,14 @@ export const ConsultationForm = ({
             />
           </div>
           <div>
-            <label className="block text-[11px] text-slate-400 mb-1">
+            <label
+              htmlFor="consulta-frecuencia-respiratoria"
+              className="block text-[11px] text-slate-400 mb-1"
+            >
               Frecuencia respiratoria (rpm)
             </label>
             <input
+              id="consulta-frecuencia-respiratoria"
               type="text"
               name="respiratoryRate"
               value={formData.respiratoryRate}
@@ -206,10 +230,14 @@ export const ConsultationForm = ({
 
       {/* Notas de consulta */}
       <div>
-        <label className="block text-xs font-semibold text-slate-300 mb-1">
+        <label
+          htmlFor="consulta-notas"
+          className="block text-xs font-semibold text-slate-300 mb-1"
+        >
           Notas de consulta
         </label>
         <textarea
+          id="consulta-notas"
           name="notas"
           rows={3}
           value={formData.notas}
@@ -221,10 +249,14 @@ export const ConsultationForm = ({
 
       {/* Recomendaciones */}
       <div>
-        <label className="block text-xs font-semibold text-slate-300 mb-1">
+        <label
+          htmlFor="consulta-recomendaciones"
+          className="block text-xs font-semibold text-slate-300 mb-1"
+        >
           Recomendaciones para el Propietario
         </label>
         <textarea
+          id="consulta-recomendaciones"
           name="recomendaciones"
           rows={2}
           value={formData.recomendaciones}
@@ -236,10 +268,14 @@ export const ConsultationForm = ({
 
       {/* Diagnóstico al final: se traspasa a la ficha de hospitalización */}
       <div>
-        <label className="block text-xs font-semibold text-slate-300 mb-1">
+        <label
+          htmlFor="consulta-diagnostico"
+          className="block text-xs font-semibold text-slate-300 mb-1"
+        >
           Diagnóstico
         </label>
         <textarea
+          id="consulta-diagnostico"
           name="diagnostico"
           rows={3}
           value={formData.diagnostico}

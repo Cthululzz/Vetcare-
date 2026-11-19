@@ -1,5 +1,11 @@
-import { useLocalStorage } from "./useLocalStorage";
+import { storageStore, useLocalStorage } from "./useLocalStorage";
 import { getLocalTodayStr } from "../utils/dateUtils";
+import {
+  diasDesde,
+  fechaBaseVencimiento,
+  sumarMeses,
+} from "../utils/licenseDates";
+import { isBypassAuthEnabled } from "../utils/authBypass";
 import {
   normalizePaymentCode,
   parsePaymentCode,
@@ -13,13 +19,14 @@ import {
   isValidActivationCode,
   LICENSE_BLOCK_DAYS,
   LICENSE_KEY,
+  normalizeActivationCode,
   PILOT_ACTIVATION_CODE,
   PILOT_ORGANIZATION_ID,
+  PROVIDER_CLINICS_KEY,
   TRIAL_DAYS,
   type License,
+  type ProviderClinic,
 } from "../constants/license";
-
-const MS_POR_DIA = 24 * 60 * 60 * 1000;
 
 const licenciaDeDesarrollo = (): License => ({
   organizationId: PILOT_ORGANIZATION_ID,
@@ -32,19 +39,6 @@ const licenciaDeDesarrollo = (): License => ({
   usedUpdateCodes: [],
 });
 
-const diasDesde = (fecha: string, hoy: string): number => {
-  const inicio = new Date(`${fecha}T00:00:00`).getTime();
-  const actual = new Date(`${hoy}T00:00:00`).getTime();
-  if (Number.isNaN(inicio)) return 0;
-  return Math.floor((actual - inicio) / MS_POR_DIA);
-};
-
-const sumarMeses = (fecha: string, meses: number): string => {
-  const base = new Date(`${fecha}T00:00:00`);
-  base.setMonth(base.getMonth() + meses);
-  return getLocalTodayStr(base);
-};
-
 export interface RedeemResult {
   ok: boolean;
   meses?: number;
@@ -52,7 +46,7 @@ export interface RedeemResult {
 }
 
 export const useLicense = () => {
-  const bypass = import.meta.env.VITE_BYPASS_AUTH === "true";
+  const bypass = isBypassAuthEnabled();
   const [storedLicense, setLicense] = useLocalStorage<License | null>(
     LICENSE_KEY,
     bypass ? licenciaDeDesarrollo() : null,
@@ -68,8 +62,12 @@ export const useLicense = () => {
     : null;
 
   const hoy = getLocalTodayStr();
-  const diasTranscurridos = license ? diasDesde(license.trialStart, hoy) : 0;
-  const diasRestantes = Math.max(0, TRIAL_DAYS - diasTranscurridos);
+  const diasDePrueba = license ? diasDesde(license.trialStart, hoy) : 0;
+  const fechaReferencia = license
+    ? fechaBaseVencimiento(license.trialStart, license.paidUntil, hoy)
+    : hoy;
+  const diasTranscurridos = license ? diasDesde(fechaReferencia, hoy) : 0;
+  const diasRestantes = Math.max(0, TRIAL_DAYS - diasDePrueba);
   const diasGraciaRestantes = Math.max(
     0,
     LICENSE_BLOCK_DAYS - diasTranscurridos,
@@ -92,12 +90,21 @@ export const useLicense = () => {
   );
 
   const activate = (code: string): boolean => {
-    if (!isValidActivationCode(code)) return false;
+    const clinicas = storageStore.get<ProviderClinic[]>(
+      PROVIDER_CLINICS_KEY,
+      [],
+    );
+    const clinica = clinicas.find(
+      (item) =>
+        normalizeActivationCode(item.activationCode) ===
+        normalizeActivationCode(code),
+    );
+    if (!isValidActivationCode(code) && !clinica) return false;
 
     setLicense({
-      organizationId: PILOT_ORGANIZATION_ID,
-      activationCode: PILOT_ACTIVATION_CODE,
-      trialStart: getLocalTodayStr(),
+      organizationId: clinica?.organizationId ?? PILOT_ORGANIZATION_ID,
+      activationCode: code.trim().toUpperCase(),
+      trialStart: clinica?.trialStart || getLocalTodayStr(),
       paidUntil: null,
       status: "trial",
       payments: [],
@@ -185,6 +192,13 @@ export const useLicense = () => {
     if (!datos) {
       return { ok: false, error: "El código de actualización no es válido." };
     }
+    const fechaActual = getLocalTodayStr();
+    if (datos.paidUntil < fechaActual) {
+      return {
+        ok: false,
+        error: "La actualización entregada ya no está vigente. Solicita una nueva.",
+      };
+    }
     if (!license) {
       return { ok: false, error: "La licencia no está activada." };
     }
@@ -205,7 +219,6 @@ export const useLicense = () => {
 
     const months = datos.months;
 
-    const fechaActual = getLocalTodayStr();
     setLicense((prev) => {
       if (!prev) return prev;
       const aplicados = prev.usedUpdateCodes ?? [];

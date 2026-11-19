@@ -6,7 +6,7 @@ import type { OrganizationId } from "../types/organization";
 
 // --- Configuración general ---
 export const APP_CONFIG = {
-  appName: "VetFlow Manager",
+  appName: "VetCare+",
   version: "1.0.0",
 } as const;
 

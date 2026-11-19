@@ -37,9 +37,10 @@ const Patients = () => {
         {/* Grid de las 2 Tarjetas Grandes */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
           {/* TARJETA 1: Fichas y Contactos */}
-          <div
+          <button
+            type="button"
             onClick={() => navigate("/pacientes/fichas")}
-            className="group relative bg-slate-900 border border-slate-800 hover:border-blue-500/50 rounded-3xl p-8 flex flex-col justify-between transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/10 cursor-pointer overflow-hidden min-h-[320px]"
+            className="group relative bg-slate-900 border border-slate-800 hover:border-blue-500/50 rounded-3xl p-8 flex flex-col justify-between transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/10 cursor-pointer overflow-hidden min-h-[320px] text-left"
           >
             <div className="pointer-events-none absolute w-[250px] h-[250px] bg-blue-500/10 blur-[90px] rounded-full -bottom-10 -right-10 group-hover:bg-blue-500/20 transition-all duration-300" />
 
@@ -71,12 +72,13 @@ const Patients = () => {
                 <ChevronRight className="w-4 h-4" />
               </div>
             </div>
-          </div>
+          </button>
 
           {/* TARJETA 2: Hospitalizados */}
-          <div
+          <button
+            type="button"
             onClick={() => navigate("/pacientes/hospitalizados")}
-            className="group relative bg-slate-900 border border-slate-800 hover:border-emerald-500/50 rounded-3xl p-8 flex flex-col justify-between transition-all duration-300 hover:shadow-xl hover:shadow-emerald-500/10 cursor-pointer overflow-hidden min-h-[320px]"
+            className="group relative bg-slate-900 border border-slate-800 hover:border-emerald-500/50 rounded-3xl p-8 flex flex-col justify-between transition-all duration-300 hover:shadow-xl hover:shadow-emerald-500/10 cursor-pointer overflow-hidden min-h-[320px] text-left"
           >
             <div className="pointer-events-none absolute w-[250px] h-[250px] bg-emerald-500/10 blur-[90px] rounded-full -bottom-10 -right-10 group-hover:bg-emerald-500/20 transition-all duration-300" />
 
@@ -117,7 +119,7 @@ const Patients = () => {
                 <ChevronRight className="w-4 h-4" />
               </div>
             </div>
-          </div>
+          </button>
         </div>
     </PageShell>
   );

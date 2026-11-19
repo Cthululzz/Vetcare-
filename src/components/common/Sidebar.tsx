@@ -4,12 +4,15 @@ import {
   Bell,
   Calendar,
   LayoutDashboard,
+  LogOut,
   Package,
   Settings,
   ShieldCheck,
   Users,
 } from "lucide-react";
 import { usePermissions } from "../../hooks/usePermissions";
+import { useAuth } from "../../hooks/useAuth";
+import { isBypassAuthEnabled } from "../../utils/authBypass";
 import { PERMISSIONS, type Permission } from "../../utils/permissions";
 
 interface NavItem {
@@ -69,6 +72,7 @@ const navItems: NavItem[] = [
 export const Sidebar = () => {
   const location = useLocation();
   const { canAny } = usePermissions();
+  const { logout } = useAuth();
 
   const visibleItems = navItems.filter(
     (item) => !item.permissions || canAny(item.permissions),
@@ -107,6 +111,17 @@ export const Sidebar = () => {
           );
         })}
       </nav>
+
+      {!isBypassAuthEnabled() && (
+        <button
+          type="button"
+          onClick={logout}
+          className="mt-4 flex items-center gap-3 rounded-xl border border-slate-800 px-3.5 py-2.5 text-sm font-medium text-slate-400 transition-colors hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-300 cursor-pointer"
+        >
+          <LogOut className="h-4 w-4" />
+          Cerrar sesión
+        </button>
+      )}
     </aside>
   );
 };

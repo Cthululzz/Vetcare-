@@ -313,7 +313,7 @@ export function useScheduleActions() {
 
     // 2. Registrar ingreso a hospitalización (hereda la sucursal de la cita).
     // El diagnóstico, la frecuencia y los planes vienen del popup de confirmación.
-    admitPatient(patient.id, hospitalization?.reason, {
+    const ingreso = admitPatient(patient.id, hospitalization?.reason, {
       organizationId: appointment.organizationId,
       sucursalId: appointment.sucursalId,
       weight,
@@ -323,6 +323,13 @@ export function useScheduleActions() {
       medicationPlans: hospitalization?.medicationPlans,
       createdBy: getDoctorName(appointment.doctorId),
     });
+
+    if (!ingreso) {
+      window.alert(
+        "No se pudo registrar el ingreso a hospitalización. Revisa si el paciente ya está internado o si la cama está ocupada. La consulta no se finalizó.",
+      );
+      return;
+    }
 
     // 3. Finalizar la consulta: registro en el historial y cita finalizada.
     // Así no hay que hacerlo manualmente después de hospitalizar.

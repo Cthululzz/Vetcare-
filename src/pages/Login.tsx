@@ -280,15 +280,10 @@ const Login = () => {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between text-sm">
-                <button
-                  type="button"
-                  disabled={isLoading}
-                  className="text-slate-400 hover:text-white transition disabled:opacity-50"
-                >
-                  ¿Olvidaste tu contraseña?
-                </button>
-              </div>
+              <p className="text-xs text-slate-500">
+                Si olvidaste tu contraseña, solicita el restablecimiento al
+                administrador de la clínica.
+              </p>
 
               <button
                 type="submit"
