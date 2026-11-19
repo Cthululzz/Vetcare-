@@ -20,12 +20,14 @@ interface PatientClinicalHistoryProps {
   history: MedicalRecord[];
   onDeleteMedicalRecord?: (recordId: string) => void;
   onOpenFullHistory?: () => void;
+  isReadOnly?: boolean;
 }
 
 export const PatientClinicalHistory = ({
   history = [],
   onDeleteMedicalRecord,
   onOpenFullHistory,
+  isReadOnly = false,
 }: PatientClinicalHistoryProps) => {
   const [showFullHistory, setShowFullHistory] = useState(false);
 
@@ -38,7 +40,7 @@ export const PatientClinicalHistory = ({
   const pastHistory = sortedHistory.length > 1 ? sortedHistory.slice(1) : [];
 
   const handleDelete = (recordId: string) => {
-    if (!onDeleteMedicalRecord) return;
+    if (isReadOnly || !onDeleteMedicalRecord) return;
     if (
       window.confirm(
         "¿Estás seguro de que deseas eliminar este registro clínico?",
@@ -137,7 +139,8 @@ export const PatientClinicalHistory = ({
                 <button
                   type="button"
                   onClick={() => handleDelete(latestConsultation.id)}
-                  className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 px-2.5 py-1 rounded-lg border border-red-500/20 transition-colors cursor-pointer"
+                  disabled={isReadOnly}
+                  className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 px-2.5 py-1 rounded-lg border border-red-500/20 transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                   title="Eliminar este registro erróneo"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
@@ -266,7 +269,8 @@ export const PatientClinicalHistory = ({
                             <button
                               type="button"
                               onClick={() => handleDelete(entry.id)}
-                              className="text-red-400 hover:text-red-300 p-1 rounded hover:bg-red-500/10 transition-colors cursor-pointer"
+                              disabled={isReadOnly}
+                              className="text-red-400 hover:text-red-300 p-1 rounded hover:bg-red-500/10 transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                               title="Eliminar este registro"
                             >
                               <Trash2 className="w-3.5 h-3.5" />

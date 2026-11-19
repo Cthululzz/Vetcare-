@@ -3,6 +3,7 @@ import { Package, Save, Trash2, X } from "lucide-react";
 import { DateInput } from "../common/DateInput";
 import { useInventory } from "../../hooks/useInventory";
 import { useInventoryTags } from "../../hooks/useInventoryTags";
+import { useLicense } from "../../hooks/useLicense";
 import { CATEGORIAS_INVENTARIO } from "../../constants/inventory";
 import type { InventoryItem } from "../../types/inventory";
 
@@ -32,6 +33,7 @@ export const InventoryProductEditModal = ({
 }: InventoryProductEditModalProps) => {
   const { updateProduct, deleteProduct, getProducts } = useInventory();
   const { getTags, createTag } = useInventoryTags();
+  const { isReadOnly } = useLicense();
 
   const [name, setName] = useState(product?.name ?? "");
   const [description, setDescription] = useState(product?.description ?? "");
@@ -63,6 +65,7 @@ export const InventoryProductEditModal = ({
   };
 
   const handleAddTag = () => {
+    if (isReadOnly) return;
     const cleanTag = newTag.trim();
     if (!cleanTag) return;
 
@@ -75,6 +78,7 @@ export const InventoryProductEditModal = ({
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
+    if (isReadOnly) return;
 
     const cleanName = name.trim();
     if (!cleanName) {
@@ -124,6 +128,7 @@ export const InventoryProductEditModal = ({
   };
 
   const handleDelete = () => {
+    if (isReadOnly) return;
     const confirmed = window.confirm(
       `¿Dar de baja "${product.name}" del inventario? El historial de movimientos se conserva.`,
     );
@@ -262,7 +267,8 @@ export const InventoryProductEditModal = ({
               <button
                 type="button"
                 onClick={handleAddTag}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-colors cursor-pointer"
+                disabled={isReadOnly}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Agregar
               </button>
@@ -318,7 +324,8 @@ export const InventoryProductEditModal = ({
           <button
             type="button"
             onClick={handleDelete}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 text-sm font-semibold transition-colors cursor-pointer"
+            disabled={isReadOnly}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 text-sm font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Trash2 className="w-4 h-4" />
             Dar de baja
@@ -333,7 +340,8 @@ export const InventoryProductEditModal = ({
             </button>
             <button
               type="submit"
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#ece883] hover:bg-[#e4df68] text-slate-950 text-sm font-bold transition-colors shadow-lg shadow-[#ece883]/10 cursor-pointer"
+              disabled={isReadOnly}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#ece883] hover:bg-[#e4df68] text-slate-950 text-sm font-bold transition-colors shadow-lg shadow-[#ece883]/10 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Save className="w-4 h-4" />
               Guardar Cambios

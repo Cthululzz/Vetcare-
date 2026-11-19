@@ -3,11 +3,13 @@ import { KeyRound, Save, UserRound } from "lucide-react";
 import { PageBanner } from "../components/common/PageBanner";
 import { PageShell } from "../components/common/PageShell";
 import { useAuth } from "../hooks/useAuth";
+import { useLicense } from "../hooks/useLicense";
 import { useUsers } from "../hooks/useUsers";
 import { ROLES_USUARIO } from "../constants/appConstants";
 
 const MyAccount = () => {
   const { user } = useAuth();
+  const { isReadOnly } = useLicense();
   const { storedUsers, emailExists, updateUser } = useUsers();
 
   const [nombre, setNombre] = useState(user?.name ?? "");
@@ -25,6 +27,7 @@ const MyAccount = () => {
 
   const handleGuardarPerfil = (event: FormEvent) => {
     event.preventDefault();
+    if (isReadOnly) return;
     setPerfilFeedback("");
     setPerfilError("");
 
@@ -45,6 +48,7 @@ const MyAccount = () => {
 
   const handleCambiarClave = (event: FormEvent) => {
     event.preventDefault();
+    if (isReadOnly) return;
     setClaveFeedback("");
     setClaveError("");
 
@@ -70,7 +74,7 @@ const MyAccount = () => {
   };
 
   const inputClass =
-    "w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none transition-colors placeholder:text-slate-600 focus:border-[#ece883] focus:ring-1 focus:ring-[#ece883]/30";
+    "w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none transition-colors placeholder:text-slate-600 focus:border-[#ece883] focus:ring-1 focus:ring-[#ece883]/30 disabled:cursor-not-allowed disabled:opacity-50";
 
   return (
     <PageShell>
@@ -108,6 +112,7 @@ const MyAccount = () => {
                 id="mi-nombre"
                 value={nombre}
                 onChange={(event) => setNombre(event.target.value)}
+                disabled={isReadOnly}
                 className={inputClass}
               />
             </div>
@@ -123,6 +128,7 @@ const MyAccount = () => {
                 type="email"
                 value={correo}
                 onChange={(event) => setCorreo(event.target.value)}
+                disabled={isReadOnly}
                 className={inputClass}
               />
             </div>
@@ -133,10 +139,16 @@ const MyAccount = () => {
             {perfilFeedback && (
               <p className="text-xs text-emerald-300">{perfilFeedback}</p>
             )}
+            {isReadOnly && (
+              <p className="text-xs text-amber-300">
+                La licencia está en modo lectura; no se pueden guardar cambios.
+              </p>
+            )}
 
             <button
               type="submit"
-              className="inline-flex items-center gap-2 rounded-xl bg-[#ece883] px-4 py-2.5 text-sm font-bold text-slate-950 transition-colors hover:bg-[#e4df68]"
+              disabled={isReadOnly}
+              className="inline-flex items-center gap-2 rounded-xl bg-[#ece883] px-4 py-2.5 text-sm font-bold text-slate-950 transition-colors hover:bg-[#e4df68] disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Save className="h-4 w-4" />
               Guardar cambios
@@ -165,6 +177,7 @@ const MyAccount = () => {
                 type="password"
                 value={claveActual}
                 onChange={(event) => setClaveActual(event.target.value)}
+                disabled={isReadOnly}
                 className={inputClass}
                 autoComplete="current-password"
               />
@@ -181,6 +194,7 @@ const MyAccount = () => {
                 type="password"
                 value={claveNueva}
                 onChange={(event) => setClaveNueva(event.target.value)}
+                disabled={isReadOnly}
                 className={inputClass}
                 autoComplete="new-password"
               />
@@ -197,6 +211,7 @@ const MyAccount = () => {
                 type="password"
                 value={claveConfirmacion}
                 onChange={(event) => setClaveConfirmacion(event.target.value)}
+                disabled={isReadOnly}
                 className={inputClass}
                 autoComplete="new-password"
               />
@@ -206,10 +221,16 @@ const MyAccount = () => {
             {claveFeedback && (
               <p className="text-xs text-emerald-300">{claveFeedback}</p>
             )}
+            {isReadOnly && (
+              <p className="text-xs text-amber-300">
+                La licencia está en modo lectura; no se pueden guardar cambios.
+              </p>
+            )}
 
             <button
               type="submit"
-              className="inline-flex items-center gap-2 rounded-xl border border-[#ece883]/30 bg-[#ece883]/10 px-4 py-2.5 text-sm font-bold text-[#ece883] transition-colors hover:bg-[#ece883]/20"
+              disabled={isReadOnly}
+              className="inline-flex items-center gap-2 rounded-xl border border-[#ece883]/30 bg-[#ece883]/10 px-4 py-2.5 text-sm font-bold text-[#ece883] transition-colors hover:bg-[#ece883]/20 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <KeyRound className="h-4 w-4" />
               Actualizar contraseña

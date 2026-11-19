@@ -33,6 +33,7 @@ interface AppointmentCardProps {
   onDelete?: (id: string) => void;
   showDate?: boolean;
   userRoles?: UserRole[];
+  isReadOnly?: boolean;
 }
 
 export const AppointmentCard = ({
@@ -43,6 +44,7 @@ export const AppointmentCard = ({
   onDelete,
   showDate = false,
   userRoles = [],
+  isReadOnly = false,
 }: AppointmentCardProps) => {
   // Obtener datos completos del paciente y dueño usando los IDs
   const { getPatient, getOwner } = usePatients();
@@ -155,8 +157,12 @@ export const AppointmentCard = ({
               status !== "cancelada" &&
               onStartConsultation && (
                 <button
-                  onClick={() => onStartConsultation(appointment)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-colors cursor-pointer shadow-lg shadow-blue-600/20"
+                  onClick={() => {
+                    if (isReadOnly) return;
+                    onStartConsultation(appointment);
+                  }}
+                  disabled={isReadOnly}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-colors cursor-pointer shadow-lg shadow-blue-600/20 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <Play className="w-3 h-3 fill-current" />
                   {status === "en_consulta"
@@ -204,16 +210,24 @@ export const AppointmentCard = ({
         <div className="flex items-center gap-2">
           {onEdit && (
             <button
-              onClick={() => onEdit(appointment)}
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs sm:text-sm font-semibold transition-colors cursor-pointer"
+              onClick={() => {
+                if (isReadOnly) return;
+                onEdit(appointment);
+              }}
+              disabled={isReadOnly}
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs sm:text-sm font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Edit3 className="w-3.5 h-3.5" /> Editar
             </button>
           )}
           {onDelete && (
             <button
-              onClick={() => onDelete(appointment.id)}
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-950/40 hover:bg-red-900/50 text-red-400 text-xs sm:text-sm font-semibold transition-colors border border-red-900/30 cursor-pointer"
+              onClick={() => {
+                if (isReadOnly) return;
+                onDelete(appointment.id);
+              }}
+              disabled={isReadOnly}
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-red-950/40 hover:bg-red-900/50 text-red-400 text-xs sm:text-sm font-semibold transition-colors border border-red-900/30 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Trash2 className="w-3.5 h-3.5" /> Eliminar
             </button>

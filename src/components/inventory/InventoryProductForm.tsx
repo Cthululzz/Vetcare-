@@ -3,6 +3,7 @@ import { Package, Save, X } from "lucide-react";
 import { DateInput } from "../common/DateInput";
 import { useInventory } from "../../hooks/useInventory";
 import { useInventoryTags } from "../../hooks/useInventoryTags";
+import { useLicense } from "../../hooks/useLicense";
 import {
   CATEGORIAS_INVENTARIO,
   getInternalUnit,
@@ -39,6 +40,7 @@ export const InventoryProductForm = ({
 }: InventoryProductFormProps) => {
   const { createProduct, getProducts } = useInventory();
   const { getTags, createTag } = useInventoryTags();
+  const { isReadOnly } = useLicense();
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -121,6 +123,7 @@ export const InventoryProductForm = ({
   };
 
   const handleAddTag = () => {
+    if (isReadOnly) return;
     const cleanTag = newTag.trim();
     if (!cleanTag) return;
 
@@ -133,6 +136,7 @@ export const InventoryProductForm = ({
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
+    if (isReadOnly) return;
 
     const cleanName = name.trim();
     if (!cleanName) {
@@ -471,7 +475,8 @@ export const InventoryProductForm = ({
               <button
                 type="button"
                 onClick={handleAddTag}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-colors cursor-pointer"
+                disabled={isReadOnly}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Agregar
               </button>
@@ -537,7 +542,8 @@ export const InventoryProductForm = ({
           <button
             type="submit"
             form="inventory-product-form"
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#ece883] hover:bg-[#e4df68] text-slate-950 text-sm font-bold transition-colors shadow-lg shadow-[#ece883]/10 cursor-pointer"
+            disabled={isReadOnly}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#ece883] hover:bg-[#e4df68] text-slate-950 text-sm font-bold transition-colors shadow-lg shadow-[#ece883]/10 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Save className="w-4 h-4" />
             Guardar Producto

@@ -8,6 +8,7 @@ interface PrescriptionCardProps {
   onView: () => void;
   onPrint: () => void;
   onDelete: () => void;
+  isReadOnly?: boolean;
 }
 
 export const PrescriptionCard = ({
@@ -16,6 +17,7 @@ export const PrescriptionCard = ({
   onView,
   onPrint,
   onDelete,
+  isReadOnly = false,
 }: PrescriptionCardProps) => {
   const cantidad = prescription.medications.length;
   const nombresMedicamentos = prescription.medications
@@ -69,7 +71,8 @@ export const PrescriptionCard = ({
         <button
           type="button"
           onClick={onDelete}
-          className="inline-flex items-center gap-1.5 rounded-xl border border-rose-500/30 px-3 py-2 text-xs font-semibold text-rose-300 transition-colors hover:bg-rose-500/10 cursor-pointer"
+          disabled={isReadOnly}
+          className="inline-flex items-center gap-1.5 rounded-xl border border-rose-500/30 px-3 py-2 text-xs font-semibold text-rose-300 transition-colors hover:bg-rose-500/10 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Trash2 className="h-3.5 w-3.5" />
           Eliminar

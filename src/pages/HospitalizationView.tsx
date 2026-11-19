@@ -34,6 +34,7 @@ import { useBranchScope } from "../context/branchScope";
 import { bedKey } from "../utils/bedScope";
 import { useAuth } from "../hooks/useAuth";
 import { usePermissions } from "../hooks/usePermissions";
+import { useLicense } from "../hooks/useLicense";
 import { AdmissionFormModal } from "../components/hospitalization/AdmissionFormModal";
 import type { AdmissionData } from "../components/hospitalization/AdmissionFormModal";
 import {
@@ -76,6 +77,9 @@ import { isMedicationPlanOverdue } from "../utils/hospitalizationTasks";
 // TIPOS INTERNOS
 // ============================================
 type TabType = "activos" | "altas";
+
+const MENSAJE_SOLO_LECTURA =
+  "La aplicación está en modo lectura. Regulariza la suscripción para realizar cambios.";
 
 interface HospitalizedPatientView {
   hospitalization: Hospitalization;
@@ -192,6 +196,7 @@ const HospitalizationView = () => {
   const { createMovement } = useInventoryMovements();
   const { user } = useAuth();
   const { canAccessClinicalFlow } = usePermissions();
+  const { isReadOnly } = useLicense();
 
   // Estados de pestañas y modales
   const [activeTab, setActiveTab] = useState<TabType>("activos");
@@ -297,11 +302,13 @@ const HospitalizationView = () => {
   // ============================================
 
   const handleOpenAdmission = () => {
+    if (isReadOnly) return;
     setFeedback(null);
     setShowAdmissionModal(true);
   };
 
   const handleAdmit = (data: AdmissionData): string | null => {
+    if (isReadOnly) return MENSAJE_SOLO_LECTURA;
     if (isHospitalized(data.patientId)) {
       return "Ese paciente ya tiene una hospitalización activa.";
     }
@@ -374,6 +381,7 @@ const HospitalizationView = () => {
     hospitalization: Hospitalization,
     patient: Patient,
   ) => {
+    if (isReadOnly) return;
     setFeedback(null);
     setSelectedHospitalizationId(hospitalization.id);
     setSelectedPatient(patient);
@@ -387,6 +395,7 @@ const HospitalizationView = () => {
     patientId: string,
     evolutionData: EvolutionData,
   ) => {
+    if (isReadOnly) return;
     const active = getActiveHospitalizations().find(
       (item) => item.patient.id === patientId,
     );
@@ -441,6 +450,7 @@ const HospitalizationView = () => {
     hospitalization: Hospitalization,
     patient: Patient,
   ) => {
+    if (isReadOnly) return;
     setFeedback(null);
     setSelectedHospitalizationId(hospitalization.id);
     setSelectedPatient(patient);
@@ -448,6 +458,7 @@ const HospitalizationView = () => {
   };
 
   const handleConfirmDischarge = (data: DischargeData) => {
+    if (isReadOnly) return;
     if (!selectedHospitalization || !selectedPatient) return;
 
     const nextControlAt = dateInputToIso(data.nextControlAt);
@@ -491,6 +502,7 @@ const HospitalizationView = () => {
   };
 
   const handleAddBed = () => {
+    if (isReadOnly) return;
     const bed = addBed();
     setFeedback({
       type: "success",
@@ -499,6 +511,7 @@ const HospitalizationView = () => {
   };
 
   const handleRemoveBed = (item: BedMapItem) => {
+    if (isReadOnly) return;
     if (isBedOccupied(item.entity)) {
       setFeedback({
         type: "error",
@@ -544,6 +557,7 @@ const HospitalizationView = () => {
     hospitalization: Hospitalization,
     patient: Patient,
   ) => {
+    if (isReadOnly) return;
     setFeedback(null);
     setSelectedHospitalizationId(hospitalization.id);
     setSelectedPatient(patient);
@@ -551,6 +565,7 @@ const HospitalizationView = () => {
   };
 
   const handleConfirmChangeBed = (bed: string) => {
+    if (isReadOnly) return;
     if (!selectedHospitalization) return;
 
     const previousBed = selectedHospitalization.bed || "Sin cama";
@@ -581,6 +596,7 @@ const HospitalizationView = () => {
     hospitalization: Hospitalization,
     patient: Patient,
   ) => {
+    if (isReadOnly) return;
     setFeedback(null);
     setSelectedHospitalizationId(hospitalization.id);
     setSelectedPatient(patient);
@@ -588,6 +604,7 @@ const HospitalizationView = () => {
   };
 
   const handleCreatePlan = (data: MedicationPlanInput): string | null => {
+    if (isReadOnly) return MENSAJE_SOLO_LECTURA;
     if (!selectedHospitalization) {
       return "No hay una hospitalización seleccionada.";
     }
@@ -608,6 +625,7 @@ const HospitalizationView = () => {
     planId: string,
     data: MedicationPlanInput,
   ): string | null => {
+    if (isReadOnly) return MENSAJE_SOLO_LECTURA;
     if (!selectedHospitalization) {
       return "No hay una hospitalización seleccionada.";
     }
@@ -621,6 +639,7 @@ const HospitalizationView = () => {
   };
 
   const handleTogglePlan = (planId: string, isActive: boolean) => {
+    if (isReadOnly) return;
     if (!selectedHospitalization) return;
 
     setMedicationPlanActive(selectedHospitalization.id, planId, isActive);
@@ -633,6 +652,7 @@ const HospitalizationView = () => {
   };
 
   const handleDeletePlan = (planId: string) => {
+    if (isReadOnly) return;
     if (!selectedHospitalization) return;
 
     removeMedicationPlan(selectedHospitalization.id, planId);
@@ -646,6 +666,7 @@ const HospitalizationView = () => {
    * Administra la dosis programada: descuenta stock y avanza el horario.
    */
   const handleAdministerPlanDose = (plan: MedicationPlan): string | null => {
+    if (isReadOnly) return MENSAJE_SOLO_LECTURA;
     if (!selectedHospitalization || !selectedPatient) {
       return "No hay una hospitalización seleccionada.";
     }
@@ -752,7 +773,8 @@ const HospitalizationView = () => {
             {canAccessClinicalFlow && (
               <button
                 onClick={handleOpenAdmission}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#ece883] hover:bg-[#e4df68] text-slate-950 text-sm font-bold transition-colors shadow-md shadow-[#ece883]/10 cursor-pointer"
+                disabled={isReadOnly}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#ece883] hover:bg-[#e4df68] text-slate-950 text-sm font-bold transition-colors shadow-md shadow-[#ece883]/10 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Plus className="w-4 h-4" /> Ingresar Paciente
               </button>
@@ -837,9 +859,9 @@ const HospitalizationView = () => {
         <BedMap
           beds={bedMapItems}
           onOpenHospitalization={handleOpenDetailById}
-          onAddBed={handleAddBed}
+          onAddBed={isReadOnly ? undefined : handleAddBed}
           onRemoveBed={handleRemoveBed}
-          canRemoveBeds={bedEntities.length > 1}
+          canRemoveBeds={bedEntities.length > 1 && !isReadOnly}
         />
 
         {/* Pestañas */}
@@ -1030,7 +1052,8 @@ const HospitalizationView = () => {
                             item.patient,
                           )
                         }
-                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-colors cursor-pointer"
+                        disabled={isReadOnly}
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <ArrowRightLeft className="w-3.5 h-3.5" /> Cambiar cama
                       </button>
@@ -1043,7 +1066,8 @@ const HospitalizationView = () => {
                                 item.patient,
                               )
                             }
-                            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-colors cursor-pointer"
+                            disabled={isReadOnly}
+                            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             <Activity className="w-3.5 h-3.5" /> Evolución
                           </button>
@@ -1051,7 +1075,8 @@ const HospitalizationView = () => {
                             onClick={() =>
                               handleOpenPlan(item.hospitalization, item.patient)
                             }
-                            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#ece883]/10 hover:bg-[#ece883]/20 text-[#ece883] border border-[#ece883]/20 text-xs font-semibold transition-colors cursor-pointer"
+                            disabled={isReadOnly}
+                            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#ece883]/10 hover:bg-[#ece883]/20 text-[#ece883] border border-[#ece883]/20 text-xs font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             <Pill className="w-3.5 h-3.5" /> Plan de remedios
                           </button>
@@ -1059,7 +1084,8 @@ const HospitalizationView = () => {
                             onClick={() =>
                               handleDarDeAlta(item.hospitalization, item.patient)
                             }
-                            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 text-xs font-semibold transition-colors cursor-pointer"
+                            disabled={isReadOnly}
+                            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 text-xs font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             <CheckCircle className="w-3.5 h-3.5" /> Alta
                           </button>

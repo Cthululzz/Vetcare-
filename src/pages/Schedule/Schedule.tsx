@@ -25,6 +25,7 @@ import { useScheduleActions } from "./useScheduleActions";
 import { usePatients } from "../../hooks/usePatients";
 import { useAuth } from "../../hooks/useAuth";
 import { usePermissions } from "../../hooks/usePermissions";
+import { useLicense } from "../../hooks/useLicense";
 import { useAppointmentReminders } from "../../hooks/useAppointmentReminders";
 import { buildDueAppointmentReminders } from "../../utils/appointmentReminders";
 import { PERMISSIONS } from "../../utils/permissions";
@@ -42,6 +43,7 @@ const Schedule = () => {
   const parametrosProcesados = useRef(false);
   const { user } = useAuth();
   const { can } = usePermissions();
+  const { isReadOnly } = useLicense();
 
   const userRoles = user ? [user.role] : [];
   const puedeCrearCita = can(PERMISSIONS.APPOINTMENTS_CREATE);
@@ -78,6 +80,7 @@ const Schedule = () => {
   }, []);
 
   useEffect(() => {
+    if (isReadOnly) return;
     if (parametrosProcesados.current) return;
     const consultar = searchParams.get("consultar");
     const nueva = searchParams.get("nueva");
@@ -93,9 +96,16 @@ const Schedule = () => {
         handleOpenNew();
       }
     });
-  }, [appointments, handleOpenNew, handleStartConsultation, searchParams]);
+  }, [
+    appointments,
+    handleOpenNew,
+    handleStartConsultation,
+    searchParams,
+    isReadOnly,
+  ]);
 
   const handleConfirmarEliminacion = () => {
+    if (isReadOnly) return;
     if (!citaAEliminar) return;
     deleteAppointment(citaAEliminar.id);
     setCitaAEliminar(null);
@@ -210,7 +220,8 @@ const Schedule = () => {
                 <button
                   type="button"
                   onClick={() => handleOpenNew(selectedDayDetail.dateStr)}
-                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-[#ece883] hover:bg-[#e4df68] text-slate-950 text-xs font-bold transition-colors cursor-pointer"
+                  disabled={isReadOnly}
+                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-[#ece883] hover:bg-[#e4df68] text-slate-950 text-xs font-bold transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <Plus className="w-4 h-4" /> Agendar para este día
                 </button>
@@ -238,6 +249,7 @@ const Schedule = () => {
                       key={cita.id}
                       appointment={cita}
                       userRoles={userRoles}
+                      isReadOnly={isReadOnly}
                       onEdit={puedeEditarCita ? handleOpenEdit : undefined}
                       onDelete={
                         puedeEliminarCita
@@ -282,7 +294,8 @@ const Schedule = () => {
               <button
                 type="button"
                 onClick={() => handleOpenNew(todayStr)}
-                className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#ece883] text-slate-950 font-bold text-sm hover:bg-[#e4df68] transition-all shadow-md shadow-[#ece883]/10 cursor-pointer"
+                disabled={isReadOnly}
+                className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[#ece883] text-slate-950 font-bold text-sm hover:bg-[#e4df68] transition-all shadow-md shadow-[#ece883]/10 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Plus className="w-4 h-4" /> Agendar cita para hoy
               </button>
@@ -305,7 +318,8 @@ const Schedule = () => {
                   <button
                     type="button"
                     onClick={() => handleOpenNew(todayStr)}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold transition-colors cursor-pointer"
+                    disabled={isReadOnly}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <Plus className="w-4 h-4" /> Agendar cita para hoy
                   </button>
@@ -318,6 +332,7 @@ const Schedule = () => {
                     key={cita.id}
                     appointment={cita}
                     userRoles={userRoles}
+                    isReadOnly={isReadOnly}
                     onEdit={puedeEditarCita ? handleOpenEdit : undefined}
                     onDelete={
                       puedeEliminarCita

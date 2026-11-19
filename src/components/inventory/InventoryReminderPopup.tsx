@@ -4,6 +4,7 @@ import { Bell, X, CheckCircle } from "lucide-react";
 import { useInventoryReminders } from "../../hooks/useInventoryReminders";
 import { useInventoryMovements } from "../../hooks/useInventoryMovements";
 import { useInventory } from "../../hooks/useInventory";
+import { useLicense } from "../../hooks/useLicense";
 import { formatDateTimeShort } from "../../utils/dateUtils";
 
 /** El aviso global es un recordatorio, no un listado: se limita para no tapar la app. */
@@ -14,6 +15,7 @@ export const InventoryReminderPopup = () => {
   const { getRemindersToNotify, markAsNotified } = useInventoryReminders();
   const { getPendingMovements, completeMovement } = useInventoryMovements();
   const { getProduct } = useInventory();
+  const { isReadOnly } = useLicense();
 
   const [isVisible, setIsVisible] = useState(false);
   const [selectedMovementId, setSelectedMovementId] = useState<string | null>(
@@ -53,7 +55,13 @@ export const InventoryReminderPopup = () => {
     : null;
 
   const handleComplete = () => {
-    if (!selectedMovementId || !formData.userName || !formData.userRole) return;
+    if (
+      isReadOnly ||
+      !selectedMovementId ||
+      !formData.userName ||
+      !formData.userRole
+    )
+      return;
 
     completeMovement(selectedMovementId, {
       userName: formData.userName,
@@ -80,10 +88,12 @@ export const InventoryReminderPopup = () => {
   };
 
   const handleDismiss = () => {
-    // Marcar todos los recordatorios como notificados para reiniciar el timer de 30 min
-    pendingReminders.forEach((reminder) => {
-      markAsNotified(reminder.id);
-    });
+    // En modo lectura solo se cierra el aviso: no se persiste el cambio.
+    if (!isReadOnly) {
+      pendingReminders.forEach((reminder) => {
+        markAsNotified(reminder.id);
+      });
+    }
     setIsVisible(false);
   };
 
@@ -268,8 +278,10 @@ export const InventoryReminderPopup = () => {
               </button>
               <button
                 onClick={handleComplete}
-                disabled={!formData.userName || !formData.userRole}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#ece883] hover:bg-[#e4df68] disabled:bg-slate-700 disabled:text-slate-500 text-slate-950 text-sm font-bold transition-colors shadow-lg shadow-[#ece883]/10 disabled:shadow-none disabled:cursor-not-allowed"
+                disabled={
+                  isReadOnly || !formData.userName || !formData.userRole
+                }
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#ece883] hover:bg-[#e4df68] disabled:bg-slate-700 disabled:text-slate-500 text-slate-950 text-sm font-bold transition-colors shadow-lg shadow-[#ece883]/10 disabled:shadow-none disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <CheckCircle className="w-4 h-4" />
                 Completar Información

@@ -4,12 +4,14 @@ import { PatientHeader } from "../components/patients/PatientHeader";
 import { PatientSearchCard } from "../components/patients/PatientSearchCard";
 import { PatientQuickAccess } from "../components/patients/PatientQuickAccess";
 import { PageShell } from "../components/common/PageShell";
+import { Pagination } from "../components/common/Pagination";
 import { PatientCard } from "../components/patients/PatientCard";
 import PatientProfileModal from "../components/patients/profile/PatientProfileModal";
 import { PatientFormModal } from "../components/patients/PatientFormModal";
 import { Mail, Phone, RotateCcw, Users } from "lucide-react";
 import { usePatients } from "../hooks/usePatients";
 import { useAppointments } from "../hooks/useAppointments";
+import { useLicense } from "../hooks/useLicense";
 import { usePermissions } from "../hooks/usePermissions";
 import type { Patient } from "../types/patient";
 import type { EspecieMascota, Genero } from "../constants/appConstants";
@@ -19,6 +21,8 @@ import { formatDateShort } from "../utils/dateUtils";
 // TIPOS INTERNOS
 // ============================================
 type TabType = "patients" | "owners";
+
+const PAGE_SIZE = 20;
 
 // ============================================
 // COMPONENTE PRINCIPAL
@@ -39,12 +43,14 @@ const PatientRecords = () => {
   const { getAppointmentsByPatient } = useAppointments();
   const { canManagePatients, canDeletePatients, canAccessClinicalFlow } =
     usePermissions();
+  const { isReadOnly } = useLicense();
 
   // ============================================
   // ESTADOS
   // ============================================
   const [activeTab, setActiveTab] = useState<TabType>("patients");
   const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(1);
 
   const [selectedSpecies, setSelectedSpecies] = useState<EspecieMascota[]>([]);
   const [selectedGender, setSelectedGender] = useState<Genero | "all">("all");
@@ -145,6 +151,37 @@ const PatientRecords = () => {
     );
   }, [owners, searchQuery]);
 
+  const totalRegistros =
+    activeTab === "patients" ? filteredPatients.length : filteredOwners.length;
+  const totalPaginas = Math.max(1, Math.ceil(totalRegistros / PAGE_SIZE));
+  const paginaActual = Math.min(page, totalPaginas);
+  const pacientesVisibles = useMemo(
+    () =>
+      filteredPatients.slice(
+        (paginaActual - 1) * PAGE_SIZE,
+        paginaActual * PAGE_SIZE,
+      ),
+    [filteredPatients, paginaActual],
+  );
+  const propietariosVisibles = useMemo(
+    () =>
+      filteredOwners.slice(
+        (paginaActual - 1) * PAGE_SIZE,
+        paginaActual * PAGE_SIZE,
+      ),
+    [filteredOwners, paginaActual],
+  );
+
+  const cambiarTab = (tab: TabType) => {
+    setActiveTab(tab);
+    setPage(1);
+  };
+
+  const cambiarBusqueda = (valor: string) => {
+    setSearchQuery(valor);
+    setPage(1);
+  };
+
   // ============================================
   // HANDLERS
   // ============================================
@@ -169,6 +206,7 @@ const PatientRecords = () => {
   };
 
   const handleDeleteMedicalRecord = (patientId: string, recordId: string) => {
+    if (isReadOnly) return;
     deleteMedicalRecord(patientId, recordId);
 
     setSelectedPatient((prev) =>
@@ -188,16 +226,20 @@ const PatientRecords = () => {
   };
 
   const handleDeleteFullPatient = (patientId: string) => {
+    if (isReadOnly) return;
     deletePatient(patientId);
+    setPage((prev) => Math.min(prev, Math.max(1, Math.ceil((filteredPatients.length - 1) / PAGE_SIZE))));
     handleCloseProfile();
   };
 
   const handleNewRecord = () => {
+    if (isReadOnly) return;
     setEditingPatient(null);
     setShowForm(true);
   };
 
   const handleEditPatient = (patient: Patient) => {
+    if (isReadOnly) return;
     setEditingPatient(patient);
     setIsModalOpen(false);
     setShowForm(true);
@@ -212,10 +254,11 @@ const PatientRecords = () => {
   };
 
   const handleSelectShortcut = (patientName: string) => {
-    setSearchQuery(patientName);
+    cambiarBusqueda(patientName);
   };
 
   const handleSelectSpecies = (species: EspecieMascota) => {
+    setPage(1);
     setSelectedSpecies((prev) => {
       if (prev.includes(species)) {
         return prev.filter((s) => s !== species);
@@ -227,6 +270,12 @@ const PatientRecords = () => {
 
   const handleSelectAllSpecies = () => {
     setSelectedSpecies([]);
+    setPage(1);
+  };
+
+  const cambiarGenero = (genero: Genero | "all") => {
+    setSelectedGender(genero);
+    setPage(1);
   };
 
   // ============================================
@@ -257,14 +306,15 @@ const PatientRecords = () => {
       <PatientHeader
           onNewRecord={handleNewRecord}
           canCreate={canManagePatients}
+          isReadOnly={isReadOnly}
         />
 
         <div className="space-y-4">
           <PatientSearchCard
             activeTab={activeTab}
-            onChangeTab={setActiveTab}
+            onChangeTab={cambiarTab}
             searchQuery={searchQuery}
-            onChangeSearch={setSearchQuery}
+            onChangeSearch={cambiarBusqueda}
           />
 
           {/* Barra de Filtros Rápidos (solo pacientes) */}
@@ -319,7 +369,7 @@ const PatientRecords = () => {
                 </span>
                 <button
                   type="button"
-                  onClick={() => setSelectedGender("all")}
+                  onClick={() => cambiarGenero("all")}
                   className={`text-xs sm:text-sm px-3 py-2 rounded-xl border transition-all cursor-pointer font-medium ${
                     selectedGender === "all"
                       ? "bg-slate-800 text-slate-200 border-slate-700"
@@ -330,7 +380,7 @@ const PatientRecords = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setSelectedGender("macho")}
+                  onClick={() => cambiarGenero("macho")}
                   className={`text-xs sm:text-sm px-3 py-2 rounded-xl border transition-all cursor-pointer font-medium ${
                     selectedGender === "macho"
                       ? "bg-blue-500/20 text-blue-300 border-blue-500/50 shadow-sm shadow-blue-500/10"
@@ -341,7 +391,7 @@ const PatientRecords = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setSelectedGender("hembra")}
+                  onClick={() => cambiarGenero("hembra")}
                   className={`text-xs sm:text-sm px-3 py-2 rounded-xl border transition-all cursor-pointer font-medium ${
                     selectedGender === "hembra"
                       ? "bg-pink-500/20 text-pink-300 border-pink-500/50 shadow-sm shadow-pink-500/10"
@@ -359,7 +409,8 @@ const PatientRecords = () => {
                   onClick={() => {
                     setSelectedSpecies([]);
                     setSelectedGender("all");
-                    setSearchQuery("");
+                    cambiarBusqueda("");
+                    setPage(1);
                   }}
                   className="flex items-center gap-1.5 text-xs sm:text-sm px-3.5 py-2 rounded-xl bg-slate-950 border border-red-500/30 text-red-400 hover:bg-red-500/10 hover:border-red-500/50 transition-all cursor-pointer font-medium ml-auto lg:ml-2"
                 >
@@ -411,7 +462,7 @@ const PatientRecords = () => {
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                    {filteredPatients.map((patient) => (
+                    {pacientesVisibles.map((patient) => (
                       <PatientCard
                         key={patient.id}
                         patient={patient}
@@ -426,7 +477,7 @@ const PatientRecords = () => {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                  {filteredOwners.map((owner) => {
+                  {propietariosVisibles.map((owner) => {
                     const ownerPatients = getPatientsByOwner(owner.id).filter(
                       (patient) => patient.isActive,
                     );
@@ -487,6 +538,14 @@ const PatientRecords = () => {
                   })}
                 </div>
               )}
+
+              <Pagination
+                total={totalRegistros}
+                page={paginaActual}
+                pageSize={PAGE_SIZE}
+                onPageChange={setPage}
+                label={activeTab === "patients" ? "pacientes" : "propietarios"}
+              />
             </div>
           </div>
         </div>
@@ -505,6 +564,7 @@ const PatientRecords = () => {
           }
           onEditPatient={canManagePatients ? handleEditPatient : undefined}
           onOpenClinicalHistory={handleOpenClinicalHistory}
+          isReadOnly={isReadOnly}
         />
       )}
 
@@ -517,6 +577,7 @@ const PatientRecords = () => {
             setEditingPatient(null);
           }}
           onSaved={handleSavedPatient}
+          isReadOnly={isReadOnly}
         />
       )}
     </PageShell>

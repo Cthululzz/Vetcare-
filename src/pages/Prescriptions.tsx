@@ -2,24 +2,30 @@ import { useMemo, useState } from "react";
 import { CheckCircle, FileText, Pill, Search, X } from "lucide-react";
 import { PageBanner } from "../components/common/PageBanner";
 import { PageShell } from "../components/common/PageShell";
+import { Pagination } from "../components/common/Pagination";
 import { DeletePrescriptionModal } from "../components/prescriptions/DeletePrescriptionModal";
 import { PrescriptionCard } from "../components/prescriptions/PrescriptionCard";
 import { PrescriptionDetailModal } from "../components/prescriptions/PrescriptionDetailModal";
 import { printPrescription } from "../components/prescriptions/printPrescription";
 import { getDoctorName } from "../constants/appConstants";
 import { useAppointments } from "../hooks/useAppointments";
+import { useLicense } from "../hooks/useLicense";
 import { usePatients } from "../hooks/usePatients";
 import { usePrescriptions } from "../hooks/usePrescriptions";
 import type { Prescription } from "../types/prescription";
+
+const PAGE_SIZE = 20;
 
 const Prescriptions = () => {
   const { prescriptions, getPrescription, deletePrescription } =
     usePrescriptions();
   const { patients, getPatient } = usePatients();
   const { getAppointment } = useAppointments();
+  const { isReadOnly } = useLicense();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [patientFilter, setPatientFilter] = useState("all");
+  const [page, setPage] = useState(1);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState("");
@@ -74,6 +80,36 @@ const Prescriptions = () => {
     });
   }, [sortedPrescriptions, patientFilter, searchQuery, getPatient]);
 
+  const totalPaginas = Math.max(
+    1,
+    Math.ceil(filteredPrescriptions.length / PAGE_SIZE),
+  );
+  const paginaActual = Math.min(page, totalPaginas);
+  const recetasVisibles = useMemo(
+    () =>
+      filteredPrescriptions.slice(
+        (paginaActual - 1) * PAGE_SIZE,
+        paginaActual * PAGE_SIZE,
+      ),
+    [filteredPrescriptions, paginaActual],
+  );
+
+  const cambiarBusqueda = (valor: string) => {
+    setSearchQuery(valor);
+    setPage(1);
+  };
+
+  const cambiarPaciente = (valor: string) => {
+    setPatientFilter(valor);
+    setPage(1);
+  };
+
+  const limpiarFiltros = () => {
+    setSearchQuery("");
+    setPatientFilter("all");
+    setPage(1);
+  };
+
   const detailPrescription = detailId ? getPrescription(detailId) : undefined;
   const deleteTarget = deleteId ? getPrescription(deleteId) : undefined;
 
@@ -93,11 +129,14 @@ const Prescriptions = () => {
   };
 
   const handleDeleteConfirm = () => {
-    if (!deleteTarget) return;
+    if (!deleteTarget || isReadOnly) return;
 
     deletePrescription(deleteTarget.id);
     setDeleteId(null);
     if (detailId === deleteTarget.id) setDetailId(null);
+    setPage((prev) =>
+      Math.min(prev, Math.max(1, Math.ceil((filteredPrescriptions.length - 1) / PAGE_SIZE))),
+    );
     setFeedback("Receta eliminada correctamente.");
   };
 
@@ -141,7 +180,7 @@ const Prescriptions = () => {
           <input
             type="text"
             value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
+            onChange={(event) => cambiarBusqueda(event.target.value)}
             placeholder="Buscar por paciente o medicamento..."
             className="w-full rounded-xl border border-slate-800 bg-slate-950 py-3 pl-11 pr-4 text-sm text-white placeholder-slate-500 focus:border-[#ece883] focus:outline-none transition-colors"
           />
@@ -154,7 +193,7 @@ const Prescriptions = () => {
             </span>
             <select
               value={patientFilter}
-              onChange={(event) => setPatientFilter(event.target.value)}
+              onChange={(event) => cambiarPaciente(event.target.value)}
               className="w-full rounded-xl border border-slate-800 bg-slate-950 px-3 py-2.5 text-sm text-white focus:border-[#ece883] focus:outline-none transition-colors"
             >
               <option value="all">Todos los pacientes</option>
@@ -169,10 +208,7 @@ const Prescriptions = () => {
           {hayFiltros ? (
             <button
               type="button"
-              onClick={() => {
-                setSearchQuery("");
-                setPatientFilter("all");
-              }}
+              onClick={limpiarFiltros}
               className="rounded-xl border border-slate-700 bg-slate-800 px-4 py-2.5 text-xs font-semibold text-slate-300 transition-colors hover:bg-slate-700 cursor-pointer"
             >
               Limpiar filtros
@@ -219,18 +255,29 @@ const Prescriptions = () => {
           </div>
         ) : (
           <div className="space-y-3">
-            {filteredPrescriptions.map((prescription) => (
+            {recetasVisibles.map((prescription) => (
               <PrescriptionCard
                 key={prescription.id}
                 prescription={prescription}
                 patientName={resolvePatientName(prescription)}
                 onView={() => setDetailId(prescription.id)}
                 onPrint={() => handlePrint(prescription)}
-                onDelete={() => setDeleteId(prescription.id)}
+                onDelete={() => {
+                  if (!isReadOnly) setDeleteId(prescription.id);
+                }}
+                isReadOnly={isReadOnly}
               />
             ))}
           </div>
         )}
+
+        <Pagination
+          total={filteredPrescriptions.length}
+          page={paginaActual}
+          pageSize={PAGE_SIZE}
+          onPageChange={setPage}
+          label="recetas"
+        />
       </section>
 
       {detailPrescription ? (

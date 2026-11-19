@@ -15,6 +15,7 @@ interface PatientProfileModalProps {
   onDeletePatient?: (patientId: string) => void;
   onEditPatient?: (patient: Patient) => void;
   onOpenClinicalHistory?: (patient: Patient) => void;
+  isReadOnly?: boolean;
 }
 
 export const PatientProfileModal = ({
@@ -26,16 +27,19 @@ export const PatientProfileModal = ({
   onDeletePatient,
   onEditPatient,
   onOpenClinicalHistory,
+  isReadOnly = false,
 }: PatientProfileModalProps) => {
   const { updateConditions } = usePatients();
 
   if (!isOpen || !patient) return null;
 
   const handleSaveConditions = (newConditions: string) => {
+    if (isReadOnly) return;
     updateConditions(patient.id, newConditions);
   };
 
   const handleFullPatientDelete = () => {
+    if (isReadOnly) return;
     if (
       window.confirm(
         `¿Estás absolutamente seguro de eliminar la ficha completa de "${patient.name}"? Esta acción no se puede deshacer y borrará todo su historial clínico.`,
@@ -68,6 +72,7 @@ export const PatientProfileModal = ({
           key={`${patient.id}-${patient.conditions ?? ""}`}
           conditions={patient.conditions}
           onSave={handleSaveConditions}
+          isReadOnly={isReadOnly}
         />
 
         {/* 3. Datos del Propietario */}
@@ -86,6 +91,7 @@ export const PatientProfileModal = ({
               ? () => onOpenClinicalHistory(patient)
               : undefined
           }
+          isReadOnly={isReadOnly}
         />
 
         {/* PIE DEL MODAL */}
@@ -107,7 +113,8 @@ export const PatientProfileModal = ({
               <button
                 type="button"
                 onClick={handleFullPatientDelete}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-bold transition-colors cursor-pointer"
+                disabled={isReadOnly}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-bold transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                 title="Eliminar paciente y su expediente completo"
               >
                 <AlertTriangle className="w-4 h-4" />
@@ -119,7 +126,8 @@ export const PatientProfileModal = ({
               <button
                 type="button"
                 onClick={() => onEditPatient(patient)}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold transition-colors cursor-pointer"
+                disabled={isReadOnly}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                 title="Editar datos del paciente y su propietario"
               >
                 <Pencil className="w-4 h-4" />

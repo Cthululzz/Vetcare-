@@ -4,16 +4,19 @@ import { AlertTriangle, Edit2, Save } from "lucide-react";
 interface PatientConditionsCardProps {
   conditions?: string;
   onSave: (newConditions: string) => void;
+  isReadOnly?: boolean;
 }
 
 export const PatientConditionsCard = ({
   conditions,
   onSave,
+  isReadOnly = false,
 }: PatientConditionsCardProps) => {
   const [isEditingConditions, setIsEditingConditions] = useState(false);
   const [condiciones, setCondiciones] = useState(conditions || "");
 
   const handleSave = () => {
+    if (isReadOnly) return;
     onSave(condiciones);
     setIsEditingConditions(false);
   };
@@ -37,7 +40,8 @@ export const PatientConditionsCard = ({
               e.stopPropagation();
               setIsEditingConditions(true);
             }}
-            className="flex items-center gap-1 text-xs text-amber-400 hover:text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 px-2.5 py-1 rounded-lg border border-amber-500/20 transition-colors cursor-pointer"
+            disabled={isReadOnly}
+            className="flex items-center gap-1 text-xs text-amber-400 hover:text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 px-2.5 py-1 rounded-lg border border-amber-500/20 transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Edit2 className="w-3 h-3" /> Editar
           </button>

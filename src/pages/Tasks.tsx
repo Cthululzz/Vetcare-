@@ -16,6 +16,7 @@ import { PageShell } from "../components/common/PageShell";
 import { useAppointments } from "../hooks/useAppointments";
 import { useAppointmentReminders } from "../hooks/useAppointmentReminders";
 import { useHospitalizations } from "../hooks/useHospitalizations";
+import { useLicense } from "../hooks/useLicense";
 import { useLocalStorage } from "../hooks/useLocalStorage";
 import { useNow } from "../hooks/useNow";
 import { usePatients } from "../hooks/usePatients";
@@ -69,6 +70,7 @@ const Tasks = () => {
   const [reminderToConfirm, setReminderToConfirm] =
     useState<DueAppointmentReminder | null>(null);
   const now = useNow();
+  const { isReadOnly } = useLicense();
 
   const { pending, overdue } = useMemo(
     () => buildHospitalizationTaskGroups(hospitalizations, getPatient, now),
@@ -102,6 +104,7 @@ const Tasks = () => {
   const isNewTask = (key: string): boolean => !seenTaskKeys.includes(key);
 
   const markTaskAsSeen = (key: string) => {
+    if (isReadOnly) return;
     setSeenTaskKeys((prev) =>
       prev.includes(key) ? prev : [...prev, key],
     );
@@ -120,6 +123,7 @@ const Tasks = () => {
   };
 
   const confirmMarkAsSent = () => {
+    if (isReadOnly) return;
     if (!reminderToConfirm) return;
     markAsSent(
       reminderToConfirm.appointment.id,
@@ -130,6 +134,7 @@ const Tasks = () => {
   };
 
   const sendReminder = (reminder: DueAppointmentReminder) => {
+    if (isReadOnly) return;
     if (!reminder.ownerPhone) return;
 
     const message = buildAppointmentReminderMessage({
@@ -249,7 +254,7 @@ const Tasks = () => {
             markTaskAsSeen(reminderKey(reminder));
             sendReminder(reminder);
           }}
-          disabled={!reminder.ownerPhone}
+          disabled={!reminder.ownerPhone || isReadOnly}
           title={
             reminder.ownerPhone
               ? "Abrir WhatsApp con el mensaje listo"
@@ -265,7 +270,8 @@ const Tasks = () => {
             markTaskAsSeen(reminderKey(reminder));
             setReminderToConfirm(reminder);
           }}
-          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors cursor-pointer"
+          disabled={isReadOnly}
+          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
         >
           <CheckCircle2 className="w-3.5 h-3.5" /> Marcar enviado
         </button>

@@ -15,6 +15,7 @@ import { useInventory } from "../hooks/useInventory";
 import { useInventoryTags } from "../hooks/useInventoryTags";
 import { usePermissions } from "../hooks/usePermissions";
 import { useAuth } from "../hooks/useAuth";
+import { useLicense } from "../hooks/useLicense";
 import { InventoryMovementForm } from "../components/inventory/InventoryMovementForm";
 import { InventoryMovementHistory } from "../components/inventory/InventoryMovementHistory";
 import { InventoryProductForm } from "../components/inventory/InventoryProductForm";
@@ -32,6 +33,7 @@ const Inventory = () => {
   const { getTags } = useInventoryTags();
   const { user } = useAuth();
   const { canManageInventory, role } = usePermissions();
+  const { isReadOnly } = useLicense();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -88,7 +90,8 @@ const Inventory = () => {
             {canManageInventory && (
               <button
                 onClick={() => setShowMovementForm(true)}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-semibold transition-colors cursor-pointer"
+                disabled={isReadOnly}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Plus className="w-4 h-4" />
                 Registrar Movimiento
@@ -97,7 +100,8 @@ const Inventory = () => {
             {canManageInventory && (
               <button
                 onClick={() => setShowProductForm(true)}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#ece883] hover:bg-[#e4df68] text-slate-950 text-sm font-bold transition-colors shadow-md shadow-[#ece883]/10 cursor-pointer"
+                disabled={isReadOnly}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#ece883] hover:bg-[#e4df68] text-slate-950 text-sm font-bold transition-colors shadow-md shadow-[#ece883]/10 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <PackagePlus className="w-4 h-4" />
                 Nuevo Producto
@@ -247,7 +251,8 @@ const Inventory = () => {
                   {canManageInventory && (
                     <button
                       onClick={() => setShowProductForm(true)}
-                      className="inline-flex items-center gap-2 mt-4 px-4 py-2.5 rounded-xl bg-[#ece883] hover:bg-[#e4df68] text-slate-950 text-sm font-bold transition-colors shadow-md shadow-[#ece883]/10 cursor-pointer"
+                      disabled={isReadOnly}
+                      className="inline-flex items-center gap-2 mt-4 px-4 py-2.5 rounded-xl bg-[#ece883] hover:bg-[#e4df68] text-slate-950 text-sm font-bold transition-colors shadow-md shadow-[#ece883]/10 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <PackagePlus className="w-4 h-4" />
                       Crear primer producto
@@ -284,8 +289,9 @@ const Inventory = () => {
                             <button
                               type="button"
                               onClick={() => setEditingProduct(product)}
+                              disabled={isReadOnly}
                               title="Editar producto"
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-[#ece883] hover:bg-slate-800 transition-colors cursor-pointer"
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-[#ece883] hover:bg-slate-800 transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                             >
                               <Pencil className="w-3.5 h-3.5" />
                             </button>

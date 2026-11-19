@@ -3,6 +3,7 @@ import { AlertTriangle, X, Save, Clock } from "lucide-react";
 import { useInventory } from "../../hooks/useInventory";
 import { useInventoryMovements } from "../../hooks/useInventoryMovements";
 import { useInventoryReminders } from "../../hooks/useInventoryReminders";
+import { useLicense } from "../../hooks/useLicense";
 import type { MovementType } from "../../types/inventory";
 import {
   formatPackageEquivalence,
@@ -35,6 +36,7 @@ export const InventoryMovementForm = ({
   const { getProducts } = useInventory();
   const { createMovement } = useInventoryMovements();
   const { createReminder } = useInventoryReminders();
+  const { isReadOnly } = useLicense();
 
   const [movementType, setMovementType] = useState<MovementType>("retiro");
   const [productId, setProductId] = useState("");
@@ -124,7 +126,7 @@ export const InventoryMovementForm = ({
   };
 
   const submitMovement = (isComplete: boolean) => {
-    if (!selectedProduct) return;
+    if (isReadOnly || !selectedProduct) return;
 
     const movement = createMovement({
       productId,
@@ -489,7 +491,8 @@ export const InventoryMovementForm = ({
             <button
               type="button"
               onClick={(e) => handleSubmit(e, false)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-600/20 hover:bg-amber-600/30 text-amber-400 border border-amber-500/30 text-sm font-semibold transition-colors"
+              disabled={isReadOnly}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-600/20 hover:bg-amber-600/30 text-amber-400 border border-amber-500/30 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Clock className="w-4 h-4" />
               Recuérdame más tarde
@@ -509,7 +512,8 @@ export const InventoryMovementForm = ({
             <button
               type="button"
               onClick={(e) => handleSubmit(e, true)}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#ece883] hover:bg-[#e4df68] text-slate-950 text-sm font-bold transition-colors shadow-lg shadow-[#ece883]/10"
+              disabled={isReadOnly}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#ece883] hover:bg-[#e4df68] text-slate-950 text-sm font-bold transition-colors shadow-lg shadow-[#ece883]/10 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Save className="w-4 h-4" />
               Registrar
@@ -609,7 +613,8 @@ export const InventoryMovementForm = ({
                   <button
                     type="button"
                     onClick={handleConfirmAdjustment}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-sm font-bold transition-colors cursor-pointer"
+                    disabled={isReadOnly}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-sm font-bold transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <AlertTriangle className="w-4 h-4" />
                     Registrar ajuste

@@ -17,6 +17,7 @@ interface PatientFormModalProps {
   patient?: Patient | null;
   onClose: () => void;
   onSaved?: (patient: Patient) => void;
+  isReadOnly?: boolean;
 }
 
 const SPECIES_LABELS: Record<EspecieMascota, string> = {
@@ -39,6 +40,7 @@ export const PatientFormModal = ({
   patient,
   onClose,
   onSaved,
+  isReadOnly = false,
 }: PatientFormModalProps) => {
   const {
     owners,
@@ -111,6 +113,7 @@ export const PatientFormModal = ({
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
+    if (isReadOnly) return;
 
     if (!name.trim()) {
       setError("Ingresa el nombre del paciente.");
@@ -241,7 +244,8 @@ export const PatientFormModal = ({
               <button
                 type="button"
                 onClick={() => handleOwnerModeChange("existing")}
-                className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                disabled={isReadOnly}
+                className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 ${
                   ownerMode === "existing"
                     ? "bg-[#ece883] text-slate-950"
                     : "bg-slate-950 text-slate-400 border border-slate-800 hover:text-white"
@@ -252,7 +256,8 @@ export const PatientFormModal = ({
               <button
                 type="button"
                 onClick={() => handleOwnerModeChange("new")}
-                className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                disabled={isReadOnly}
+                className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 ${
                   ownerMode === "new"
                     ? "bg-[#ece883] text-slate-950"
                     : "bg-slate-950 text-slate-400 border border-slate-800 hover:text-white"
@@ -461,7 +466,8 @@ export const PatientFormModal = ({
             </button>
             <button
               type="submit"
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#ece883] hover:bg-[#e4df68] text-slate-950 text-xs font-bold transition-colors cursor-pointer"
+              disabled={isReadOnly}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#ece883] hover:bg-[#e4df68] text-slate-950 text-xs font-bold transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Save className="w-4 h-4" />
               {isEditing ? "Guardar cambios" : "Crear ficha"}

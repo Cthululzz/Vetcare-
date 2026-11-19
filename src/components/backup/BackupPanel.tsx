@@ -1,5 +1,6 @@
 import { AlertCircle, CheckCircle2, Database, Download, Upload } from "lucide-react";
 import { useState, type ChangeEvent } from "react";
+import { useLicense } from "../../hooks/useLicense";
 import { storageStore } from "../../hooks/useLocalStorage";
 import { canWriteStorageKey } from "../../utils/licenseGuard";
 
@@ -14,6 +15,7 @@ const esObjeto = (valor: unknown): valor is Record<string, unknown> =>
   typeof valor === "object" && valor !== null && !Array.isArray(valor);
 
 export const BackupPanel = () => {
+  const { isReadOnly } = useLicense();
   const [exportando, setExportando] = useState(false);
   const [importando, setImportando] = useState(false);
   const [respaldo, setRespaldo] = useState<RespaldoLeido | null>(null);
@@ -72,6 +74,7 @@ export const BackupPanel = () => {
   const handleArchivo = async (
     event: ChangeEvent<HTMLInputElement>,
   ): Promise<void> => {
+    if (isReadOnly) return;
     const archivo = event.target.files?.[0];
     event.target.value = "";
     setRespaldo(null);
@@ -126,6 +129,7 @@ export const BackupPanel = () => {
   };
 
   const handleConfirmar = (): void => {
+    if (isReadOnly) return;
     if (!respaldo || ocupado) return;
 
     const noEscribibles = respaldo.claves.filter(
@@ -195,11 +199,16 @@ export const BackupPanel = () => {
             Selecciona un archivo JSON generado por VetCare+. Primero verás un
             resumen de su contenido.
           </p>
+          {isReadOnly && (
+            <p className="text-xs text-amber-300">
+              La licencia está en modo lectura; no se pueden importar respaldos.
+            </p>
+          )}
           <input
             type="file"
             accept="application/json"
             onChange={handleArchivo}
-            disabled={ocupado}
+            disabled={ocupado || isReadOnly}
             aria-label="Archivo de respaldo JSON"
             className="block w-full cursor-pointer rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-slate-300 file:mr-3 file:rounded-lg file:border-0 file:bg-[#ece883] file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-slate-950 disabled:cursor-not-allowed disabled:opacity-50"
           />
@@ -245,7 +254,7 @@ export const BackupPanel = () => {
                 <button
                   type="button"
                   onClick={handleConfirmar}
-                  disabled={ocupado}
+                  disabled={ocupado || isReadOnly}
                   className="inline-flex items-center gap-2 rounded-lg bg-red-500 px-3 py-1.5 font-bold text-white transition-colors hover:bg-red-400 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <Upload className="h-4 w-4" />
