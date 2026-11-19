@@ -1,5 +1,5 @@
 import { useState, useMemo, type FormEvent } from "react";
-import { Save, CheckCircle2, BedDouble } from "lucide-react";
+import { Save, CheckCircle2, BedDouble, FlaskConical } from "lucide-react";
 import {
   getAppointmentBadgeStyle,
   formatAppointmentTypeLabel,
@@ -12,6 +12,7 @@ import { ActionConfirmModal } from "./ConsultationModals";
 import { HospitalizationConfirmModal } from "./HospitalizationConfirmModal";
 import { PrescriptionConfirmModal } from "./PrescriptionConfirmModal";
 import { PrescriptionFormModal } from "./PrescriptionFormModal";
+import { ExamOrderModal } from "./ExamOrderModal";
 import { ConsultationForm } from "./ConsultationForm";
 import { usePrescriptionFlow } from "./usePrescriptionFlow";
 import type { Appointment } from "../../../types/appointment";
@@ -26,6 +27,8 @@ import type {
   ConsultationData,
   HospitalizationFormData,
 } from "../../../types/consultation";
+import type { ExamOrder } from "../../../types/examOrder";
+import { getExamenCategoriaLabel } from "../../../constants/examOrders";
 
 // ============================================
 // TIPOS EXPORTADOS
@@ -90,6 +93,8 @@ export const ConsultationModal = ({
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showExitConfirmModal, setShowExitConfirmModal] = useState(false);
+  const [showExamOrderModal, setShowExamOrderModal] = useState(false);
+  const [examOrder, setExamOrder] = useState<ExamOrder | undefined>();
 
   // ============================================
   // DATOS DERIVADOS
@@ -146,6 +151,7 @@ export const ConsultationModal = ({
     recommendations: formData.recomendaciones,
     shouldFinish,
     hospitalization,
+    examOrder,
   });
 
   /**
@@ -272,6 +278,56 @@ export const ConsultationModal = ({
               onWeightUnitChange={handleWeightUnitChange}
             />
 
+            {/* Orden de exámenes */}
+            <div className="px-6 pb-2">
+              {examOrder && examOrder.categories.length > 0 && (
+                <div className="mb-3 rounded-xl border border-violet-500/30 bg-violet-500/5 p-3">
+                  <div className="flex items-start gap-2">
+                    <FlaskConical className="mt-0.5 h-4 w-4 shrink-0 text-violet-300" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-violet-300">
+                        Orden de exámenes
+                      </p>
+                      <div className="mt-1 flex flex-wrap gap-1.5">
+                        {examOrder.categories.map((category) => (
+                          <span
+                            key={category}
+                            className="rounded-lg border border-violet-500/20 bg-violet-500/10 px-2 py-0.5 text-[11px] font-semibold text-violet-200"
+                          >
+                            {getExamenCategoriaLabel(category)}
+                          </span>
+                        ))}
+                      </div>
+                      {examOrder.notes && (
+                        <p className="mt-1.5 whitespace-pre-wrap text-xs text-slate-300">
+                          {examOrder.notes}
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowExamOrderModal(true)}
+                      className="text-[11px] font-semibold text-violet-300 hover:text-violet-200"
+                    >
+                      Editar
+                    </button>
+                  </div>
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => setShowExamOrderModal(true)}
+                className={`inline-flex w-full items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition-colors ${
+                  examOrder
+                    ? "border-violet-500/40 bg-violet-500/15 text-violet-200 hover:bg-violet-500/25"
+                    : "border-slate-700 bg-slate-950/40 text-slate-300 hover:border-violet-500/40 hover:text-violet-200"
+                }`}
+              >
+                <FlaskConical className="h-4 w-4" />
+                {examOrder ? "Editar orden de exámenes" : "Orden de exámenes"}
+              </button>
+            </div>
+
             {/* Botones de acción */}
             <div className="flex flex-wrap items-center justify-between gap-3 p-6 border-t border-slate-800">
               <button
@@ -346,6 +402,17 @@ export const ConsultationModal = ({
         isOpen={prescriptionFlow.showPrescriptionForm}
         onSave={prescriptionFlow.handlePrescriptionSave}
         onClose={prescriptionFlow.handlePrescriptionFormClose}
+      />
+
+      <ExamOrderModal
+        isOpen={showExamOrderModal}
+        initialOrder={examOrder}
+        onSave={(order) => {
+          setExamOrder(order);
+          setShowExamOrderModal(false);
+          setHasUnsavedChanges(true);
+        }}
+        onClose={() => setShowExamOrderModal(false)}
       />
     </>
   );

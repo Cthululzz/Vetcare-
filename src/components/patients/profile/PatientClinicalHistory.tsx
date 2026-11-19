@@ -12,6 +12,7 @@ import {
 import type { MedicalRecord } from "../../../types/patient";
 import { getRecordType } from "../../../utils/clinicalHistory";
 import { RECORD_TYPE_META } from "../history/recordTypeMeta";
+import { ExamOrderSummary } from "../history/ExamOrderSummary";
 import { formatWeightWithUnit } from "../../../utils/weight";
 
 interface PatientClinicalHistoryProps {
@@ -204,6 +205,11 @@ export const PatientClinicalHistory = ({
                   </div>
                 </div>
 
+                <ExamOrderSummary
+                  order={latestConsultation.examOrder}
+                  compact
+                />
+
                 {renderVitalSigns(latestConsultation)}
               </div>
             )}
@@ -298,6 +304,8 @@ export const PatientClinicalHistory = ({
                           </p>
                         </div>
                       </div>
+
+                      <ExamOrderSummary order={entry.examOrder} compact />
 
                       {renderVitalSigns(entry)}
                     </div>

@@ -15,6 +15,7 @@ import {
 import { formatDateShort, formatDateTimeShort } from "../../../utils/dateUtils";
 import { formatWeightWithUnit } from "../../../utils/weight";
 import { RECORD_TYPE_META } from "./recordTypeMeta";
+import { ExamOrderSummary } from "./ExamOrderSummary";
 
 interface ClinicalRecordCardProps {
   record: MedicalRecord;
@@ -125,6 +126,8 @@ export const ClinicalRecordCard = ({
             </p>
           </div>
         </div>
+
+        <ExamOrderSummary order={record.examOrder} />
 
         {(record.temperature || record.heartRate || record.respiratoryRate) && (
           <div className="rounded-xl bg-slate-900/40 border border-slate-800/60 px-3.5 py-2.5">

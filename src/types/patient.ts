@@ -43,6 +43,8 @@ export interface MedicalRecord extends BranchScoped {
   veterinarian?: string;
   /** Próximo control o visita recomendada (ISO "aaaa-mm-dd" o fecha-hora). */
   nextVisitAt?: string;
+  /** Orden de exámenes indicada en la consulta. */
+  examOrder?: import("./examOrder").ExamOrder;
 }
 
 export interface Patient extends BranchScoped {

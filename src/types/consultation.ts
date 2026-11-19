@@ -2,6 +2,7 @@ import type { MedicationPlanInput } from "../hooks/useHospitalizations";
 import type { Appointment } from "./appointment";
 import type { Owner, Patient } from "./patient";
 import type { WeightUnit } from "../utils/weight";
+import type { ExamOrder } from "./examOrder";
 
 /** Datos que se piden al confirmar una hospitalización desde la consulta. */
 export interface HospitalizationFormData {
@@ -25,4 +26,6 @@ export interface ConsultationData {
   recommendations?: string;
   shouldFinish: boolean;
   hospitalization?: HospitalizationFormData;
+  /** Orden de exámenes indicada durante la consulta. */
+  examOrder?: ExamOrder;
 }

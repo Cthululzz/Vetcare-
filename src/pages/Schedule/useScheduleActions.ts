@@ -238,6 +238,7 @@ export function useScheduleActions() {
       weightUnit,
       recommendations,
       shouldFinish,
+      examOrder,
     } = consultationData;
 
     // 1. Persistir borrador en la cita (siempre)
@@ -266,6 +267,7 @@ export function useScheduleActions() {
         recommendations,
         type: "consulta",
         veterinarian: getDoctorName(appointment.doctorId),
+        examOrder,
       },
       appointment,
       );
