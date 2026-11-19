@@ -14,6 +14,7 @@ import { AppointmentCard } from "../../components/schedule/AppointmentCard";
 import { MonthCalendarView } from "../../components/schedule/MonthCalendarView";
 import { WeekView } from "../../components/schedule/WeekView";
 import { ConsultationModal } from "../../components/schedule/ConsultationModal/ConsultationModal";
+import { DeleteAppointmentModal } from "../../components/schedule/DeleteAppointmentModal";
 import {
   getLocalTodayStr,
   getWeekDays,
@@ -22,8 +23,12 @@ import {
 } from "../../utils/dateUtils";
 import { useScheduleActions } from "./useScheduleActions";
 import { usePatients } from "../../hooks/usePatients";
+import { useAuth } from "../../hooks/useAuth";
+import { usePermissions } from "../../hooks/usePermissions";
 import { useAppointmentReminders } from "../../hooks/useAppointmentReminders";
 import { buildDueAppointmentReminders } from "../../utils/appointmentReminders";
+import { PERMISSIONS } from "../../utils/permissions";
+import type { Appointment } from "../../types/appointment";
 import type { TabType } from "./types";
 
 const Schedule = () => {
@@ -33,7 +38,15 @@ const Schedule = () => {
   const [currentCalendarDate, setCurrentCalendarDate] = useState(new Date());
   const [showCompleted, setShowCompleted] = useState(false);
   const [hoy, setHoy] = useState(getLocalTodayStr);
+  const [citaAEliminar, setCitaAEliminar] = useState<Appointment | null>(null);
   const parametrosProcesados = useRef(false);
+  const { user } = useAuth();
+  const { can } = usePermissions();
+
+  const userRoles = user ? [user.role] : [];
+  const puedeCrearCita = can(PERMISSIONS.APPOINTMENTS_CREATE);
+  const puedeEditarCita = can(PERMISSIONS.APPOINTMENTS_EDIT);
+  const puedeEliminarCita = can(PERMISSIONS.APPOINTMENTS_DELETE);
 
   const {
     appointments,
@@ -81,6 +94,12 @@ const Schedule = () => {
       }
     });
   }, [appointments, handleOpenNew, handleStartConsultation, searchParams]);
+
+  const handleConfirmarEliminacion = () => {
+    if (!citaAEliminar) return;
+    deleteAppointment(citaAEliminar.id);
+    setCitaAEliminar(null);
+  };
 
   const todayStr = hoy;
 
@@ -187,13 +206,15 @@ const Schedule = () => {
             </div>
 
             <div className="w-full flex justify-end">
-              <button
-                type="button"
-                onClick={() => handleOpenNew(selectedDayDetail.dateStr)}
-                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-[#ece883] hover:bg-[#e4df68] text-slate-950 text-xs font-bold transition-colors cursor-pointer"
-              >
-                <Plus className="w-4 h-4" /> Agendar para este día
-              </button>
+              {puedeCrearCita && (
+                <button
+                  type="button"
+                  onClick={() => handleOpenNew(selectedDayDetail.dateStr)}
+                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-[#ece883] hover:bg-[#e4df68] text-slate-950 text-xs font-bold transition-colors cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" /> Agendar para este día
+                </button>
+              )}
             </div>
           </div>
 
@@ -216,8 +237,18 @@ const Schedule = () => {
                     <AppointmentCard
                       key={cita.id}
                       appointment={cita}
-                      onEdit={handleOpenEdit}
-                      onDelete={deleteAppointment}
+                      userRoles={userRoles}
+                      onEdit={puedeEditarCita ? handleOpenEdit : undefined}
+                      onDelete={
+                        puedeEliminarCita
+                          ? (id) => {
+                              const cita = appointments.find(
+                                (item) => item.id === id,
+                              );
+                              if (cita) setCitaAEliminar(cita);
+                            }
+                          : undefined
+                      }
                       onStartConsultation={handleStartConsultation}
                     />
                   ))}
@@ -247,7 +278,7 @@ const Schedule = () => {
               ))}
             </div>
 
-            {activeTab === "hoy" && (
+            {activeTab === "hoy" && puedeCrearCita && (
               <button
                 type="button"
                 onClick={() => handleOpenNew(todayStr)}
@@ -270,13 +301,15 @@ const Schedule = () => {
                   No existen registros programados para la fecha actual (
                   {formatDateLatam(todayStr)}).
                 </p>
-                <button
-                  type="button"
-                  onClick={() => handleOpenNew(todayStr)}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold transition-colors cursor-pointer"
-                >
-                  <Plus className="w-4 h-4" /> Agendar cita para hoy
-                </button>
+                {puedeCrearCita && (
+                  <button
+                    type="button"
+                    onClick={() => handleOpenNew(todayStr)}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold transition-colors cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4" /> Agendar cita para hoy
+                  </button>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -284,8 +317,18 @@ const Schedule = () => {
                   <AppointmentCard
                     key={cita.id}
                     appointment={cita}
-                    onEdit={handleOpenEdit}
-                    onDelete={deleteAppointment}
+                    userRoles={userRoles}
+                    onEdit={puedeEditarCita ? handleOpenEdit : undefined}
+                    onDelete={
+                      puedeEliminarCita
+                        ? (id) => {
+                            const cita = appointments.find(
+                              (item) => item.id === id,
+                            );
+                            if (cita) setCitaAEliminar(cita);
+                          }
+                        : undefined
+                    }
                     onStartConsultation={handleStartConsultation}
                   />
                 ))}
@@ -362,6 +405,19 @@ const Schedule = () => {
           onHospitalize={handleHospitalize}
         />
       )}
+
+      <DeleteAppointmentModal
+        isOpen={Boolean(citaAEliminar)}
+        patientName={
+          citaAEliminar
+            ? getPatient(citaAEliminar.patientId)?.name ?? "el paciente"
+            : ""
+        }
+        appointmentDate={citaAEliminar ? formatDateLatam(citaAEliminar.fecha) : ""}
+        appointmentTime={citaAEliminar?.hora ?? ""}
+        onConfirm={handleConfirmarEliminacion}
+        onCancel={() => setCitaAEliminar(null)}
+      />
     </PageShell>
   );
 };

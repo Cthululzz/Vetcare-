@@ -14,7 +14,16 @@
 - [x] Consulta completa: signos vitales, diagnóstico, hospitalización, receta y orden de exámenes.
 - [x] Licenciamiento, activación y recuperación de acceso (simulados en cliente).
 - [x] Control de roles y alcance por sucursal en la interfaz.
-- [ ] Optimización: dividir el bundle JS (~668 kB) y reducir el logo (2,28 MB).
+- [x] Cerrar sesión visible en el sidebar; en desarrollo se puede suspender el auto-login y reactivarlo desde un control.
+- [x] Permisos de crear/editar/eliminar citas aplicados en la agenda; borrado con confirmación.
+- [x] Página "Mi cuenta": edición de perfil y cambio de contraseña.
+- [x] Menú lateral plegable en móvil (botón de hamburguesa).
+- [x] Respaldos JSON: exportación e importación validadas desde Configuración (respeta el modo lectura de licencia).
+- [x] Impresión de receta, orden de exámenes y registro clínico sin dependencias nuevas.
+- [x] Módulo de reportes: citas por estado/tipo, pacientes por especie y stock crítico, con filtro de fechas.
+- [x] Módulo de Recetas: listado, búsqueda, detalle, impresión y eliminación con confirmación.
+- [ ] Seguridad real de contraseñas (hoy se guardan en claro en localStorage; se resuelve con el backend).
+- [ ] Optimización: dividir el bundle JS (~721 kB) y reducir el logo (2,28 MB).
 
 ## Fase 2: Arquitectura & Multi-sucursal (planificada, no implementada)
 

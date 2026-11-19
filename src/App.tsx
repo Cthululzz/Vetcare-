@@ -9,6 +9,9 @@ import Inventory from "./pages/Inventory"; // ← AGREGAR
 import Tasks from "./pages/Tasks";
 import Configuration from "./pages/Configuration";
 import ProviderConsole from "./pages/ProviderConsole";
+import Reports from "./pages/Reports";
+import Prescriptions from "./pages/Prescriptions";
+import MyAccount from "./pages/MyAccount";
 import Login from "./pages/Login";
 import AppLayout from "./components/common/AppLayout";
 import { DevAuthBypass } from "./components/common/DevAuthBypass";
@@ -208,6 +211,25 @@ function App() {
               element={
                 <RequirePermission permission={PERMISSIONS.INVENTORY_VIEW}>
                   <Inventory />
+                </RequirePermission>
+              }
+            />
+            <Route path="/mi-cuenta" element={<MyAccount />} />
+            <Route
+              path="/recetas"
+              element={
+                <RequirePermission
+                  permission={PERMISSIONS.CLINICAL_HISTORY_VIEW}
+                >
+                  <Prescriptions />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="/reportes"
+              element={
+                <RequirePermission permission={PERMISSIONS.REPORTS_VIEW}>
+                  <Reports />
                 </RequirePermission>
               }
             />

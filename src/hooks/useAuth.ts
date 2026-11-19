@@ -3,7 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { useLocalStorage } from "./useLocalStorage";
 import { toPublicUser, useUsers } from "./useUsers";
 import type { User } from "../types/user";
-import { isBypassAuthEnabled } from "../utils/authBypass";
+import {
+  disableDevBypassForSession,
+  isBypassAuthEnabled,
+} from "../utils/authBypass";
 
 export type { User } from "../types/user";
 
@@ -81,6 +84,8 @@ export function useAuth() {
 
   /** Cierra la sesión y redirige al login */
   const logout = useCallback(() => {
+    // En desarrollo el auto-login reaparecería en el siguiente render.
+    if (isBypassAuthEnabled()) disableDevBypassForSession();
     setAuthState({
       user: null,
       isAuthenticated: false,

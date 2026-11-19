@@ -16,6 +16,7 @@ import { formatDateShort, formatDateTimeShort } from "../../../utils/dateUtils";
 import { formatWeightWithUnit } from "../../../utils/weight";
 import { RECORD_TYPE_META } from "./recordTypeMeta";
 import { ExamOrderSummary } from "./ExamOrderSummary";
+import { PrintClinicalRecordButton } from "../../print/PrintClinicalRecordButton";
 
 interface ClinicalRecordCardProps {
   record: MedicalRecord;
@@ -69,7 +70,8 @@ export const ClinicalRecordCard = ({
           </div>
 
           {(onEdit || onDelete) && (
-            <div className="flex items-center gap-1.5">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <PrintClinicalRecordButton record={record} />
               {onEdit && (
                 <button
                   type="button"

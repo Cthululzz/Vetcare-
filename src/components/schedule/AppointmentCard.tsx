@@ -42,7 +42,7 @@ export const AppointmentCard = ({
   onEdit,
   onDelete,
   showDate = false,
-  userRoles = ["VET"],
+  userRoles = [],
 }: AppointmentCardProps) => {
   // Obtener datos completos del paciente y dueño usando los IDs
   const { getPatient, getOwner } = usePatients();

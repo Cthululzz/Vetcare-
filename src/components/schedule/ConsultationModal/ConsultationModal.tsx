@@ -29,6 +29,7 @@ import type {
 } from "../../../types/consultation";
 import type { ExamOrder } from "../../../types/examOrder";
 import { getExamenCategoriaLabel } from "../../../constants/examOrders";
+import { PrintExamOrderButton } from "../../print/PrintExamOrderButton";
 
 // ============================================
 // TIPOS EXPORTADOS
@@ -304,13 +305,19 @@ export const ConsultationModal = ({
                         </p>
                       )}
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setShowExamOrderModal(true)}
-                      className="text-[11px] font-semibold text-violet-300 hover:text-violet-200"
-                    >
-                      Editar
-                    </button>
+                    <div className="flex shrink-0 flex-col items-end gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setShowExamOrderModal(true)}
+                        className="text-[11px] font-semibold text-violet-300 hover:text-violet-200"
+                      >
+                        Editar
+                      </button>
+                      <PrintExamOrderButton
+                        order={examOrder}
+                        patientName={patient.name}
+                      />
+                    </div>
                   </div>
                 </div>
               )}

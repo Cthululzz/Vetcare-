@@ -3,11 +3,12 @@ import { Mail, Lock, Eye, EyeOff, AlertCircle } from "lucide-react";
 import logo from "../assets/logo.png";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
+import { isBypassAuthEnabled } from "../utils/authBypass";
 
 const Login = () => {
   const navigate = useNavigate();
   const { login, isAuthenticated } = useAuth();
-  const bypassAuth = import.meta.env.VITE_BYPASS_AUTH === "true";
+  const bypassAuth = isBypassAuthEnabled();
 
   // ============================================
   // ESTADOS
