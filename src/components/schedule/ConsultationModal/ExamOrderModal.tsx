@@ -9,6 +9,8 @@ interface ExamOrderModalProps {
   initialOrder?: ExamOrder;
   onSave: (order: ExamOrder) => void;
   onClose: () => void;
+  /** Texto de ayuda; por omisión se usa el de la consulta. */
+  description?: string;
 }
 
 export const ExamOrderModal = ({
@@ -16,6 +18,7 @@ export const ExamOrderModal = ({
   initialOrder,
   onSave,
   onClose,
+  description = "Marca las áreas que deben evaluarse. Puedes ajustar la orden antes de finalizar la consulta.",
 }: ExamOrderModalProps) => {
   const iniciales = (initialOrder?.categories ?? []).filter((id) =>
     EXAM_CATEGORY_IDS.includes(id),
@@ -59,10 +62,7 @@ export const ExamOrderModal = ({
                   {seleccionadas.length === 1 ? "" : "s"}
                 </span>
               </div>
-              <p className="mt-1 text-xs text-slate-400">
-                Marca las áreas que deben evaluarse. Puedes ajustar la orden
-                antes de finalizar la consulta.
-              </p>
+              <p className="mt-1 text-xs text-slate-400">{description}</p>
             </div>
           </div>
           <button

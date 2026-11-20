@@ -12,7 +12,6 @@ import {
 import { PageBanner } from "../components/common/PageBanner";
 import { PageShell } from "../components/common/PageShell";
 import { UserManagement } from "../components/users/UserManagement";
-import { BackupPanel } from "../components/backup/BackupPanel";
 import { useLicense } from "../hooks/useLicense";
 import { usePermissions } from "../hooks/usePermissions";
 import { formatDateShort } from "../utils/dateUtils";
@@ -201,8 +200,6 @@ const Configuration = () => {
       </section>
 
       {puedeGestionarUsuarios && <UserManagement />}
-
-      <BackupPanel />
 
       <section className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
         <div className="border-b border-slate-800 pb-3">

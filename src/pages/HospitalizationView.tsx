@@ -21,6 +21,7 @@ import {
 import { PageBanner } from "../components/common/PageBanner";
 import { PageShell } from "../components/common/PageShell";
 import { PetAvatar } from "../components/common/PetAvatar";
+import { RequestExamOrderButton } from "../components/patients/RequestExamOrderButton";
 import { usePatients } from "../hooks/usePatients";
 import {
   isReviewOverdue,
@@ -1071,6 +1072,11 @@ const HospitalizationView = () => {
                           >
                             <Activity className="w-3.5 h-3.5" /> Evolución
                           </button>
+                          <RequestExamOrderButton
+                            patient={item.patient}
+                            disabled={isReadOnly}
+                            description="Marca las áreas que deben evaluarse durante la internación. La orden quedará en el historial del paciente."
+                          />
                           <button
                             onClick={() =>
                               handleOpenPlan(item.hospitalization, item.patient)

@@ -1,10 +1,12 @@
 import { X, AlertTriangle, Pencil, History } from "lucide-react";
 import type { Patient, Owner } from "../../../types/patient";
 import { usePatients } from "../../../hooks/usePatients";
+import { usePermissions } from "../../../hooks/usePermissions";
 import PatientProfileHeader from "./PatientProfileHeader";
 import PatientConditionsCard from "./PatientConditionsCard";
 import PatientOwnerInfo from "./PatientOwnerInfo";
 import PatientClinicalHistory from "./PatientClinicalHistory";
+import { RequestExamOrderButton } from "../RequestExamOrderButton";
 
 interface PatientProfileModalProps {
   isOpen: boolean;
@@ -30,6 +32,7 @@ export const PatientProfileModal = ({
   isReadOnly = false,
 }: PatientProfileModalProps) => {
   const { updateConditions } = usePatients();
+  const { canAccessClinicalFlow } = usePermissions();
 
   if (!isOpen || !patient) return null;
 
@@ -107,6 +110,15 @@ export const PatientProfileModal = ({
                 <History className="w-4 h-4" />
                 <span>Historial clínico</span>
               </button>
+            )}
+
+            {canAccessClinicalFlow && (
+              <RequestExamOrderButton
+                patient={patient}
+                disabled={isReadOnly}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-violet-500/10 hover:bg-violet-500/20 border border-violet-500/30 text-violet-300 text-xs font-bold transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+                description="Marca las áreas que deben evaluarse. La orden quedará en el historial clínico del paciente."
+              />
             )}
 
             {onDeletePatient && (

@@ -112,8 +112,10 @@ export const printDocument = (options: PrintDocumentOptions): void => {
   const iframe = document.createElement("iframe");
   iframe.title = "Documento para impresión";
   iframe.setAttribute("aria-hidden", "true");
+  // Fuera de pantalla, pero sin opacity ni display:none: Chromium no imprime
+  // el contenido de un iframe oculto de esas formas.
   iframe.style.cssText =
-    "position:fixed;left:-9999px;top:0;width:1px;height:1px;border:0;opacity:0;pointer-events:none;";
+    "position:absolute;left:-9999px;top:0;width:1px;height:1px;border:0;";
 
   let impreso = false;
   let limpio = false;
@@ -157,6 +159,7 @@ export const printDocument = (options: PrintDocumentOptions): void => {
       const ventana = iframe.contentWindow;
       if (ventana) {
         ventana.addEventListener("afterprint", limpiar);
+        iframe.focus();
         ventana.focus();
         // window.print() del documento temporal, no de la página completa.
         ventana.window.print();
