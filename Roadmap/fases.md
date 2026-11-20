@@ -29,7 +29,7 @@
 
 - [ ] Diseño de la base de datos relacional (MySQL/PostgreSQL) con `sucursal_id` / `organization_id`.
 - [ ] Separación de vistas según la sucursal activa (ya existe en frontend; falta en datos reales).
-- [ ] Unificar los identificadores de organización (`vet-piloto` vs `vet-demo`).
+- [x] Unificar los identificadores de organización: `vet-piloto` es el ID canónico y `vet-demo` se migra automáticamente al leer localStorage.
 - [ ] Definir esquema de tablas para: usuarios, citas, pacientes, propietarios, historial, recetas, órdenes de exámenes, hospitalización e inventario.
 
 ## Fase 3: Conexión & Backend (pendiente)

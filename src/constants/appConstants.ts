@@ -29,7 +29,9 @@ export const SUCURSALES = [
 export type SucursalId = (typeof SUCURSALES)[number]["id"];
 
 /** Organización única de la etapa actual, usada como valor de migración. */
-export const DEFAULT_ORGANIZATION_ID: OrganizationId = "vet-demo";
+export const DEFAULT_ORGANIZATION_ID: OrganizationId = "vet-piloto";
+/** IDs anteriores que se reescriben al valor canónico al leer localStorage. */
+export const LEGACY_ORGANIZATION_IDS: readonly OrganizationId[] = ["vet-demo"];
 /** Sucursal asignada a los datos históricos que todavía no la registran. */
 export const DEFAULT_SUCURSAL_ID: SucursalId = "centro";
 

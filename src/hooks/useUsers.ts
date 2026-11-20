@@ -3,7 +3,6 @@ import { useLocalStorage } from "./useLocalStorage";
 import { DEFAULT_ORGANIZATION_ID } from "../constants/appConstants";
 import type { SucursalId, UserRole } from "../constants/appConstants";
 import { DEMO_USERS } from "../constants/demoUsers";
-import { PILOT_ORGANIZATION_ID } from "../constants/license";
 import { isBypassAuthEnabled } from "../utils/authBypass";
 import type { StoredUser, User } from "../types/user";
 
@@ -88,16 +87,14 @@ export function useUsers() {
       const user: StoredUser = {
         ...data,
         id: crypto.randomUUID(),
-        organizationId:
-          data.organizationId ??
-          (bypass ? DEFAULT_ORGANIZATION_ID : PILOT_ORGANIZATION_ID),
+        organizationId: data.organizationId ?? DEFAULT_ORGANIZATION_ID,
         createdAt: new Date().toISOString(),
         isActive: true,
       };
       setStoredUsers((prev) => [...prev, user]);
       return toPublicUser(user);
     },
-    [bypass, setStoredUsers],
+    [setStoredUsers],
   );
 
   const updateUser = useCallback(

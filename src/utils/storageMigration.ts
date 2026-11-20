@@ -9,12 +9,13 @@
 import {
   DEFAULT_ORGANIZATION_ID,
   DEFAULT_SUCURSAL_ID,
+  LEGACY_ORGANIZATION_IDS,
   isValidSucursalId,
 } from "../constants/appConstants";
 import type { SucursalId } from "../constants/appConstants";
-import type { BranchScoped } from "../types/organization";
+import type { BranchScoped, OrganizationId } from "../types/organization";
 
-export const STORAGE_SCHEMA_VERSION = 2;
+export const STORAGE_SCHEMA_VERSION = 3;
 export const SCHEMA_VERSION_KEY = "vet_schema_version";
 
 /** Keys cuyos elementos son entidades con alcance de sucursal. */
@@ -36,6 +37,13 @@ const BRANCH_SCOPED_KEYS = new Set([
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
+/** Keys con organización pero sin alcance de sucursal. */
+const ORGANIZATION_ONLY_KEYS = new Set(["vet_license", "vet_provider_clinics"]);
+
+/** Detecta el ID anterior que debe reescribirse al valor canónico. */
+const isLegacyOrganizationId = (value: unknown): boolean =>
+  typeof value === "string" && LEGACY_ORGANIZATION_IDS.includes(value.trim());
+
 /**
  * Completa los campos de alcance. El valor explícito gana; si falta o no es
  * válido se usa el del padre (para registros anidados) o el valor por defecto.
@@ -47,7 +55,9 @@ const withScope = <T extends Record<string, unknown>>(
   const raw = value as Partial<BranchScoped>;
   const organizationId =
     typeof raw.organizationId === "string" && raw.organizationId.trim()
-      ? raw.organizationId
+      ? isLegacyOrganizationId(raw.organizationId)
+        ? DEFAULT_ORGANIZATION_ID
+        : raw.organizationId
       : (fallback?.organizationId ?? DEFAULT_ORGANIZATION_ID);
   const sucursalId = isValidSucursalId(raw.sucursalId)
     ? raw.sucursalId
@@ -142,6 +152,71 @@ export interface NormalizedStorageValue<T> {
 }
 
 /**
+ * Reescribe el ID anterior en licencia y en el registro del proveedor. En las
+ * clínicas se descartan duplicados que aparezcan al unificar los IDs.
+ */
+const normalizeOrganizationOnly = <T>(
+  key: string,
+  stored: T,
+): NormalizedStorageValue<T> => {
+  if (!ORGANIZATION_ONLY_KEYS.has(key)) {
+    return { value: stored, changed: false };
+  }
+
+  if (key === "vet_license") {
+    if (!isRecord(stored) || !isLegacyOrganizationId(stored.organizationId)) {
+      return { value: stored, changed: false };
+    }
+    return {
+      value: { ...stored, organizationId: DEFAULT_ORGANIZATION_ID } as T,
+      changed: true,
+    };
+  }
+
+  if (!Array.isArray(stored)) {
+    return { value: stored, changed: false };
+  }
+
+  const seen = new Set<string>();
+  const normalized: unknown[] = [];
+  let changed = false;
+
+  const add = (item: unknown, legacy: boolean): void => {
+    if (!isRecord(item)) {
+      normalized.push(item);
+      return;
+    }
+
+    const organizationId: OrganizationId = legacy
+      ? DEFAULT_ORGANIZATION_ID
+      : (item.organizationId as OrganizationId);
+    if (legacy) changed = true;
+
+    if (typeof organizationId === "string") {
+      if (seen.has(organizationId)) {
+        changed = true;
+        return;
+      }
+      seen.add(organizationId);
+    }
+
+    normalized.push(legacy ? { ...item, organizationId } : item);
+  };
+
+  // Primero las clínicas ya canónicas: si un ID legacy colisiona, se descarta
+  // la copia antigua en vez de reemplazar la que ya tenía el ID correcto.
+  const esLegacy = (item: unknown): boolean =>
+    isRecord(item) && isLegacyOrganizationId(item.organizationId);
+
+  for (const item of stored) if (!esLegacy(item)) add(item, false);
+  for (const item of stored) if (esLegacy(item)) add(item, true);
+
+  return changed
+    ? { value: normalized as T, changed: true }
+    : { value: stored, changed: false };
+};
+
+/**
  * Aplica la migración correspondiente a una key. Devuelve la misma referencia
  * cuando no hay cambios, para respetar el contrato de `useSyncExternalStore`.
  */
@@ -149,6 +224,9 @@ export function normalizeStoredValue<T>(
   key: string,
   stored: T,
 ): NormalizedStorageValue<T> {
+  const organizationOnly = normalizeOrganizationOnly(key, stored);
+  if (organizationOnly.changed) return organizationOnly;
+
   if (!BRANCH_SCOPED_KEYS.has(key) || !Array.isArray(stored)) {
     return { value: stored, changed: false };
   }
@@ -176,7 +254,7 @@ export function normalizeStoredValue<T>(
 export function migrateAllStoredValues(): void {
   if (typeof window === "undefined") return;
 
-  for (const key of BRANCH_SCOPED_KEYS) {
+  for (const key of [...BRANCH_SCOPED_KEYS, ...ORGANIZATION_ONLY_KEYS]) {
     const raw = window.localStorage.getItem(key);
     if (!raw) continue;
 

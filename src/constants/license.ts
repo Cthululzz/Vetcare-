@@ -1,6 +1,8 @@
 // Contrato de licencia de la etapa piloto. La clave se entrega en mano junto
 // con el instalador, como los códigos que venían al reverso de la caja.
 
+import { DEFAULT_ORGANIZATION_ID } from "./appConstants";
+
 export const LICENSE_KEY = "vet_license";
 /** Registro privado del proveedor: una entrada por veterinaria base. */
 export const PROVIDER_CLINICS_KEY = "vet_provider_clinics";
@@ -10,7 +12,8 @@ export const TRIAL_DAYS = 14;
 export const GRACE_DAYS = 7;
 /** A partir de este día el acceso queda bloqueado hasta regularizar. */
 export const LICENSE_BLOCK_DAYS = TRIAL_DAYS + GRACE_DAYS;
-export const PILOT_ORGANIZATION_ID = "vet-piloto";
+/** Alias del ID canónico: licencia y datos de negocio usan el mismo valor. */
+export const PILOT_ORGANIZATION_ID = DEFAULT_ORGANIZATION_ID;
 export const PILOT_ACTIVATION_CODE = "VET-PILOTO-2026-8F4K";
 
 export type LicenseStatus = "trial" | "active";

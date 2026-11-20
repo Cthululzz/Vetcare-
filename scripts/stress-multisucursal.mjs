@@ -215,12 +215,12 @@ const seedExpression = `(() => {
   const beds = [];
   for (const b of sucursales) {
     for (let j = 1; j <= 20; j++) {
-      beds.push({ name: 'Cama ' + prefijo[b] + '-' + String(j).padStart(2,'0'), organizationId: 'vet-demo', sucursalId: b });
+      beds.push({ name: 'Cama ' + prefijo[b] + '-' + String(j).padStart(2,'0'), organizationId: 'vet-piloto', sucursalId: b });
     }
   }
   // Mismo nombre físico en dos sedes: es válido y no debe disputar la ocupación.
-  beds.push({ name: 'Cama COLISION-01', organizationId: 'vet-demo', sucursalId: 'centro' });
-  beds.push({ name: 'Cama COLISION-01', organizationId: 'vet-demo', sucursalId: 'norte' });
+  beds.push({ name: 'Cama COLISION-01', organizationId: 'vet-piloto', sucursalId: 'centro' });
+  beds.push({ name: 'Cama COLISION-01', organizationId: 'vet-piloto', sucursalId: 'norte' });
 
   const inventory = [];
   for (let b = 0; b < 3; b++) {
@@ -233,7 +233,7 @@ const seedExpression = `(() => {
         category: pick(['Medicamentos','Insumos','Vacunas']),
         tags: [sucursales[b]],
         currentStock: int(0,60), minStock: int(5,20), unit: pick(unidades),
-        organizationId: 'vet-demo', sucursalId: sucursales[b],
+        organizationId: 'vet-piloto', sucursalId: sucursales[b],
         location: 'Bodega ' + sucursales[b] + ' / Estante ' + int(1,8),
         batch: 'LOTE-' + i,
         expirationDate: day(int(-30,400)),

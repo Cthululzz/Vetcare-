@@ -74,7 +74,7 @@ await evaluate(`(() => {
   // en sedes distintas es válido y ya no se cura.
   for (const h of activas) {
     h.bed = 'Cama TEST-DUP';
-    h.organizationId = 'vet-demo';
+    h.organizationId = 'vet-piloto';
     h.sucursalId = 'centro';
   }
   const value = JSON.stringify(hs);
