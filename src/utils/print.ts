@@ -79,9 +79,27 @@ const construirHtml = (options: PrintDocumentOptions): string => {
         color: #6b7280;
         font-size: 10px;
       }
+      .no-print {
+        position: fixed;
+        top: 12px;
+        right: 12px;
+        padding: 8px 14px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        background: #f3f4f6;
+        color: #111827;
+        font: inherit;
+        cursor: pointer;
+      }
+      @media print {
+        .no-print { display: none !important; }
+      }
     </style>
   </head>
   <body>
+    <button type="button" class="no-print" onclick="window.close()">
+      Cerrar ventana
+    </button>
     <main class="document">
       <header class="header">
         <div>
@@ -101,88 +119,47 @@ const construirHtml = (options: PrintDocumentOptions): string => {
 };
 
 /**
- * Abre el documento en un iframe oculto e invoca su window.print().
- * El nodo se retira al cerrar el diálogo de impresión o con un temporizador.
+ * Abre el documento en una ventana propia e invoca su window.print().
+ * Imprimir desde un iframe oculto hacía que Chromium/Edge mostrara solo el
+ * encabezado y el pie en la vista previa; con una ventana dedicada se imprime
+ * el documento completo y el usuario puede cerrarla al terminar.
  */
 export const printDocument = (options: PrintDocumentOptions): void => {
-  if (typeof window === "undefined" || typeof document === "undefined") return;
-  if (!document.body) return;
+  if (typeof window === "undefined") return;
+
+  const ventana = window.open(
+    "",
+    "_blank",
+    "width=1024,height=768,left=80,top=80,resizable=yes,scrollbars=yes",
+  );
+
+  if (!ventana) {
+    window.alert(
+      "No se pudo abrir la ventana de impresión. Permite ventanas emergentes para este sitio e inténtalo nuevamente.",
+    );
+    return;
+  }
 
   const html = construirHtml(options);
-  const iframe = document.createElement("iframe");
-  iframe.title = "Documento para impresión";
-  iframe.setAttribute("aria-hidden", "true");
-  // Fuera de pantalla, pero sin opacity ni display:none: Chromium no imprime
-  // el contenido de un iframe oculto de esas formas.
-  iframe.style.cssText =
-    "position:absolute;left:-9999px;top:0;width:1px;height:1px;border:0;";
+  ventana.document.open();
+  ventana.document.write(html);
+  ventana.document.close();
 
   let impreso = false;
-  let limpio = false;
-  let temporizadorImpresion = 0;
-  let temporizadorLimpieza = 0;
-
-  const limpiar = (): void => {
-    if (limpio) return;
-    limpio = true;
-
-    if (temporizadorImpresion !== 0) {
-      window.clearTimeout(temporizadorImpresion);
-    }
-    if (temporizadorLimpieza !== 0) {
-      window.clearTimeout(temporizadorLimpieza);
-    }
-    window.removeEventListener("afterprint", limpiar);
-    try {
-      iframe.contentWindow?.removeEventListener("afterprint", limpiar);
-    } catch {
-      // El acceso al iframe puede estar restringido; la limpieza continúa.
-    }
-
-    window.setTimeout(() => {
-      try {
-        iframe.remove();
-      } catch {
-        // El nodo ya pudo ser retirado por el navegador.
-      }
-    }, 500);
-  };
-
   const imprimir = (): void => {
-    if (impreso || limpio) return;
+    if (impreso || ventana.closed) return;
     impreso = true;
-    if (temporizadorImpresion !== 0) {
-      window.clearTimeout(temporizadorImpresion);
-    }
-
     try {
-      const ventana = iframe.contentWindow;
-      if (ventana) {
-        ventana.addEventListener("afterprint", limpiar);
-        iframe.focus();
-        ventana.focus();
-        // window.print() del documento temporal, no de la página completa.
-        ventana.window.print();
-      } else {
-        window.print();
-        limpiar();
-      }
+      ventana.focus();
+      ventana.print();
     } catch {
-      // Algunos navegadores bloquean la impresión automática: no propagamos el error.
-      limpiar();
+      // El usuario puede imprimir manualmente desde la ventana abierta.
     }
   };
 
-  iframe.onload = imprimir;
-  window.addEventListener("afterprint", limpiar);
-  document.body.appendChild(iframe);
-
-  temporizadorImpresion = window.setTimeout(imprimir, 800);
-  temporizadorLimpieza = window.setTimeout(limpiar, 60000);
-
-  try {
-    iframe.srcdoc = html;
-  } catch {
-    limpiar();
-  }
+  ventana.addEventListener("load", imprimir, { once: true });
+  ventana.setTimeout(imprimir, 300);
+  ventana.addEventListener("afterprint", () => {
+    if (!ventana.closed) ventana.close();
+  });
 };
