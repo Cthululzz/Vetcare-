@@ -46,6 +46,9 @@ export function useAppointments() {
   const getAppointment = (id: string): Appointment | undefined =>
     appointments.find((app) => app.id === id);
 
+  /** Citas de todas las sucursales, para auditar un vínculo antes de quitarlo. */
+  const getAppointmentsEnTodasSedes = (): Appointment[] => storedAppointments;
+
   const getAppointmentsByPatient = (patientId: string): Appointment[] =>
     appointments.filter((app) => app.patientId === patientId);
 
@@ -144,6 +147,7 @@ export function useAppointments() {
 
     // Consultas
     getAppointment,
+    getAppointmentsEnTodasSedes,
     getAppointmentsByPatient,
     getAppointmentsByDoctor,
     getAppointmentsByDate,

@@ -1,7 +1,11 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Save, UserPlus, Users, X } from "lucide-react";
 import { DateInput } from "../common/DateInput";
+import { useBranchScope } from "../../context/branchScope";
+import { useAuth } from "../../hooks/useAuth";
 import { usePatients } from "../../hooks/usePatients";
+import { LinkClientToBranchModal } from "./LinkClientToBranchModal";
+import { necesitaVinculo } from "../../utils/clientMatching";
 import {
   ESPECIES_MASCOTA,
   ESTADOS_VACUNA,
@@ -18,6 +22,7 @@ interface PatientFormModalProps {
   onClose: () => void;
   onSaved?: (patient: Patient) => void;
   isReadOnly?: boolean;
+  puedeVincular?: boolean;
 }
 
 const SPECIES_LABELS: Record<EspecieMascota, string> = {
@@ -41,11 +46,16 @@ export const PatientFormModal = ({
   onClose,
   onSaved,
   isReadOnly = false,
+  puedeVincular = true,
 }: PatientFormModalProps) => {
+  const { writeScope } = useBranchScope();
+  const { user } = useAuth();
   const {
     owners,
     getOwner,
     getOwnerByPhone,
+    findCoincidenciasClientes,
+    vincularSucursal,
     createOwner,
     updateOwner,
     createPatient,
@@ -79,8 +89,41 @@ export const PatientFormModal = ({
   );
   const [conditions, setConditions] = useState(patient?.conditions ?? "");
   const [error, setError] = useState("");
+  const [avisoDescartado, setAvisoDescartado] = useState(false);
+
+  const sucursalDestino = writeScope().sucursalId;
+  const coincidencias = useMemo(
+    () =>
+      isEditing || ownerMode !== "new"
+        ? []
+        : findCoincidenciasClientes({
+            ownerName,
+            ownerPhone,
+            ownerEmail,
+            petName: name,
+            petBreed: breed,
+            petSpecies: species,
+          }).filter((coincidencia) =>
+            necesitaVinculo(coincidencia.owner, sucursalDestino),
+          ),
+    [
+      isEditing,
+      ownerMode,
+      findCoincidenciasClientes,
+      ownerName,
+      ownerPhone,
+      ownerEmail,
+      name,
+      breed,
+      species,
+      sucursalDestino,
+    ],
+  );
+  const mostrarAvisoVinculo =
+    coincidencias.length > 0 && !avisoDescartado && !isReadOnly;
 
   const handleSelectOwner = (value: string) => {
+    setAvisoDescartado(false);
     setOwnerId(value);
     const owner = owners.find((item) => item.id === value);
     setOwnerName(owner?.name ?? "");
@@ -92,6 +135,7 @@ export const PatientFormModal = ({
     if (mode === ownerMode) return;
     setOwnerMode(mode);
     setError("");
+    setAvisoDescartado(false);
 
     if (mode === "new") {
       // Se limpian los datos del propietario seleccionado para no duplicarlo.
@@ -111,6 +155,32 @@ export const PatientFormModal = ({
     }
   };
 
+  /** Vincula la ficha existente; en el alta directa queda confirmada al instante. */
+  const handleVincular = (ownerId: string, mascotaId?: string) => {
+    const coincidencia = coincidencias.find((c) => c.owner.id === ownerId);
+    if (!coincidencia) return;
+
+    vincularSucursal(coincidencia.owner.id, sucursalDestino, {
+      motivo: "manual",
+      creadoPor: user?.name ?? user?.email,
+      confirmadoEn: new Date().toISOString(),
+    });
+
+    if (mascotaId && coincidencia.mascotaCoincidente) {
+      onSaved?.(coincidencia.mascotaCoincidente);
+      onClose();
+      return;
+    }
+
+    setOwnerMode("existing");
+    setOwnerId(coincidencia.owner.id);
+    setOwnerName(coincidencia.owner.name);
+    setOwnerPhone(coincidencia.owner.phone);
+    setOwnerEmail(coincidencia.owner.email ?? "");
+    setAvisoDescartado(true);
+    setError("");
+  };
+
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
     if (isReadOnly) return;
@@ -126,6 +196,13 @@ export const PatientFormModal = ({
     if (ownerMode === "new") {
       if (!ownerName.trim() || !ownerPhone.trim()) {
         setError("Ingresa nombre y teléfono del propietario.");
+        return;
+      }
+
+      if (coincidencias.some((coincidencia) => coincidencia.confianza === "alta")) {
+        setError(
+          "Ese cliente ya está registrado en otra sucursal. Usa la opción «Agregar sucursal» antes de continuar.",
+        );
         return;
       }
 
@@ -291,7 +368,10 @@ export const PatientFormModal = ({
                 <input
                   type="text"
                   value={ownerName}
-                  onChange={(event) => setOwnerName(event.target.value)}
+                  onChange={(event) => {
+                    setAvisoDescartado(false);
+                    setOwnerName(event.target.value);
+                  }}
                   placeholder="Nombre y apellido"
                   className={fieldClass}
                 />
@@ -301,7 +381,10 @@ export const PatientFormModal = ({
                 <input
                   type="tel"
                   value={ownerPhone}
-                  onChange={(event) => setOwnerPhone(event.target.value)}
+                  onChange={(event) => {
+                    setAvisoDescartado(false);
+                    setOwnerPhone(event.target.value);
+                  }}
                   placeholder="+56 9 1234 5678"
                   className={fieldClass}
                 />
@@ -311,7 +394,10 @@ export const PatientFormModal = ({
                 <input
                   type="email"
                   value={ownerEmail}
-                  onChange={(event) => setOwnerEmail(event.target.value)}
+                  onChange={(event) => {
+                    setAvisoDescartado(false);
+                    setOwnerEmail(event.target.value);
+                  }}
                   placeholder="correo@ejemplo.cl"
                   className={fieldClass}
                 />
@@ -331,7 +417,10 @@ export const PatientFormModal = ({
                 <input
                   type="text"
                   value={name}
-                  onChange={(event) => setName(event.target.value)}
+                  onChange={(event) => {
+                    setAvisoDescartado(false);
+                    setName(event.target.value);
+                  }}
                   placeholder="Nombre de la mascota"
                   className={fieldClass}
                 />
@@ -341,9 +430,10 @@ export const PatientFormModal = ({
                 <span className={labelClass}>Especie</span>
                 <select
                   value={species}
-                  onChange={(event) =>
-                    setSpecies(event.target.value as EspecieMascota)
-                  }
+                  onChange={(event) => {
+                    setAvisoDescartado(false);
+                    setSpecies(event.target.value as EspecieMascota);
+                  }}
                   className={fieldClass}
                 >
                   {ESPECIES_MASCOTA.map((option) => (
@@ -359,7 +449,10 @@ export const PatientFormModal = ({
                 <input
                   type="text"
                   value={breed}
-                  onChange={(event) => setBreed(event.target.value)}
+                  onChange={(event) => {
+                    setAvisoDescartado(false);
+                    setBreed(event.target.value);
+                  }}
                   placeholder="Ej: Mestizo, Labrador"
                   className={fieldClass}
                 />
@@ -475,6 +568,16 @@ export const PatientFormModal = ({
           </div>
         </form>
       </div>
+
+      {mostrarAvisoVinculo && (
+        <LinkClientToBranchModal
+          coincidencias={coincidencias}
+          sucursalDestino={sucursalDestino}
+          puedeVincular={puedeVincular && !isReadOnly}
+          onVincular={handleVincular}
+          onCancel={() => setAvisoDescartado(true)}
+        />
+      )}
     </div>
   );
 };

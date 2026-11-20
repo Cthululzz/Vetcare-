@@ -19,8 +19,25 @@ export interface Organization {
   paidUntil?: string;
 }
 
+/**
+ * Relación entre una ficha y una sucursal distinta de su origen.
+ * Se crea cuando se detecta un cliente ya registrado en otra sede y se confirma
+ * cuando hay una atención real (cita finalizada u hospitalización).
+ */
+export interface VinculoSucursal {
+  sucursalId: SucursalId;
+  motivo: "cita" | "manual";
+  citaId?: string;
+  creadoEn: string;
+  creadoPor?: string;
+  confirmadoEn?: string;
+  activo: boolean;
+}
+
 /** Campos que toda entidad con alcance de sucursal debe persistir. */
 export interface BranchScoped {
   organizationId: OrganizationId;
   sucursalId: SucursalId;
+  /** Sucursales adicionales donde esta ficha puede ser atendida. */
+  sucursalesAcceso?: VinculoSucursal[];
 }

@@ -14,7 +14,7 @@ import { usePatients } from "../hooks/usePatients";
 import { usePrescriptions } from "../hooks/usePrescriptions";
 import type { Prescription } from "../types/prescription";
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 10;
 
 const Prescriptions = () => {
   const { prescriptions, getPrescription, deletePrescription } =

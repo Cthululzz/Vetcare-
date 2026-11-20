@@ -31,9 +31,15 @@ export interface ConsultationData {
   examOrder?: ExamOrder;
 }
 
-/** Documentos listos para imprimir al terminar una consulta. */
+/**
+ * Documentos listos para imprimir al terminar una consulta.
+ * El correo del dueño ya viaja aquí y las opciones de envío están visibles en
+ * el pop-up; el envío real se conectará con la migración a backend.
+ */
 export interface FinishPrintDocuments {
   patientName: string;
+  /** Correo del dueño, si lo facilitó. Se usará para el envío de documentos. */
+  ownerEmail?: string;
   veterinarian?: string;
   /** Solo presente cuando se creó efectivamente una receta. */
   prescription?: Prescription;

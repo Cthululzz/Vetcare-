@@ -30,6 +30,8 @@ node scripts/stress-interactions.mjs
 node scripts/stress-flows2.mjs
 node scripts/stress-final.mjs
 node scripts/stress-multisucursal.mjs
+node scripts/stress-multisucursal-edicion.mjs
+node scripts/stress-clientes-compartidos.mjs
 ```
 
 Cada script imprime un JSON con los datos sembrados, los resultados y los
@@ -47,6 +49,8 @@ Todos manejan `Page.javascriptDialogOpening` automáticamente para que un
 | `stress-flows2.mjs` | Atomicidad de la finalización de consulta. |
 | `stress-final.mjs` | Agenda semana/mes, historial, inventario y tareas. |
 | `stress-multisucursal.mjs` | 3 sucursales, camas con alcance por sede (incluida una colisión deliberada), consulta por sucursal, aislamiento del selector (ADMIN/VET) y herencia de alcance en citas, registros, recetas e internaciones. |
+| `stress-multisucursal-edicion.mjs` | Edición de nombre, teléfono y correo de propietarios desde cada sucursal y desde “Todas”, verificando que no se dupliquen ni desaparezcan dueños o mascotas. Requiere la semilla de `stress-multisucursal.mjs`. |
+| `stress-clientes-compartidos.mjs` | Clientes compartidos: casos A (dueño + mascota iguales), B (dueño igual, mascota distinta) y C (coincidencia dudosa con candidatos); visibilidad por sucursal, confirmación al finalizar, limpieza al eliminar la cita y vínculo manual confirmado desde Pacientes. Siembra sus propios datos con prefijo `CS-`. |
 
 `vetcare-cdp.mjs` es el helper de conexión usado durante el desarrollo.
 

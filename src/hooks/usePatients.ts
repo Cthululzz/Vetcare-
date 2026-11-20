@@ -2,13 +2,22 @@ import { useMemo } from "react";
 import { useLocalStorage } from "./useLocalStorage";
 import { useBranchScope } from "../context/branchScope";
 import type { Patient, Owner, MedicalRecord } from "../types/patient";
-import type { BranchScoped } from "../types/organization";
+import type {
+  BranchScoped,
+  VinculoSucursal,
+} from "../types/organization";
 import type {
   EspecieMascota,
   Genero,
   EstadoVacuna,
+  SucursalId,
 } from "../constants/appConstants";
 import { normalizePhone } from "../utils/phone";
+import {
+  findClientMatches,
+  type ClientMatch,
+  type ClientMatchInput,
+} from "../utils/clientMatching";
 
 // ============================================
 // KEYS DE ALMACENAMIENTO
@@ -25,6 +34,30 @@ function generateId(): string {
 
 function isoNow(): string {
   return new Date().toISOString();
+}
+
+function agregarVinculo(
+  actuales: VinculoSucursal[] | undefined,
+  vinculo: VinculoSucursal,
+): VinculoSucursal[] {
+  const lista = actuales ?? [];
+  const indice = lista.findIndex(
+    (item) =>
+      item.sucursalId === vinculo.sucursalId &&
+      item.motivo === vinculo.motivo &&
+      (item.citaId ?? "") === (vinculo.citaId ?? ""),
+  );
+  if (indice === -1) return [...lista, vinculo];
+  return lista.map((item, i) =>
+    i === indice ? { ...item, activo: true } : item,
+  );
+}
+
+function transformarVinculos(
+  actuales: VinculoSucursal[] | undefined,
+  transformar: (vinculo: VinculoSucursal) => VinculoSucursal,
+): VinculoSucursal[] | undefined {
+  return actuales?.map(transformar);
 }
 
 // ============================================
@@ -56,6 +89,145 @@ export function usePatients() {
     const normalizado = normalizePhone(phone);
     if (!normalizado) return undefined;
     return owners.find((o) => normalizePhone(o.phone) === normalizado);
+  };
+
+  /** Dueño por ID sin aplicar el filtro de sucursal. */
+  const getOwnerEnTodasSedes = (ownerId: string): Owner | undefined =>
+    storedOwners.find((o) => o.id === ownerId);
+
+  /** Coincidencias en todas las sucursales, para ofrecer la vinculación. */
+  const findCoincidenciasClientes = (
+    input: ClientMatchInput,
+  ): ClientMatch[] => findClientMatches(storedOwners, storedPatients, input);
+
+  /**
+   * Agrega una sucursal a la ficha del dueño y a todas sus mascotas. El mismo
+   * vínculo se replica para que el filtro por sucursal vea al paciente y a su
+   * tutor como una sola unidad.
+   */
+  const vincularSucursal = (
+    ownerId: string,
+    sucursalId: SucursalId,
+    opciones: {
+      motivo: VinculoSucursal["motivo"];
+      citaId?: string;
+      creadoPor?: string;
+      confirmadoEn?: string;
+    },
+  ) => {
+    const vinculo: VinculoSucursal = {
+      sucursalId,
+      motivo: opciones.motivo,
+      citaId: opciones.citaId,
+      creadoEn: isoNow(),
+      creadoPor: opciones.creadoPor,
+      confirmadoEn: opciones.confirmadoEn,
+      activo: true,
+    };
+
+    setOwners((prev) =>
+      prev.map((o) =>
+        o.id === ownerId
+          ? { ...o, sucursalesAcceso: agregarVinculo(o.sucursalesAcceso, vinculo) }
+          : o,
+      ),
+    );
+    setPatients((prev) =>
+      prev.map((p) =>
+        p.ownerId === ownerId
+          ? {
+              ...p,
+              sucursalesAcceso: agregarVinculo(p.sucursalesAcceso, vinculo),
+              updatedAt: isoNow(),
+            }
+          : p,
+      ),
+    );
+  };
+
+  /** Marca el vínculo de una cita como confirmado tras una atención real. */
+  const confirmarVinculosCita = (citaId: string) => {
+    const fecha = isoNow();
+    const transformar = (vinculo: VinculoSucursal): VinculoSucursal =>
+      vinculo.citaId === citaId
+        ? { ...vinculo, confirmadoEn: vinculo.confirmadoEn ?? fecha }
+        : vinculo;
+
+    setOwners((prev) =>
+      prev.map((o) => ({
+        ...o,
+        sucursalesAcceso: transformarVinculos(o.sucursalesAcceso, transformar),
+      })),
+    );
+    setPatients((prev) =>
+      prev.map((p) => ({
+        ...p,
+        sucursalesAcceso: transformarVinculos(p.sucursalesAcceso, transformar),
+      })),
+    );
+  };
+
+  /** Deshace el vínculo de una cita que se eliminó sin llegar a atender. */
+  const desactivarVinculoCita = (
+    ownerId: string,
+    citaId: string,
+    sucursalId: SucursalId,
+  ) => {
+    const transformar = (vinculo: VinculoSucursal): VinculoSucursal =>
+      vinculo.citaId === citaId && vinculo.sucursalId === sucursalId
+        ? { ...vinculo, activo: false }
+        : vinculo;
+
+    setOwners((prev) =>
+      prev.map((o) =>
+        o.id === ownerId
+          ? {
+              ...o,
+              sucursalesAcceso: transformarVinculos(
+                o.sucursalesAcceso,
+                transformar,
+              ),
+            }
+          : o,
+      ),
+    );
+    setPatients((prev) =>
+      prev.map((p) =>
+        p.ownerId === ownerId
+          ? {
+              ...p,
+              sucursalesAcceso: transformarVinculos(
+                p.sucursalesAcceso,
+                transformar,
+              ),
+            }
+          : p,
+      ),
+    );
+  };
+
+  /**
+   * Dueño asociado a una cita. El NOMBRE es la clave: si no coincide con ningún
+   * cliente registrado no se devuelve nadie, aunque el teléfono pertenezca a
+   * otro dueño. El teléfono sólo desempata cuando hay dos clientes con el mismo
+   * nombre. Así, al escribir un nombre nuevo el formulario vuelve a cero.
+   */
+  const getOwnerForAppointment = (
+    phone: string,
+    name: string,
+  ): Owner | undefined => {
+    const nombre = name.trim().toLowerCase();
+    if (!nombre) return undefined;
+
+    const porNombre = owners.filter(
+      (o) => o.name.trim().toLowerCase() === nombre,
+    );
+    if (porNombre.length === 0) return undefined;
+    if (porNombre.length === 1) return porNombre[0];
+
+    const normalizado = normalizePhone(phone);
+    if (!normalizado) return undefined;
+    return porNombre.find((o) => normalizePhone(o.phone) === normalizado);
   };
 
   const createOwner = (
@@ -99,6 +271,10 @@ export function usePatients() {
   const getPatientsByOwner = (ownerId: string): Patient[] =>
     patients.filter((p) => p.ownerId === ownerId);
 
+  /** Mascotas de un dueño sin aplicar el filtro de sucursal. */
+  const getPatientsByOwnerEnTodasSedes = (ownerId: string): Patient[] =>
+    storedPatients.filter((p) => p.ownerId === ownerId);
+
   const createPatient = (
     data: Omit<
       Patient,
@@ -111,9 +287,15 @@ export function usePatients() {
       | "sucursalId"
     >,
   ): Patient => {
-    const owner = owners.find((o) => o.id === data.ownerId);
-    const scope = owner
-      ? { organizationId: owner.organizationId, sucursalId: owner.sucursalId }
+    const owner = storedOwners.find((o) => o.id === data.ownerId);
+    const scope: BranchScoped = owner
+      ? {
+          organizationId: owner.organizationId,
+          sucursalId: owner.sucursalId,
+          ...(owner.sucursalesAcceso
+            ? { sucursalesAcceso: owner.sucursalesAcceso }
+            : {}),
+        }
       : writeScope();
     const newPatient: Patient = {
       ...data,
@@ -294,6 +476,12 @@ export function usePatients() {
     // Owners
     getOwner,
     getOwnerByPhone,
+    getOwnerEnTodasSedes,
+    getOwnerForAppointment,
+    findCoincidenciasClientes,
+    vincularSucursal,
+    confirmarVinculosCita,
+    desactivarVinculoCita,
     createOwner,
     updateOwner,
     deleteOwner,
@@ -302,6 +490,7 @@ export function usePatients() {
     getPatient,
     getPatientEnTodasSedes,
     getPatientsByOwner,
+    getPatientsByOwnerEnTodasSedes,
     getActivePatients,
     getHospitalizedPatients,
     createPatient,

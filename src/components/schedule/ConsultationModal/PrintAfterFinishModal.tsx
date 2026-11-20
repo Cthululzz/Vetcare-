@@ -1,5 +1,12 @@
 import { useState } from "react";
-import { CheckCircle2, FileText, FlaskConical, Printer } from "lucide-react";
+import {
+  CheckCircle2,
+  FileText,
+  FlaskConical,
+  Mail,
+  Printer,
+  Send,
+} from "lucide-react";
 import { printConsultationDocuments } from "../../print/printConsultationDocuments";
 import type { FinishPrintDocuments } from "../../../types/consultation";
 
@@ -9,9 +16,10 @@ interface PrintAfterFinishModalProps {
 }
 
 /**
- * Pop-up que se muestra justo después de finalizar la consulta. Solo ofrece
- * los documentos que realmente se generaron: la receta creada y/u orden de
- * exámenes con categorías.
+ * Pop-up que se muestra justo después de finalizar la consulta. Ofrece los
+ * documentos que realmente se generaron: la receta creada y/u orden de
+ * exámenes con categorías. El envío por correo queda visible pero se habilita
+ * recién con la migración a backend.
  */
 export const PrintAfterFinishModal = ({
   documents,
@@ -19,22 +27,44 @@ export const PrintAfterFinishModal = ({
 }: PrintAfterFinishModalProps) => {
   const tieneReceta = Boolean(documents.prescription);
   const tieneOrden = Boolean(documents.examOrder?.categories.length);
-  const [imprimirReceta, setImprimirReceta] = useState(tieneReceta);
-  const [imprimirOrden, setImprimirOrden] = useState(tieneOrden);
+  const [incluirReceta, setIncluirReceta] = useState(tieneReceta);
+  const [incluirOrden, setIncluirOrden] = useState(tieneOrden);
+  const [avisoMail, setAvisoMail] = useState(false);
 
   if (!tieneReceta && !tieneOrden) return null;
 
   const haySeleccion =
-    (imprimirReceta && tieneReceta) || (imprimirOrden && tieneOrden);
+    (incluirReceta && tieneReceta) || (incluirOrden && tieneOrden);
+
+  const documentosSeleccionados = (): FinishPrintDocuments => ({
+    ...documents,
+    prescription: incluirReceta ? documents.prescription : undefined,
+    examOrder: incluirOrden ? documents.examOrder : undefined,
+  });
+
+  const imprimir = () => {
+    printConsultationDocuments(documentosSeleccionados());
+  };
 
   const handleImprimir = () => {
-    printConsultationDocuments({
-      ...documents,
-      prescription: imprimirReceta ? documents.prescription : undefined,
-      examOrder: imprimirOrden ? documents.examOrder : undefined,
-    });
+    imprimir();
     onClose();
   };
+
+  const handleEnviarMail = () => {
+    setAvisoMail(true);
+  };
+
+  const handleImprimirYEnviar = () => {
+    imprimir();
+    onClose();
+    window.alert(
+      "Los documentos seleccionados se enviarán al correo cuando se active la integración con el backend.",
+    );
+  };
+
+  const botonBase =
+    "inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-40";
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
@@ -51,8 +81,7 @@ export const PrintAfterFinishModal = ({
                 Consulta finalizada
               </h3>
               <p className="mt-1 text-xs text-slate-400">
-                ¿Deseas imprimir los documentos para entregarlos al cliente
-                ahora mismo?
+                Elige qué documentos deseas entregar o enviar al cliente.
               </p>
             </div>
           </div>
@@ -62,8 +91,8 @@ export const PrintAfterFinishModal = ({
               <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-700 bg-slate-950/40 p-3 transition-colors hover:border-[#ece883]/40">
                 <input
                   type="checkbox"
-                  checked={imprimirReceta}
-                  onChange={(event) => setImprimirReceta(event.target.checked)}
+                  checked={incluirReceta}
+                  onChange={(event) => setIncluirReceta(event.target.checked)}
                   className="mt-0.5 h-4 w-4 shrink-0 accent-[#ece883]"
                 />
                 <FileText className="mt-0.5 h-4 w-4 shrink-0 text-[#ece883]" />
@@ -82,8 +111,8 @@ export const PrintAfterFinishModal = ({
               <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-700 bg-slate-950/40 p-3 transition-colors hover:border-violet-400/50">
                 <input
                   type="checkbox"
-                  checked={imprimirOrden}
-                  onChange={(event) => setImprimirOrden(event.target.checked)}
+                  checked={incluirOrden}
+                  onChange={(event) => setIncluirOrden(event.target.checked)}
                   className="mt-0.5 h-4 w-4 shrink-0 accent-violet-400"
                 />
                 <FlaskConical className="mt-0.5 h-4 w-4 shrink-0 text-violet-300" />
@@ -101,15 +130,27 @@ export const PrintAfterFinishModal = ({
 
           <p className="mt-3 text-[11px] text-slate-500">
             {haySeleccion
-              ? "Se abrirá un solo diálogo de impresión con los documentos seleccionados."
-              : "Selecciona al menos un documento para imprimir."}
+              ? "Imprimir abrirá un solo diálogo con los documentos seleccionados."
+              : "Selecciona al menos un documento."}
+          </p>
+          <p className="mt-1 text-[11px] text-slate-500">
+            {documents.ownerEmail
+              ? `Correo del dueño: ${documents.ownerEmail}.`
+              : "El dueño no tiene un correo registrado."}
           </p>
 
-          <div className="mt-5 flex items-center gap-3">
+          {avisoMail && (
+            <p className="mt-2 rounded-lg border border-amber-400/25 bg-amber-400/10 px-3 py-2 text-[11px] text-amber-200">
+              El envío por correo se habilitará con la migración a backend. Por
+              ahora puedes imprimir los documentos seleccionados.
+            </p>
+          )}
+
+          <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors cursor-pointer"
+              className={`${botonBase} bg-slate-800 hover:bg-slate-700 text-slate-300`}
             >
               Omitir
             </button>
@@ -117,9 +158,25 @@ export const PrintAfterFinishModal = ({
               type="button"
               onClick={handleImprimir}
               disabled={!haySeleccion}
-              className="inline-flex flex-1 items-center justify-center gap-2 px-4 py-2 rounded-xl bg-[#ece883] hover:bg-[#e4df68] text-slate-950 text-xs font-bold transition-colors shadow-lg shadow-[#ece883]/20 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+              className={`${botonBase} bg-[#ece883] hover:bg-[#e4df68] text-slate-950 shadow-lg shadow-[#ece883]/20`}
             >
               <Printer className="h-4 w-4" /> Imprimir seleccionados
+            </button>
+            <button
+              type="button"
+              onClick={handleEnviarMail}
+              disabled={!haySeleccion}
+              className={`${botonBase} border border-sky-400/40 bg-sky-500/10 hover:bg-sky-500/20 text-sky-200`}
+            >
+              <Send className="h-4 w-4" /> Enviar al mail
+            </button>
+            <button
+              type="button"
+              onClick={handleImprimirYEnviar}
+              disabled={!haySeleccion}
+              className={`${botonBase} border border-violet-400/40 bg-violet-500/10 hover:bg-violet-500/20 text-violet-200`}
+            >
+              <Mail className="h-4 w-4" /> Imprimir y enviar al mail
             </button>
           </div>
         </div>

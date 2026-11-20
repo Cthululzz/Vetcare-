@@ -44,6 +44,8 @@ const Schedule = () => {
   const [citaAEliminar, setCitaAEliminar] = useState<Appointment | null>(null);
   const [documentosAImprimir, setDocumentosAImprimir] =
     useState<FinishPrintDocuments | null>(null);
+  const [irAHospitalizadosTrasImprimir, setIrAHospitalizadosTrasImprimir] =
+    useState(false);
   const parametrosProcesados = useRef(false);
   const { user } = useAuth();
   const { can } = usePermissions();
@@ -56,7 +58,7 @@ const Schedule = () => {
 
   const {
     appointments,
-    deleteAppointment,
+    handleDeleteAppointment,
     isModalOpen,
     editingState,
     isConsultationModalOpen,
@@ -111,7 +113,7 @@ const Schedule = () => {
   const handleConfirmarEliminacion = () => {
     if (isReadOnly) return;
     if (!citaAEliminar) return;
-    deleteAppointment(citaAEliminar.id);
+    handleDeleteAppointment(citaAEliminar);
     setCitaAEliminar(null);
   };
 
@@ -421,8 +423,20 @@ const Schedule = () => {
           patient={modalPatient}
           owner={modalOwner}
           onSaveConsultation={handleSaveConsultation}
-          onHospitalize={handleHospitalize}
-          onConsultationFinished={setDocumentosAImprimir}
+          onHospitalize={(data) =>
+            handleHospitalize(data, (documents) => {
+              if (!documents) {
+                navigate("/pacientes/hospitalizados");
+                return;
+              }
+              setIrAHospitalizadosTrasImprimir(true);
+              setDocumentosAImprimir(documents);
+            })
+          }
+          onConsultationFinished={(documents) => {
+            setIrAHospitalizadosTrasImprimir(false);
+            setDocumentosAImprimir(documents);
+          }}
         />
       )}
 
@@ -443,7 +457,13 @@ const Schedule = () => {
       {documentosAImprimir && (
         <PrintAfterFinishModal
           documents={documentosAImprimir}
-          onClose={() => setDocumentosAImprimir(null)}
+          onClose={() => {
+            setDocumentosAImprimir(null);
+            if (irAHospitalizadosTrasImprimir) {
+              setIrAHospitalizadosTrasImprimir(false);
+              navigate("/pacientes/hospitalizados");
+            }
+          }}
         />
       )}
     </PageShell>

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useBranchScope } from "../../context/branchScope";
+import { useAuth } from "../../hooks/useAuth";
 import { useAppointments } from "../../hooks/useAppointments";
 import { usePatients } from "../../hooks/usePatients";
 import { useHospitalizations } from "../../hooks/useHospitalizations";
@@ -8,11 +9,16 @@ import type { Appointment } from "../../types/appointment";
 import type { AppointmentFormData } from "../../components/schedule/AppointmentForm/AppointmentForm";
 import { getDoctorName } from "../../constants/appConstants";
 import { getLocalTodayStr } from "../../utils/dateUtils";
+import { normalizePhone } from "../../utils/phone";
+import { necesitaVinculo } from "../../utils/clientMatching";
 import type { EditingState, ConsultationData, DayDetail } from "./types";
+import type { FinishPrintDocuments } from "../../types/consultation";
 
 export function useScheduleActions() {
   const navigate = useNavigate();
   const { writeScope } = useBranchScope();
+  const { user } = useAuth();
+  const creadoPor = user?.name ?? user?.email;
 
   const {
     appointments,
@@ -21,17 +27,23 @@ export function useScheduleActions() {
     deleteAppointment,
     updateStatus,
     hasScheduleConflict,
+    getAppointmentsEnTodasSedes,
   } = useAppointments();
 
   const {
     getPatient,
+    getPatientEnTodasSedes,
     getOwner,
-    getOwnerByPhone,
-    getPatientsByOwner,
+    getOwnerEnTodasSedes,
+    getOwnerForAppointment,
+    getPatientsByOwnerEnTodasSedes,
+    findCoincidenciasClientes,
+    vincularSucursal,
+    confirmarVinculosCita,
+    desactivarVinculoCita,
     createOwner,
     updateOwner,
     createPatient,
-    updatePatient,
     addMedicalRecord,
   } = usePatients();
 
@@ -62,6 +74,8 @@ export function useScheduleActions() {
       ownerPhone: owner?.phone || "",
       ownerEmail: owner?.email,
       patientName: patient?.name || "",
+      patientId: patient?.id,
+      createNewPatient: false,
       species: patient?.species || "perro",
       breed: patient?.breed,
       gender: patient?.gender || "macho",
@@ -124,59 +138,105 @@ export function useScheduleActions() {
       // entidades nuevas de este flujo (dueño, paciente y cita).
       const scope = writeScope(data.sucursalId);
 
-      // 1. Buscar o crear dueño
-      let owner = getOwnerByPhone(data.ownerPhone);
+      // Si el usuario descartó el aviso, no se permite crear un duplicado.
+      const coincideOtraSede = findCoincidenciasClientes({
+        ownerName: data.ownerName,
+        ownerPhone: data.ownerPhone,
+        ownerEmail: data.ownerEmail,
+        petName: data.patientName,
+        petBreed: data.breed,
+        petSpecies: data.species,
+      }).find(
+        (coincidencia) =>
+          coincidencia.confianza === "alta" &&
+          necesitaVinculo(coincidencia.owner, scope.sucursalId),
+      );
+      if (!data.ownerIdVinculado && coincideOtraSede) {
+        return "Ese cliente ya está registrado en otra sucursal. Usa la opción «Agregar sucursal» antes de agendar.";
+      }
+
+      // 1. Buscar o crear dueño. El nombre manda; el teléfono sólo desempata
+      // si hay dos clientes registrados con el mismo nombre. Si el formulario
+      // ya eligió una ficha de otra sede, se usa esa y no se crea otra.
+      let owner = data.ownerIdVinculado
+        ? getOwnerEnTodasSedes(data.ownerIdVinculado)
+        : undefined;
+      if (!owner) {
+        owner = getOwnerForAppointment(data.ownerPhone, data.ownerName);
+      }
       if (!owner) {
         owner = createOwner(
           {
-            name: data.ownerName,
-            phone: data.ownerPhone,
-            email: data.ownerEmail,
+            name: data.ownerName.trim(),
+            phone: data.ownerPhone.trim(),
+            email: data.ownerEmail?.trim() || undefined,
           },
           scope,
         );
-      } else if (
-        owner.name !== data.ownerName ||
-        owner.email !== data.ownerEmail
-      ) {
-        updateOwner(owner.id, {
-          name: data.ownerName,
-          email: data.ownerEmail,
-        });
-        owner = getOwnerByPhone(data.ownerPhone)!;
+      } else {
+        const cambios: Partial<{
+          name: string;
+          phone: string;
+          email?: string;
+        }> = {};
+        if (owner.name !== data.ownerName.trim())
+          cambios.name = data.ownerName.trim();
+        if (normalizePhone(owner.phone) !== normalizePhone(data.ownerPhone))
+          cambios.phone = data.ownerPhone.trim();
+        if ((owner.email ?? "") !== (data.ownerEmail?.trim() ?? ""))
+          cambios.email = data.ownerEmail?.trim() || undefined;
+
+        if (Object.keys(cambios).length > 0) {
+          updateOwner(owner.id, cambios);
+          owner = getOwnerEnTodasSedes(owner.id)!;
+        }
       }
 
-      // 2. Buscar o crear paciente
-      const ownerPatients = getPatientsByOwner(owner.id);
-      let patient = ownerPatients.find(
-        (p) =>
-          p.name.toLowerCase() === data.patientName.toLowerCase() && p.isActive,
-      );
+      // 2. Resolver la mascota. La elección explícita del formulario manda;
+      // nunca se sobrescriben especie/raza de una mascota ya registrada.
+      const ownerPatients = getPatientsByOwnerEnTodasSedes(owner.id);
+      const seleccionada = data.patientId
+        ? ownerPatients.find((p) => p.id === data.patientId)
+        : undefined;
 
-      if (!patient) {
+      let patient: ReturnType<typeof getPatient>;
+      if (seleccionada) {
+        patient = seleccionada;
+      } else if (data.createNewPatient) {
         patient = createPatient({
-          name: data.patientName,
+          name: data.patientName.trim(),
           species: data.species,
           gender: data.gender,
           ownerId: owner.id,
           breed: data.breed,
           vaccineStatus: "pendiente",
         });
-      } else if (
-        patient.species !== data.species ||
-        patient.gender !== data.gender ||
-        patient.breed !== data.breed
-      ) {
-        updatePatient(patient.id, {
-          species: data.species,
-          gender: data.gender,
-          breed: data.breed,
-        });
+      } else {
+        const mismaNombre = ownerPatients.find(
+          (p) =>
+            p.name.trim().toLowerCase() ===
+              data.patientName.trim().toLowerCase() && p.isActive,
+        );
+        patient = mismaNombre
+          ? mismaNombre
+          : createPatient({
+              name: data.patientName.trim(),
+              species: data.species,
+              gender: data.gender,
+              ownerId: owner.id,
+              breed: data.breed,
+              vaccineStatus: "pendiente",
+            });
+      }
+
+      if (!patient) {
+        return "No se pudo resolver la mascota. Inténtalo nuevamente.";
       }
 
       // 3. Crear o actualizar la cita
-      if (editingState?.appointmentId) {
-        updateAppointment(editingState.appointmentId, {
+      let citaId = editingState?.appointmentId;
+      if (citaId) {
+        updateAppointment(citaId, {
           patientId: patient.id,
           ownerId: owner.id,
           doctorId: data.doctorId,
@@ -189,7 +249,7 @@ export function useScheduleActions() {
           alergiasNotas: data.alergiasNotas,
         });
       } else {
-        createAppointment({
+        const nuevaCita = createAppointment({
           patientId: patient.id,
           ownerId: owner.id,
           doctorId: data.doctorId,
@@ -204,6 +264,18 @@ export function useScheduleActions() {
           condicionesPrevias: undefined,
           recomendaciones: undefined,
           notas: undefined,
+        });
+        citaId = nuevaCita.id;
+      }
+
+      // 4. El vínculo nace con la solicitud de cita y lleva su ID. Si la cita
+      // se elimina sin atención, este mismo dato permite deshacerlo.
+      const ownerActual = getOwnerEnTodasSedes(owner.id);
+      if (citaId && ownerActual && necesitaVinculo(ownerActual, scope.sucursalId)) {
+        vincularSucursal(owner.id, scope.sucursalId, {
+          motivo: "cita",
+          citaId,
+          creadoPor,
         });
       }
 
@@ -272,6 +344,7 @@ export function useScheduleActions() {
       appointment,
       );
       updateStatus(appointment.id, "finalizada");
+      confirmarVinculosCita(appointment.id);
     } else {
       updateStatus(appointment.id, "en_consulta");
     }
@@ -282,13 +355,17 @@ export function useScheduleActions() {
 
   /**
    * Finaliza la consulta y envía al paciente a hospitalización en un solo paso.
-   * Escribe el registro médico, marca la cita como finalizada, registra el
-   * ingreso y lleva al usuario al área de hospitalización para que vea al
-   * paciente ya internado.
+   * Escribe el registro médico, marca la cita como finalizada y registra el
+   * ingreso. Si se indicó una orden de exámenes, la entrega al pop-up de
+   * documentos (imprimir / enviar / omitir) antes de navegar a hospitalización.
    */
-  const handleHospitalize = (data: ConsultationData) => {
+  const handleHospitalize = (
+    data: ConsultationData,
+    onDocumentsReady?: (documents: FinishPrintDocuments | null) => void,
+  ) => {
     const {
       patient,
+      owner,
       appointment,
       notes,
       diagnosis,
@@ -353,14 +430,60 @@ export function useScheduleActions() {
     appointment,
     );
     updateStatus(appointment.id, "finalizada");
+    confirmarVinculosCita(appointment.id);
 
     setIsConsultationModalOpen(false);
     setSelectedAppointmentForConsultation(null);
 
-    // 4. Llevar al usuario al área de hospitalización para ver el ingreso.
+    // 4. La orden con al menos un examen se ofrece en el mismo pop-up que la
+    // receta al finalizar la consulta. Quien recibe el documento decide cuándo
+    // navegar, para que el usuario no pierda las opciones de impresión/envío.
+    const documents: FinishPrintDocuments | null = examOrder?.categories.length
+      ? {
+          patientName: patient.name,
+          ownerEmail: owner.email,
+          veterinarian: getDoctorName(appointment.doctorId),
+          examOrder,
+        }
+      : null;
+
+    if (onDocumentsReady) {
+      onDocumentsReady(documents);
+      return;
+    }
+
+    // 5. Llevar al usuario al área de hospitalización para ver el ingreso.
     // El alta se persiste de forma síncrona en localStorage, así que el
     // paciente ya aparece en el listado al llegar a la pantalla.
     navigate("/pacientes/hospitalizados");
+  };
+
+  /**
+   * Elimina la cita y deshace el vínculo de sucursal si no hubo una atención
+   * real (otra cita o un registro clínico) que lo justifique.
+   */
+  const handleDeleteAppointment = (appointment: Appointment) => {
+    const patient = getPatientEnTodasSedes(appointment.patientId);
+    const owner = patient ? getOwnerEnTodasSedes(patient.ownerId) : undefined;
+
+    deleteAppointment(appointment.id);
+    if (!owner) return;
+
+    const sucursal = appointment.sucursalId;
+    const quedanCitas = getAppointmentsEnTodasSedes().some(
+      (cita) =>
+        cita.id !== appointment.id &&
+        cita.sucursalId === sucursal &&
+        cita.status !== "cancelada" &&
+        getPatientEnTodasSedes(cita.patientId)?.ownerId === owner.id,
+    );
+    const hayAtencion = getPatientsByOwnerEnTodasSedes(owner.id).some((p) =>
+      p.history.some((registro) => registro.sucursalId === sucursal),
+    );
+
+    if (!quedanCitas && !hayAtencion) {
+      desactivarVinculoCita(owner.id, appointment.id, sucursal);
+    }
   };
 
   const handleCloseConsultation = () => {
@@ -392,5 +515,6 @@ export function useScheduleActions() {
     handleSaveConsultation,
     handleHospitalize, // ← NUEVO: expuesto
     handleCloseConsultation,
+    handleDeleteAppointment,
   };
 }

@@ -97,7 +97,13 @@ export function useActiveBranchState(user: {
     (item: BranchScoped): boolean =>
       activeBranch === "all" ||
       (item.organizationId === organizationId &&
-        item.sucursalId === activeBranch),
+        (item.sucursalId === activeBranch ||
+          Boolean(
+            item.sucursalesAcceso?.some(
+              (vinculo) =>
+                vinculo.activo && vinculo.sucursalId === activeBranch,
+            ),
+          ))),
     [activeBranch, organizationId],
   );
 

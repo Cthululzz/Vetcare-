@@ -54,6 +54,7 @@ export function usePrescriptionFlow({
 
     onFinishComplete?.({
       patientName: data.patient.name,
+      ownerEmail: data.owner.email,
       veterinarian: getDoctorName(data.appointment.doctorId),
       prescription,
       examOrder,

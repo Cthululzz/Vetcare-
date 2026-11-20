@@ -1,5 +1,9 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useBranchScope } from "../../../context/branchScope";
+import { usePatients } from "../../../hooks/usePatients";
+import { usePermissions } from "../../../hooks/usePermissions";
+import { LinkClientToBranchModal } from "../../patients/LinkClientToBranchModal";
+import { necesitaVinculo } from "../../../utils/clientMatching";
 import type { ChangeEvent, FormEvent } from "react";
 import {
   Calendar,
@@ -11,6 +15,7 @@ import {
   Mail,
 } from "lucide-react";
 import { formatDateShort, normalizarHora } from "../../../utils/dateUtils";
+import type { Patient } from "../../../types/patient";
 import { DateInput } from "../../common/DateInput";
 import {
   ESPECIES_MASCOTA,
@@ -24,6 +29,10 @@ import {
   type SucursalId,
 } from "../../../constants/appConstants";
 import { FormField } from "../FormField";
+import {
+  buildPetOptionLabel,
+  NEW_PATIENT_OPTION,
+} from "../../../utils/patientSelection";
 import { PetInfoSection } from "./PetInfoSection";
 
 // ============================================
@@ -39,9 +48,15 @@ export interface AppointmentFormData {
   ownerName: string;
   ownerPhone: string;
   ownerEmail?: string;
+  /** Dueño detectado en otra sucursal y aceptado para vincular al guardar. */
+  ownerIdVinculado?: string;
 
   // Datos de paciente
   patientName: string;
+  /** Mascota existente elegida en el desplegable del dueño. */
+  patientId?: string;
+  /** El usuario eligió "Agregar nuevo paciente" aunque el nombre se repita. */
+  createNewPatient?: boolean;
   species: EspecieMascota;
   breed?: string;
   gender: Genero;
@@ -93,6 +108,8 @@ export const AppointmentForm = ({
   initialData,
 }: AppointmentFormProps) => {
   const { activeBranch, writeScope } = useBranchScope();
+  const { getOwner, getOwnerForAppointment, getPatientsByOwner, findCoincidenciasClientes } = usePatients();
+  const { canManagePatients } = usePermissions();
   const [formData, setFormData] = useState<AppointmentFormData>(() => ({
     ...INITIAL_FORM_STATE,
     ...initialData,
@@ -100,6 +117,7 @@ export const AppointmentForm = ({
   }));
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [avisoDescartado, setAvisoDescartado] = useState(false);
 
   const isPreselectedDate = Boolean(
     initialData?.fecha && !initialData?.patientName,
@@ -110,11 +128,175 @@ export const AppointmentForm = ({
       ? SUCURSALES
       : SUCURSALES.filter((sucursal) => sucursal.id === activeBranch);
 
+  const duenoResuelto = getOwnerForAppointment(
+    formData.ownerPhone,
+    formData.ownerName,
+  );
+  const mascotasDelDueno = duenoResuelto
+    ? getPatientsByOwner(duenoResuelto.id).filter((p) => p.isActive)
+    : [];
+
+  const opcionesPacientes = mascotasDelDueno.map((paciente) => ({
+    id: paciente.id,
+    label: buildPetOptionLabel(paciente, mascotasDelDueno, duenoResuelto),
+  }));
+
+  const coincidencias = useMemo(
+    () =>
+      findCoincidenciasClientes({
+        ownerName: formData.ownerName,
+        ownerPhone: formData.ownerPhone,
+        ownerEmail: formData.ownerEmail,
+        petName: formData.patientName,
+        petBreed: formData.breed,
+        petSpecies: formData.species,
+      }).filter((coincidencia) =>
+        necesitaVinculo(coincidencia.owner, formData.sucursalId),
+      ),
+    [
+      findCoincidenciasClientes,
+      formData.ownerName,
+      formData.ownerPhone,
+      formData.ownerEmail,
+      formData.patientName,
+      formData.breed,
+      formData.species,
+      formData.sucursalId,
+    ],
+  );
+  const mostrarAvisoVinculo =
+    coincidencias.length > 0 &&
+    !avisoDescartado &&
+    !formData.ownerIdVinculado &&
+    !isSubmitted;
+
+  const candidataAutomatica = mascotasDelDueno.find(
+    (p) =>
+      p.name.trim().toLowerCase() === formData.patientName.trim().toLowerCase(),
+  );
+  const seleccionPaciente = formData.createNewPatient
+    ? NEW_PATIENT_OPTION
+    : (formData.patientId ?? candidataAutomatica?.id ?? NEW_PATIENT_OPTION);
+
+  /** Carga en el formulario la mascota elegida y los datos de su dueño. */
+  const aplicarMascota = (
+    mascota: Patient,
+    estado: AppointmentFormData,
+  ): AppointmentFormData => {
+    const dueno = getOwner(mascota.ownerId);
+    return {
+      ...estado,
+      patientId: mascota.id,
+      createNewPatient: false,
+      patientName: mascota.name,
+      species: mascota.species,
+      breed: mascota.breed ?? "",
+      gender: mascota.gender,
+      ownerName: dueno?.name ?? estado.ownerName,
+      ownerPhone: dueno?.phone ?? estado.ownerPhone,
+      ownerEmail: dueno?.email ?? "",
+    };
+  };
+
   const handleChange = (
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setAvisoDescartado(false);
+    setFormData((prev) => {
+      let siguiente: AppointmentFormData = { ...prev, [name]: value };
+
+      const duenoAnterior = getOwnerForAppointment(
+        prev.ownerPhone,
+        prev.ownerName,
+      );
+      const duenoNuevo = getOwnerForAppointment(
+        siguiente.ownerPhone,
+        siguiente.ownerName,
+      );
+
+      if (name === "ownerName" || name === "ownerPhone") {
+        // Si el dueño cambió (o dejó de existir), el formulario vuelve a cero:
+        // no se arrastra ninguna mascota del cliente anterior.
+        if (duenoNuevo?.id !== duenoAnterior?.id) {
+          siguiente.patientId = undefined;
+          siguiente.createNewPatient = undefined;
+          siguiente.patientName = "";
+          siguiente.species = ESPECIES_MASCOTA[0];
+          siguiente.breed = "";
+          siguiente.gender = "macho";
+        }
+        siguiente.ownerEmail = duenoNuevo?.email ?? "";
+        if (duenoNuevo && !siguiente.ownerPhone.trim()) {
+          siguiente.ownerPhone = duenoNuevo.phone;
+        }
+      }
+
+      // Al escribir el nombre de la mascota se autocompleta si coincide con una
+      // de las mascotas DEL DUEÑO ACTUAL. Si no hay dueño reconocido, no hay
+      // nada que autocompletar y el campo queda libre para registrar una nueva.
+      if (name === "patientName") {
+        const nombre = value.trim().toLowerCase();
+        const mascotas = duenoNuevo
+          ? getPatientsByOwner(duenoNuevo.id).filter((p) => p.isActive)
+          : [];
+        const coincidencias = nombre
+          ? mascotas.filter(
+              (p) => p.name.trim().toLowerCase() === nombre,
+            )
+          : [];
+
+        if (coincidencias.length === 1) {
+          siguiente = aplicarMascota(coincidencias[0], siguiente);
+        } else {
+          siguiente.patientId = undefined;
+          siguiente.createNewPatient = true;
+        }
+      } else if (name === "species" || name === "breed") {
+        // Modificar los datos clínicos implica registrar una mascota nueva.
+        siguiente.patientId = undefined;
+        siguiente.createNewPatient = true;
+      }
+
+      return siguiente;
+    });
+  };
+
+  const handleSelectPatient = (value: string) => {
+    if (value === NEW_PATIENT_OPTION) {
+      setFormData((prev) => ({
+        ...prev,
+        patientId: undefined,
+        createNewPatient: true,
+      }));
+      return;
+    }
+
+    const mascota = mascotasDelDueno.find((p) => p.id === value);
+    if (!mascota) return;
+
+    setFormData((prev) => aplicarMascota(mascota, prev));
+  };
+
+  /** Acepta la ficha existente; el vínculo se persiste al guardar la cita. */
+  const handleVincular = (ownerId: string, mascotaId?: string) => {
+    const coincidencia = coincidencias.find((c) => c.owner.id === ownerId);
+    if (!coincidencia) return;
+
+    setFormData((prev) => {
+      const base: AppointmentFormData = {
+        ...prev,
+        ownerIdVinculado: ownerId,
+        ownerName: coincidencia.owner.name,
+        ownerPhone: coincidencia.owner.phone,
+        ownerEmail: coincidencia.owner.email ?? "",
+      };
+      return mascotaId && coincidencia.mascotaCoincidente
+        ? aplicarMascota(coincidencia.mascotaCoincidente, base)
+        : { ...base, patientId: undefined, createNewPatient: true };
+    });
+    setAvisoDescartado(true);
+    setSubmitError("");
   };
 
   const handleSubmit = (e: FormEvent) => {
@@ -217,9 +399,14 @@ export const AppointmentForm = ({
                 Datos del Paciente
               </h3>
               <PetInfoSection
+                key={duenoResuelto?.id ?? "sin-dueno"}
                 formData={formData}
                 onChange={handleChange}
                 setFormData={setFormData}
+                opcionesPacientes={opcionesPacientes}
+                seleccionPaciente={seleccionPaciente}
+                onSelectPatient={handleSelectPatient}
+                mostrarDesplegable={Boolean(duenoResuelto)}
               />
             </div>
           </div>
@@ -413,6 +600,16 @@ export const AppointmentForm = ({
           </button>
         </div>
       </form>
+
+      {mostrarAvisoVinculo && (
+        <LinkClientToBranchModal
+          coincidencias={coincidencias}
+          sucursalDestino={formData.sucursalId}
+          puedeVincular={canManagePatients}
+          onVincular={handleVincular}
+          onCancel={() => setAvisoDescartado(true)}
+        />
+      )}
     </div>
   );
 };

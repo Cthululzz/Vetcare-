@@ -8,13 +8,19 @@ import { Pagination } from "../components/common/Pagination";
 import { PatientCard } from "../components/patients/PatientCard";
 import PatientProfileModal from "../components/patients/profile/PatientProfileModal";
 import { PatientFormModal } from "../components/patients/PatientFormModal";
-import { Mail, Phone, RotateCcw, Users } from "lucide-react";
+import { OwnerEditModal } from "../components/patients/OwnerEditModal";
+import { Building2, Mail, Pencil, Phone, RotateCcw, Users } from "lucide-react";
 import { usePatients } from "../hooks/usePatients";
 import { useAppointments } from "../hooks/useAppointments";
 import { useLicense } from "../hooks/useLicense";
 import { usePermissions } from "../hooks/usePermissions";
-import type { Patient } from "../types/patient";
-import type { EspecieMascota, Genero } from "../constants/appConstants";
+import type { Patient, Owner } from "../types/patient";
+import {
+  getSucursalName,
+  type EspecieMascota,
+  type Genero,
+} from "../constants/appConstants";
+import { sucursalesDelOwner } from "../utils/clientMatching";
 import { formatDateShort } from "../utils/dateUtils";
 
 // ============================================
@@ -59,6 +65,7 @@ const PatientRecords = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
+  const [editingOwner, setEditingOwner] = useState<Owner | null>(null);
 
   // Guardar IDs de pacientes recientes (no nombres)
   const [recentPatientIds, setRecentPatientIds] = useState<string[]>([]);
@@ -504,6 +511,18 @@ const PatientRecords = () => {
                               </p>
                             </div>
                           </div>
+
+                          {canManagePatients && !isReadOnly && (
+                            <button
+                              type="button"
+                              onClick={() => setEditingOwner(owner)}
+                              title="Editar nombre, teléfono y correo del propietario"
+                              className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border border-[#ece883]/30 bg-[#ece883]/10 px-2.5 py-1.5 text-[11px] font-bold text-[#ece883] transition-colors hover:bg-[#ece883]/20"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                              Editar
+                            </button>
+                          )}
                         </div>
 
                         <div className="space-y-1.5 text-xs text-slate-400">
@@ -518,6 +537,23 @@ const PatientRecords = () => {
                             </p>
                           )}
                         </div>
+
+                        {sucursalesDelOwner(owner).filter(
+                          (sucursal) => sucursal !== owner.sucursalId,
+                        ).length > 0 && (
+                          <p className="flex items-start gap-2 rounded-lg border border-[#ece883]/20 bg-[#ece883]/5 px-2.5 py-2 text-[11px] text-[#ece883]">
+                            <Building2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                            <span>
+                              Atendido también en:{" "}
+                              {sucursalesDelOwner(owner)
+                                .filter(
+                                  (sucursal) => sucursal !== owner.sucursalId,
+                                )
+                                .map(getSucursalName)
+                                .join(", ")}
+                            </span>
+                          </p>
+                        )}
 
                         {ownerPatients.length > 0 && (
                           <div className="flex flex-wrap gap-1.5 pt-1">
@@ -578,6 +614,15 @@ const PatientRecords = () => {
           }}
           onSaved={handleSavedPatient}
           isReadOnly={isReadOnly}
+          puedeVincular={canManagePatients}
+        />
+      )}
+
+      {editingOwner && (
+        <OwnerEditModal
+          key={editingOwner.id}
+          owner={getOwner(editingOwner.id) ?? editingOwner}
+          onClose={() => setEditingOwner(null)}
         />
       )}
     </PageShell>
