@@ -3,6 +3,7 @@ import type { Appointment } from "./appointment";
 import type { Owner, Patient } from "./patient";
 import type { WeightUnit } from "../utils/weight";
 import type { ExamOrder } from "./examOrder";
+import type { Prescription } from "./prescription";
 
 /** Datos que se piden al confirmar una hospitalización desde la consulta. */
 export interface HospitalizationFormData {
@@ -27,5 +28,15 @@ export interface ConsultationData {
   shouldFinish: boolean;
   hospitalization?: HospitalizationFormData;
   /** Orden de exámenes indicada durante la consulta. */
+  examOrder?: ExamOrder;
+}
+
+/** Documentos listos para imprimir al terminar una consulta. */
+export interface FinishPrintDocuments {
+  patientName: string;
+  veterinarian?: string;
+  /** Solo presente cuando se creó efectivamente una receta. */
+  prescription?: Prescription;
+  /** Solo presente cuando la orden tiene al menos una categoría. */
   examOrder?: ExamOrder;
 }

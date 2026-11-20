@@ -14,6 +14,7 @@ import { AppointmentCard } from "../../components/schedule/AppointmentCard";
 import { MonthCalendarView } from "../../components/schedule/MonthCalendarView";
 import { WeekView } from "../../components/schedule/WeekView";
 import { ConsultationModal } from "../../components/schedule/ConsultationModal/ConsultationModal";
+import { PrintAfterFinishModal } from "../../components/schedule/ConsultationModal/PrintAfterFinishModal";
 import { DeleteAppointmentModal } from "../../components/schedule/DeleteAppointmentModal";
 import {
   getLocalTodayStr,
@@ -30,6 +31,7 @@ import { useAppointmentReminders } from "../../hooks/useAppointmentReminders";
 import { buildDueAppointmentReminders } from "../../utils/appointmentReminders";
 import { PERMISSIONS } from "../../utils/permissions";
 import type { Appointment } from "../../types/appointment";
+import type { FinishPrintDocuments } from "../../types/consultation";
 import type { TabType } from "./types";
 
 const Schedule = () => {
@@ -40,6 +42,8 @@ const Schedule = () => {
   const [showCompleted, setShowCompleted] = useState(false);
   const [hoy, setHoy] = useState(getLocalTodayStr);
   const [citaAEliminar, setCitaAEliminar] = useState<Appointment | null>(null);
+  const [documentosAImprimir, setDocumentosAImprimir] =
+    useState<FinishPrintDocuments | null>(null);
   const parametrosProcesados = useRef(false);
   const { user } = useAuth();
   const { can } = usePermissions();
@@ -418,6 +422,7 @@ const Schedule = () => {
           owner={modalOwner}
           onSaveConsultation={handleSaveConsultation}
           onHospitalize={handleHospitalize}
+          onConsultationFinished={setDocumentosAImprimir}
         />
       )}
 
@@ -433,6 +438,14 @@ const Schedule = () => {
         onConfirm={handleConfirmarEliminacion}
         onCancel={() => setCitaAEliminar(null)}
       />
+
+      {/* Pop-up de impresión posterior a la finalización de la consulta */}
+      {documentosAImprimir && (
+        <PrintAfterFinishModal
+          documents={documentosAImprimir}
+          onClose={() => setDocumentosAImprimir(null)}
+        />
+      )}
     </PageShell>
   );
 };

@@ -4,16 +4,14 @@ import { formatDateTimeShort } from "../../utils/dateUtils";
 import { escapeHtml, printDocument } from "../../utils/print";
 
 /**
- * Envía una receta al diálogo de impresión del navegador.
- * printDocument escapa el título y el subtítulo; el cuerpo se arma aparte y
- * por eso la referencia incluida en él se escapa explícitamente.
+ * Construye el cuerpo HTML de una receta. Se exporta para poder combinarla
+ * con otros documentos en una sola impresión sin duplicar el formato.
  */
-export function printPrescription(
+export function buildPrescriptionPrintBody(
   prescription: Prescription,
   patientName: string,
   veterinarian?: string,
-): void {
-  const fechaEmision = formatDateTimeShort(prescription.createdAt);
+): string {
   const cuerpo = buildPrescriptionHtml({
     createdAt: prescription.createdAt,
     medications: prescription.medications.map((medication) => ({
@@ -25,11 +23,28 @@ export function printPrescription(
     veterinarian,
   });
   const referencia = `<p class="notas">N° de receta: ${escapeHtml(prescription.id.slice(0, 8))}</p>`;
+  return `${cuerpo}${referencia}`;
+}
 
+/**
+ * Envía una receta al diálogo de impresión del navegador.
+ * printDocument escapa el título y el subtítulo; el cuerpo se arma aparte y
+ * por eso la referencia incluida en él se escapa explícitamente.
+ */
+export function printPrescription(
+  prescription: Prescription,
+  patientName: string,
+  veterinarian?: string,
+): void {
+  const fechaEmision = formatDateTimeShort(prescription.createdAt);
   printDocument({
     title: "Receta médica",
     subtitle: `Paciente: ${patientName} · Emitida el ${fechaEmision}`,
     clinicName: "VetCare+",
-    bodyHtml: `${cuerpo}${referencia}`,
+    bodyHtml: buildPrescriptionPrintBody(
+      prescription,
+      patientName,
+      veterinarian,
+    ),
   });
 }

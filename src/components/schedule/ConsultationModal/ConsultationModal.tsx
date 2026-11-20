@@ -25,6 +25,7 @@ import {
 import { normalizeVitalSign } from "../../../utils/vitalSigns";
 import type {
   ConsultationData,
+  FinishPrintDocuments,
   HospitalizationFormData,
 } from "../../../types/consultation";
 import type { ExamOrder } from "../../../types/examOrder";
@@ -43,6 +44,7 @@ interface ConsultationModalProps {
   owner: Owner;
   onSaveConsultation: (data: ConsultationData) => void;
   onHospitalize?: (data: ConsultationData) => void;
+  onConsultationFinished?: (documents: FinishPrintDocuments) => void;
 }
 
 const initialFormDataFor = (appointment: Appointment, patient: Patient) => {
@@ -79,6 +81,7 @@ export const ConsultationModal = ({
   owner,
   onSaveConsultation,
   onHospitalize,
+  onConsultationFinished,
 }: ConsultationModalProps) => {
   const { isFirstTimePatient } = useAppointments();
   const { updatePatient } = usePatients();
@@ -175,6 +178,7 @@ export const ConsultationModal = ({
     onSaveConsultation: commitConsultation,
     buildConsultationData,
     setHasUnsavedChanges,
+    onFinishComplete: onConsultationFinished,
   });
 
   // ============================================
